@@ -141,6 +141,7 @@ These went beyond what the document specified. Each is a place where the spec wa
 5. **`תאריך פתיחה` (`created_at`) added.** The spec's fault table has a close date but no open date, while the screen displays one.
 6. **Bulk edit does not overwrite treatment descriptions unless opted in.** The spec describes editing multiple selected faults, but blindly applying one description across a selection would silently destroy the others' notes.
 7. **`אחריות` is assigned from the fault edit dialog.** The spec defines the field but never says who assigns a maintenance worker or from which screen. This is the only screen staff work from, so it went there. Only `איש תחזוקה` / `מנהל תחזוקה` can be assigned.
+8. **`residents.phone` is constrained to E.164 at the database level.** Sign-in matches a normalized `+972…` string, so a resident stored as `0547465952` can never log in — and nothing reports why. The app normalizes on every write, but the Supabase table editor does not, which is exactly how an admin adds a resident by hand. This was not theoretical: the first real row added to this system had precisely that bug.
 
 ## Sample data
 

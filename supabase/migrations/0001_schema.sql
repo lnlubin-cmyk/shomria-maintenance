@@ -42,7 +42,13 @@ create table residents (
   last_name    text not null,              -- שם משפחה
   phone        text not null unique,       -- מספר טלפון (E.164, e.g. +972501234567)
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+
+  -- Sign-in matches this column against a normalized E.164 string, so a row
+  -- stored as "0547465952" can never log in — and nothing would report why.
+  -- The app normalizes on every write, but the Supabase table editor does not,
+  -- and that is exactly how an admin will add a resident by hand.
+  constraint residents_phone_e164 check (phone ~ '^\+972[1-9][0-9]{7,8}$')
 );
 
 comment on table residents is 'תושבי הישוב. מהווה גם רשימת ההרשאה להרשמה למערכת.';
