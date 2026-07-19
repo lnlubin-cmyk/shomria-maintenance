@@ -12,12 +12,21 @@ Built from `מערכת ניהול תחזוקה.pdf`. Scope: maintenance manageme
 
 ## Login
 
-Residents sign in with an **email code**: they enter their email, it's matched
-against the residents table, and a 6-digit code is emailed. Google SSO also
-works — Google's verified email is matched against the residents table and
-linked automatically. Either way, only an address on a resident record can get
-in. (Phone/SMS login is deferred; `phone` stays on the record for the future
-SMS flow and the map feature.)
+Email verification happens **once, at registration**; after that it's email +
+password.
+
+- **First login / forgot password:** enter email → matched against the
+  residents table → 6-digit code emailed → verify → **choose a password**.
+- **Returning login:** email + password, no code. The session persists (cookies,
+  auto-refreshed), so a returning user usually skips the form entirely, and the
+  browser can save/autofill the password.
+- **Google SSO:** Google's verified email is matched against the residents table
+  and linked automatically; those users sign in with Google and need no password.
+- **Admin-created accounts** have no password yet, so their owner's first login
+  uses the same email-code flow to set one.
+
+Only an address on a resident record can register. (Phone/SMS login is deferred;
+`phone` stays on the record for the future SMS flow and the map feature.)
 
 Two dashboard settings are required for email login:
 
@@ -37,6 +46,7 @@ Verified end-to-end:
 - **18/18 role and access tests** — each role sees exactly what it should over real HTTP, and a resident cannot see another resident's calls.
 - **9/9 database guard tests** — a resident with a valid JWT, bypassing the UI entirely, cannot edit תיאור הטיפול, change status, delete calls, self-assign אחריות, read others' calls, dump the residents table, or promote themselves to admin.
 - **7/7 email-login tests** — the residents-table gate recognizes members and normalizes case, doesn't reveal non-members, a real OTP sign-in reaches the right screen, and an authenticated non-resident is refused a `users` row.
+- **7/7 password-login tests** — password login reaches protected pages, a wrong password is rejected, and the first-login round trip (email code → set password → log in with it) works end to end.
 
 Not yet exercised with real delivery: the OTP email actually arriving (needs SMTP), the Excel import, and Google SSO against a real Google OAuth client.
 
