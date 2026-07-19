@@ -51,8 +51,8 @@ export default function ImportResidents({ onImported }: { onImported: () => void
     <div className="card">
       <h2 className="font-semibold">טעינת תושבים מקובץ Excel</h2>
       <p className="mt-1 text-sm text-gray-600">
-        העמודות בקובץ חייבות להיות בסדר הבא: תעודת זהות, שם פרטי, שם משפחה, מספר טלפון. שורת כותרת
-        תזוהה ותדולג אוטומטית. תושב עם תעודת זהות קיימת יעודכן.
+        העמודות בקובץ חייבות להיות בסדר הבא: תעודת זהות, שם פרטי, שם משפחה, מספר טלפון, אימייל
+        (העמודה האחרונה אופציונלית). שורת כותרת תזוהה ותדולג אוטומטית. תושב עם תעודת זהות קיימת יעודכן.
       </p>
 
       <div className="mt-4 flex items-center gap-3">

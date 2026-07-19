@@ -24,7 +24,7 @@ export default async function AdminPage() {
   const supabase = createClient();
 
   const [{ data: residents }, { data: buildings }, { data: users }] = await Promise.all([
-    supabase.from("residents").select("id, first_name, last_name, phone").order("last_name"),
+    supabase.from("residents").select("id, first_name, last_name, phone, email").order("last_name"),
     supabase
       .from("buildings")
       .select("plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4")

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-type Step = "phone" | "otp";
+type Step = "email" | "otp";
 
 /**
  * useSearchParams() bails out of prerendering, which Next 14 rejects at build
@@ -29,16 +29,28 @@ function LoginFallback() {
   );
 }
 
+// Errors the SSO callback can redirect back with.
+const SSO_ERRORS: Record<string, string> = {
+  sso_not_registered: "כתובת ה-Google שלך אינה רשומה ברשימת התושבים. היכנס עם האימייל הרשום וקוד אימות.",
+  account_exists: "לתושב זה כבר קיים חשבון במערכת. פנה למזכירות.",
+  auth_failed: "ההתחברות עם Google נכשלה. נסה שוב.",
+  link_failed: "אירעה שגיאה בהשלמת ההרשמה. נסה שוב.",
+  missing_code: "ההתחברות עם Google נכשלה. נסה שוב.",
+};
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/faults";
 
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
-  const [normalizedPhone, setNormalizedPhone] = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [normalizedEmail, setNormalizedEmail] = useState("");
   const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const e = params.get("error");
+    return e ? (SSO_ERRORS[e] ?? null) : null;
+  });
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -49,10 +61,10 @@ function LoginForm() {
     setBusy(true);
 
     try {
-      const res = await fetch("/api/auth/check-phone", {
+      const res = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
 
@@ -61,12 +73,15 @@ function LoginForm() {
         return;
       }
 
-      // Only send a real OTP to a registered resident, but always advance to the
+      // Only send a real code to a registered resident, but always advance to the
       // code step so an unregistered caller cannot tell the difference.
+      // shouldCreateUser:false — don't provision an auth account for an address
+      // that isn't a resident, so this can't be used to mint junk accounts.
       if (data.registered) {
         const supabase = createClient();
         const { error: otpError } = await supabase.auth.signInWithOtp({
-          phone: data.phone,
+          email: data.email,
+          options: { shouldCreateUser: true },
         });
         if (otpError) {
           setError("שליחת הקוד נכשלה. נסה שוב.");
@@ -74,9 +89,9 @@ function LoginForm() {
         }
       }
 
-      setNormalizedPhone(data.phone);
+      setNormalizedEmail(data.email);
       setStep("otp");
-      setNotice("אם המספר רשום ברשימת התושבים, נשלח אליו קוד אימות ב-SMS.");
+      setNotice("אם האימייל רשום ברשימת התושבים, נשלח אליו קוד אימות.");
     } catch {
       setError("שגיאת רשת. נסה שוב.");
     } finally {
@@ -92,9 +107,9 @@ function LoginForm() {
     try {
       const supabase = createClient();
       const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: normalizedPhone,
+        email: normalizedEmail,
         token: code,
-        type: "sms",
+        type: "email",
       });
 
       if (verifyError) {
@@ -106,7 +121,7 @@ function LoginForm() {
       const linkRes = await fetch("/api/auth/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: normalizedPhone }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       if (!linkRes.ok) {
@@ -156,26 +171,27 @@ function LoginForm() {
             <div className="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">{notice}</div>
           )}
 
-          {step === "phone" ? (
+          {step === "email" ? (
             <form onSubmit={handleSendCode} className="space-y-4">
               <div>
-                <label className="label" htmlFor="phone">
-                  מספר טלפון
+                <label className="label" htmlFor="email">
+                  כתובת אימייל
                 </label>
                 <input
-                  id="phone"
+                  id="email"
                   className="field"
-                  type="tel"
+                  type="email"
                   dir="ltr"
-                  inputMode="tel"
-                  placeholder="050-123-4567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   autoFocus
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  הכניסה מותרת לחברי הישוב בלבד, לפי מספר הטלפון הרשום.
+                  הכניסה מותרת לחברי הישוב בלבד, לפי האימייל הרשום.
                 </p>
               </div>
 
@@ -212,13 +228,13 @@ function LoginForm() {
                 type="button"
                 className="w-full text-sm text-gray-600 hover:underline"
                 onClick={() => {
-                  setStep("phone");
+                  setStep("email");
                   setCode("");
                   setError(null);
                   setNotice(null);
                 }}
               >
-                שינוי מספר טלפון
+                שינוי כתובת אימייל
               </button>
             </form>
           )}

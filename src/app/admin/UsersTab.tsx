@@ -23,9 +23,10 @@ export default function UsersTab({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // A resident who already has an account cannot get a second one.
+  // A resident who already has an account cannot get a second one, and login is
+  // by email — so only residents WITH an email can be given an account.
   const linkedIds = new Set(users.map((u) => u.resident_id));
-  const available = residents.filter((r) => !linkedIds.has(r.id));
+  const available = residents.filter((r) => !linkedIds.has(r.id) && r.email);
 
   async function run(action: (fd: FormData) => Promise<any>, fd: FormData) {
     setError(null);
@@ -65,10 +66,10 @@ export default function UsersTab({
         >
           <h2 className="font-semibold">משתמש חדש</h2>
           <p className="text-sm text-gray-600">
-            המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם מספר הטלפון הרשום לתושב.
+            המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם האימייל הרשום לתושב וקוד אימות.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label" htmlFor="resident_id">
                 תושב *
@@ -77,13 +78,13 @@ export default function UsersTab({
                 <option value="">— בחר תושב —</option>
                 {available.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.first_name} {r.last_name} — {formatIsraeliPhone(r.phone)}
+                    {r.first_name} {r.last_name} — {r.email}
                   </option>
                 ))}
               </select>
               {available.length === 0 && (
                 <p className="mt-1 text-xs text-amber-700">
-                  לכל התושבים כבר קיים חשבון. הוסף תושב חדש תחילה.
+                  אין תושבים זמינים. ודא שלתושב יש אימייל ושעדיין אין לו חשבון.
                 </p>
               )}
             </div>
@@ -99,14 +100,6 @@ export default function UsersTab({
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="label" htmlFor="email">
-                אימייל (לא חובה)
-              </label>
-              <input id="email" name="email" type="email" className="field" dir="ltr" />
-              <p className="mt-1 text-xs text-gray-500">נדרש רק לכניסה דרך Google.</p>
             </div>
           </div>
 

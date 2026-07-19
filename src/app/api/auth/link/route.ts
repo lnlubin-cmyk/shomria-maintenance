@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { normalizeIsraeliPhone } from "@/lib/phone";
+import { normalizeEmail } from "@/lib/email";
 
 /**
  * Links a freshly authenticated account to its resident record, creating the
- * `users` row. Called after phone OTP verification, and after SSO once the
- * user supplies a phone number.
+ * `users` row. Called after email OTP verification, and after Google SSO.
  *
  * Runs with the service role because RLS restricts writes to `users` to admins
  * — a user cannot create their own row. Every input is re-derived server-side:
- * the caller supplies only a phone, never a role or resident id.
+ * the caller never supplies a role or resident id.
  */
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -34,29 +33,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, alreadyLinked: true });
   }
 
-  // Prefer the verified phone on the auth account (OTP flow). For SSO the auth
-  // account has no phone, so fall back to what the user typed.
+  // Trust the email verified on the auth account (email OTP and Google SSO both
+  // set it). Fall back to the body only if somehow absent.
   const body = await request.json().catch(() => ({}));
-  const candidate = authUser.phone ?? body.phone;
+  const candidate = authUser.email ?? body.email;
 
   if (typeof candidate !== "string") {
-    return NextResponse.json({ error: "מספר טלפון חסר" }, { status: 400 });
+    return NextResponse.json({ error: "כתובת אימייל חסרה" }, { status: 400 });
   }
 
-  const normalized = normalizeIsraeliPhone(candidate);
+  const normalized = normalizeEmail(candidate);
   if (!normalized) {
-    return NextResponse.json({ error: "מספר הטלפון אינו תקין" }, { status: 400 });
+    return NextResponse.json({ error: "כתובת האימייל אינה תקינה" }, { status: 400 });
   }
 
   const { data: resident } = await admin
     .from("residents")
     .select("id")
-    .eq("phone", normalized)
+    .eq("email", normalized)
     .maybeSingle();
 
   if (!resident) {
     return NextResponse.json(
-      { error: "מספר הטלפון אינו רשום ברשימת התושבים. פנה למזכירות." },
+      { error: "האימייל אינו רשום ברשימת התושבים. פנה למזכירות." },
       { status: 403 }
     );
   }
@@ -81,8 +80,8 @@ export async function POST(request: Request) {
     id: authUser.id,
     resident_id: resident.id,
     role: "resident",
-    email: authUser.email ?? null,
-    phone: normalized,
+    email: normalized,
+    phone: authUser.phone ?? null,
   });
 
   if (error) {

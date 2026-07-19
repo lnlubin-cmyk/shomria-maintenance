@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { normalizeIsraeliPhone } from "@/lib/phone";
+import { normalizeEmail } from "@/lib/email";
 
 interface RowError {
   row: number;
@@ -9,9 +10,12 @@ interface RowError {
 }
 
 /**
- * Spec screen 4: bulk resident import from Excel. Column order is fixed by the
- * spec and read positionally, not by header name:
- *   1. תעודת זהות  2. שם פרטי  3. שם משפחה  4. מספר טלפון
+ * Spec screen 4: bulk resident import from Excel. Column order is fixed and read
+ * positionally, not by header name:
+ *   1. תעודת זהות  2. שם פרטי  3. שם משפחה  4. מספר טלפון  5. אימייל (optional)
+ *
+ * Email is column 5, appended to the spec's original four. It's optional per
+ * row, but a resident without one cannot be given a login account later.
  *
  * Rows are validated first and the whole file is rejected if any row is bad —
  * a half-imported residents table is worse than none, since it is the
@@ -67,10 +71,17 @@ export async function POST(request: Request) {
 
   const cell = (r: unknown[], i: number) => String(r[i] ?? "").trim();
 
-  const parsed: { id: string; first_name: string; last_name: string; phone: string }[] = [];
+  const parsed: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email: string | null;
+  }[] = [];
   const errors: RowError[] = [];
   const seenIds = new Set<string>();
   const seenPhones = new Set<string>();
+  const seenEmails = new Set<string>();
 
   dataRows.forEach((row, i) => {
     // +1 for the header we skipped, +1 because spreadsheets are 1-indexed.
@@ -80,8 +91,9 @@ export async function POST(request: Request) {
     const firstName = cell(row, 1);
     const lastName = cell(row, 2);
     const phoneRaw = cell(row, 3);
+    const emailRaw = cell(row, 4);
 
-    if (!id && !firstName && !lastName && !phoneRaw) return; // blank row
+    if (!id && !firstName && !lastName && !phoneRaw && !emailRaw) return; // blank row
 
     if (!id) {
       errors.push({ row: rowNumber, message: "תעודת זהות חסרה" });
@@ -102,6 +114,20 @@ export async function POST(request: Request) {
       return;
     }
 
+    // Email is optional, but if present it must be valid and unique in the file.
+    let email: string | null = null;
+    if (emailRaw) {
+      email = normalizeEmail(emailRaw);
+      if (!email) {
+        errors.push({ row: rowNumber, message: `כתובת אימייל אינה תקינה: "${emailRaw}"` });
+        return;
+      }
+      if (seenEmails.has(email)) {
+        errors.push({ row: rowNumber, message: `אימייל כפול בקובץ: ${emailRaw}` });
+        return;
+      }
+    }
+
     if (seenIds.has(id)) {
       errors.push({ row: rowNumber, message: `תעודת זהות כפולה בקובץ: ${id}` });
       return;
@@ -111,9 +137,10 @@ export async function POST(request: Request) {
       return;
     }
 
+    if (email) seenEmails.add(email);
     seenIds.add(id);
     seenPhones.add(phone);
-    parsed.push({ id, first_name: firstName, last_name: lastName, phone });
+    parsed.push({ id, first_name: firstName, last_name: lastName, phone, email });
   });
 
   if (errors.length > 0) {
@@ -137,7 +164,7 @@ export async function POST(request: Request) {
   if (error) {
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: "אחד ממספרי הטלפון בקובץ כבר רשום לתושב אחר במערכת." },
+        { error: "אחד ממספרי הטלפון או כתובות האימייל בקובץ כבר רשום לתושב אחר במערכת." },
         { status: 409 }
       );
     }

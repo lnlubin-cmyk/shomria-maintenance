@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { normalizeIsraeliPhone } from "@/lib/phone";
+import { normalizeEmail } from "@/lib/email";
 import { ROLE_LABELS, type UserRole } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
@@ -36,6 +37,7 @@ export async function upsertResident(formData: FormData): Promise<ActionResult> 
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const emailRaw = String(formData.get("email") ?? "").trim();
 
   if (!id) return { error: "תעודת זהות חובה" };
   if (!firstName) return { error: "שם פרטי חובה" };
@@ -44,13 +46,23 @@ export async function upsertResident(formData: FormData): Promise<ActionResult> 
   const phone = normalizeIsraeliPhone(phoneRaw);
   if (!phone) return { error: "מספר טלפון אינו תקין" };
 
+  // Email is optional on the record, but if given it must be valid — it's the
+  // login identifier, and a malformed one means the resident can never sign in.
+  let email: string | null = null;
+  if (emailRaw) {
+    email = normalizeEmail(emailRaw);
+    if (!email) return { error: "כתובת האימייל אינה תקינה" };
+  }
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("residents")
-    .upsert({ id, first_name: firstName, last_name: lastName, phone }, { onConflict: "id" });
+    .upsert({ id, first_name: firstName, last_name: lastName, phone, email }, { onConflict: "id" });
 
   if (error) {
-    if (error.code === "23505") return { error: "מספר הטלפון כבר רשום לתושב אחר" };
+    if (error.code === "23505") {
+      return { error: "מספר הטלפון או האימייל כבר רשומים לתושב אחר" };
+    }
     return { error: "שמירת התושב נכשלה" };
   }
 
@@ -168,7 +180,6 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
 
   const residentId = String(formData.get("resident_id") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim() || null;
 
   if (!residentId) return { error: "יש לבחור תושב" };
   if (!VALID_ROLES.includes(role as UserRole)) return { error: "סוג משתמש לא חוקי" };
@@ -177,11 +188,17 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
 
   const { data: resident } = await admin
     .from("residents")
-    .select("id, phone")
+    .select("id, phone, email")
     .eq("id", residentId)
     .maybeSingle();
 
   if (!resident) return { error: "התושב אינו קיים" };
+
+  // Login is by email, so an account can't exist without one. The admin sets
+  // the resident's email on the תושבים tab first.
+  if (!resident.email) {
+    return { error: "לתושב זה אין אימייל. יש להוסיף אימייל בכרטיס התושב לפני יצירת חשבון." };
+  }
 
   const { data: existing } = await admin
     .from("users")
@@ -191,11 +208,11 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
 
   if (existing) return { error: "לתושב זה כבר קיים חשבון" };
 
+  // email_confirm: the admin is vouching for the address, so skip the
+  // confirmation email — the resident just signs in with a code.
   const { data: created, error: authError } = await admin.auth.admin.createUser({
-    phone: resident.phone,
-    email: email ?? undefined,
-    phone_confirm: true,
-    email_confirm: Boolean(email),
+    email: resident.email,
+    email_confirm: true,
   });
 
   if (authError || !created.user) {
@@ -206,7 +223,7 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     id: created.user.id,
     resident_id: residentId,
     role,
-    email,
+    email: resident.email,
     phone: resident.phone,
   });
 

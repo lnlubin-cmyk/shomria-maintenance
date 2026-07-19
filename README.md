@@ -7,17 +7,38 @@ Built from `מערכת ניהול תחזוקה.pdf`. Scope: maintenance manageme
 ## Stack
 
 - **Next.js 14** (App Router, TypeScript, Server Actions)
-- **Supabase** — Postgres, Auth (phone OTP + Google SSO), Row Level Security
+- **Supabase** — Postgres, Auth (email OTP + Google SSO), Row Level Security
 - **Tailwind CSS** — RTL via `dir="rtl"`
+
+## Login
+
+Residents sign in with an **email code**: they enter their email, it's matched
+against the residents table, and a 6-digit code is emailed. Google SSO also
+works — Google's verified email is matched against the residents table and
+linked automatically. Either way, only an address on a resident record can get
+in. (Phone/SMS login is deferred; `phone` stays on the record for the future
+SMS flow and the map feature.)
+
+Two dashboard settings are required for email login:
+
+- **Custom SMTP.** Supabase's built-in email sender is rate-limited to a few
+  messages per hour and is *not for production*. Configure an SMTP provider
+  (Resend, AWS SES, SendGrid — free/cheap tiers exist) under
+  Authentication → Emails before real use.
+- **OTP code template.** To send a 6-digit code rather than a magic link, the
+  "Magic Link" email template must include `{{ .Token }}`. Otherwise the code
+  step won't have a code to enter.
 
 ## Status
 
-Builds clean and runs against a live Supabase project. Verified end-to-end:
+Builds clean and runs against a live Supabase project (Frankfurt / eu-central-1).
+Verified end-to-end:
 
 - **18/18 role and access tests** — each role sees exactly what it should over real HTTP, and a resident cannot see another resident's calls.
 - **9/9 database guard tests** — a resident with a valid JWT, bypassing the UI entirely, cannot edit תיאור הטיפול, change status, delete calls, self-assign אחריות, read others' calls, dump the residents table, or promote themselves to admin.
+- **7/7 email-login tests** — the residents-table gate recognizes members and normalizes case, doesn't reveal non-members, a real OTP sign-in reaches the right screen, and an authenticated non-resident is refused a `users` row.
 
-Not yet exercised: the Excel import, the real phone-OTP flow (needs Twilio), and Google SSO (needs a Google OAuth client).
+Not yet exercised with real delivery: the OTP email actually arriving (needs SMTP), the Excel import, and Google SSO against a real Google OAuth client.
 
 ## ⚠️ Remove before deploying
 
@@ -49,6 +70,15 @@ At [supabase.com](https://supabase.com), create a project. Then in **SQL Editor*
 1. `supabase/migrations/0001_schema.sql` — tables, enums, triggers
 2. `supabase/migrations/0002_rls.sql` — row level security
 3. `supabase/migrations/0003_seed.sql` — sample residents and buildings
+4. `supabase/migrations/0004_resident_email.sql` — email column (no-op on a fresh 0001, needed only for an already-provisioned DB)
+
+Or apply them all at once with the runner (reads the connection string from the
+environment, never a file):
+
+```bash
+PGURI="postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres" \
+  node scripts/migrate.mjs supabase/migrations/*.sql
+```
 
 ### 3. Environment variables
 
@@ -80,8 +110,8 @@ Open http://localhost:3000
 
 Every self-registered account gets the `resident` role, and only an admin can change roles — so the first admin is promoted by hand:
 
-1. Sign in with the phone of the resident who should be admin. With the sample data, `050-100-0020` (דורית אלון) is the intended one.
-2. Edit the phone in `scripts/bootstrap-admin.sql` and run it in the SQL editor.
+1. Sign in with the email of the resident who should be admin. With the sample data, `dorit@example.com` (דורית אלון) is the intended one.
+2. Edit `scripts/bootstrap-admin.sql` to match on that email and run it in the SQL editor.
 3. Reload — the ניהול מערכת menu item appears.
 
 From there, all further users are managed in the admin screen.
@@ -102,7 +132,7 @@ Optionally run `scripts/seed-faults.sql` for sample calls (requires at least one
 | Route | Who | What |
 |---|---|---|
 | `/` | Everyone | Home, sign-in, menu |
-| `/login` | Guests | Phone OTP + Google SSO |
+| `/login` | Guests | Email OTP + Google SSO |
 | `/faults/new` | Signed in | Open a new call |
 | `/faults` | Signed in | Residents: own calls. Staff: full table with filters, multi-select, edit, delete |
 | `/admin` | Admin | Users, residents, buildings, Excel import |

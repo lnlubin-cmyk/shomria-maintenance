@@ -41,6 +41,7 @@ create table residents (
   first_name   text not null,              -- שם פרטי
   last_name    text not null,              -- שם משפחה
   phone        text not null unique,       -- מספר טלפון (E.164, e.g. +972501234567)
+  email        text unique,                -- אימייל — the login identifier (nullable: a resident record may exist before an email is known)
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
 
@@ -48,7 +49,15 @@ create table residents (
   -- stored as "0547465952" can never log in — and nothing would report why.
   -- The app normalizes on every write, but the Supabase table editor does not,
   -- and that is exactly how an admin will add a resident by hand.
-  constraint residents_phone_e164 check (phone ~ '^\+972[1-9][0-9]{7,8}$')
+  constraint residents_phone_e164 check (phone ~ '^\+972[1-9][0-9]{7,8}$'),
+
+  -- Login matches on email, so the same table-editor hazard applies. Stored
+  -- lowercase and trimmed, matching how the app normalizes on every write, so a
+  -- resident typing "Yossi@GMail.com " still matches "yossi@gmail.com".
+  constraint residents_email_format check (
+    email is null or email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
+  ),
+  constraint residents_email_normalized check (email is null or email = lower(email))
 );
 
 comment on table residents is 'תושבי הישוב. מהווה גם רשימת ההרשאה להרשמה למערכת.';

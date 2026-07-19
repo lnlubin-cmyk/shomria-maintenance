@@ -142,6 +142,24 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
             </div>
           </div>
 
+          <div>
+            <label className="label" htmlFor="email">
+              אימייל
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              className="field"
+              dir="ltr"
+              placeholder="you@example.com"
+              defaultValue={editing?.email ?? ""}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              משמש לכניסה למערכת. חובה כדי ליצור לתושב חשבון.
+            </p>
+          </div>
+
           <div className="flex gap-3">
             <button type="submit" className="btn-primary" disabled={busy}>
               {busy ? "שומר..." : "שמירה"}
@@ -161,20 +179,21 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[640px] text-right text-sm">
+        <table className="w-full min-w-[760px] text-right text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="px-3 py-3">תעודת זהות</th>
               <th className="px-3 py-3">שם פרטי</th>
               <th className="px-3 py-3">שם משפחה</th>
               <th className="px-3 py-3">טלפון</th>
+              <th className="px-3 py-3">אימייל</th>
               <th className="px-3 py-3">פעולות</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תושבים.
                 </td>
               </tr>
@@ -188,6 +207,9 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                 <td className="px-3 py-3">{r.last_name}</td>
                 <td className="px-3 py-3" dir="ltr">
                   {formatIsraeliPhone(r.phone)}
+                </td>
+                <td className="px-3 py-3" dir="ltr">
+                  {r.email ?? <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-3 py-3">
                   <div className="flex gap-3">
