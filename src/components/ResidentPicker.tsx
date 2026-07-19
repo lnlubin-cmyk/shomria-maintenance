@@ -105,7 +105,12 @@ export default function ResidentPicker({
               <button
                 type="button"
                 className="block w-full px-3 py-2 text-right text-sm hover:bg-brand-50"
-                onClick={() => select(o)}
+                // onMouseDown + preventDefault: register the pick before the
+                // input's blur can close the list out from under the click.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  select(o);
+                }}
               >
                 {o.first_name} {o.last_name}
               </button>

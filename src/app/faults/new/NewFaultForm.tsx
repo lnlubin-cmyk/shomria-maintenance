@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ResidentPicker from "@/components/ResidentPicker";
+import BuildingPicker from "@/components/BuildingPicker";
 import { createFault } from "../actions";
 import type { Building } from "@/lib/types";
 
@@ -22,7 +23,6 @@ export default function NewFaultForm({
   // Spec 2a: defaults to the current user, but may be changed to another resident.
   const [callerId, setCallerId] = useState<string | null>(currentResidentId);
   const [buildingPlot, setBuildingPlot] = useState(defaultBuildingPlot ?? "");
-  const [buildingQuery, setBuildingQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -32,10 +32,6 @@ export default function NewFaultForm({
     month: "2-digit",
     year: "numeric",
   });
-
-  const visibleBuildings = buildingQuery.trim()
-    ? buildings.filter((b) => b.building_name.includes(buildingQuery.trim()))
-    : buildings;
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -82,32 +78,12 @@ export default function NewFaultForm({
       </div>
 
       <div>
-        <label className="label" htmlFor="building">
-          שם המבנה *
-        </label>
-        <input
-          className="field mb-2"
-          placeholder="חיפוש לפי שם המבנה"
-          value={buildingQuery}
-          onChange={(e) => setBuildingQuery(e.target.value)}
-          autoComplete="off"
-        />
-        <select
-          id="building"
-          className="field"
+        <label className="label">שם המבנה *</label>
+        <BuildingPicker
+          buildings={buildings}
           value={buildingPlot}
-          onChange={(e) => setBuildingPlot(e.target.value)}
-          required
-          size={Math.min(6, Math.max(2, visibleBuildings.length))}
-        >
-          <option value="">— בחר מבנה —</option>
-          {visibleBuildings.map((b) => (
-            <option key={b.plot_number} value={b.plot_number}>
-              {b.building_name}
-              {b.street_name ? ` — ${b.street_name} ${b.house_number ?? ""}` : ""}
-            </option>
-          ))}
-        </select>
+          onChange={(plot) => setBuildingPlot(plot)}
+        />
         {defaultBuildingPlot && (
           <p className="mt-1 text-xs text-gray-500">ברירת המחדל היא המבנה שבו אתה רשום כתושב.</p>
         )}
