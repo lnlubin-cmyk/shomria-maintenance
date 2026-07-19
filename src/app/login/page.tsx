@@ -205,14 +205,18 @@ function LoginForm() {
                 <label className="label" htmlFor="code">
                   קוד אימות
                 </label>
+                {/* Supabase OTP length is configurable (6–10 digits) and newer
+                    projects default to 8, so don't hard-code a width — accept
+                    whatever length the emailed code is. */}
                 <input
                   id="code"
                   className="field text-center text-lg tracking-widest"
                   type="text"
                   dir="ltr"
                   inputMode="numeric"
-                  placeholder="000000"
-                  maxLength={6}
+                  autoComplete="one-time-code"
+                  placeholder="הזן את הקוד מהאימייל"
+                  maxLength={10}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                   required
