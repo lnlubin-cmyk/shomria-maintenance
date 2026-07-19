@@ -18,6 +18,14 @@ export const STATUS_LABELS: Record<FaultStatus, string> = {
   closed: "הקריאה סגורה",
 };
 
+/** Compact labels for the resident status tracker (stepper). */
+export const STATUS_SHORT_LABELS: Record<FaultStatus, string> = {
+  received: "התקבלה",
+  in_treatment: "בטיפול",
+  fixed: "תוקנה",
+  closed: "סגורה",
+};
+
 export const TREATMENT_TYPE_LABELS: Record<TreatmentType, string> = {
   electricity: "חשמל",
   plumbing: "אינסטלציה",

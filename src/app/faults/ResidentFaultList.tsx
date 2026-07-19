@@ -3,14 +3,68 @@
 import Link from "next/link";
 import {
   STATUS_LABELS,
+  STATUS_SHORT_LABELS,
   STATUS_STYLES,
+  STATUS_ORDER,
   TREATMENT_TYPE_LABELS,
   PRIORITY_LABELS,
   PRIORITY_STYLES,
   formatDate,
   fullName,
   type FaultRow,
+  type FaultStatus,
 } from "@/lib/types";
+
+/**
+ * Visual status tracker — the four stages of a call, with the current one
+ * highlighted and earlier ones marked done. The page is RTL, so the first
+ * stage (התקבלה) sits on the right.
+ */
+function StatusTracker({ status }: { status: FaultStatus }) {
+  const current = STATUS_ORDER.indexOf(status);
+
+  return (
+    <ol className="flex items-start" aria-label="מעקב סטטוס">
+      {STATUS_ORDER.map((s, i) => {
+        const done = i < current;
+        const isCurrent = i === current;
+        return (
+          <li key={s} className="flex flex-1 items-start last:flex-none">
+            <div className="flex w-16 flex-col items-center">
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                  done
+                    ? "bg-brand-500 text-white"
+                    : isCurrent
+                      ? "bg-brand-500 text-white ring-4 ring-brand-100"
+                      : "bg-gray-200 text-gray-400"
+                }`}
+              >
+                {done ? "✓" : i + 1}
+              </span>
+              <span
+                className={`mt-1 text-center text-[11px] leading-tight ${
+                  isCurrent
+                    ? "font-semibold text-brand-700"
+                    : done
+                      ? "text-gray-600"
+                      : "text-gray-400"
+                }`}
+              >
+                {STATUS_SHORT_LABELS[s]}
+              </span>
+            </div>
+            {i < STATUS_ORDER.length - 1 && (
+              <div
+                className={`mt-3.5 h-0.5 flex-1 ${i < current ? "bg-brand-500" : "bg-gray-200"}`}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 /**
  * Spec: "בדיקת סטטוס קריאה" for a resident. Read-only — a resident never edits
@@ -47,7 +101,11 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
             <div className="text-sm text-gray-500">נפתחה: {formatDate(f.created_at)}</div>
           </div>
 
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <StatusTracker status={f.status} />
+          </div>
+
+          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-gray-500">שם הפונה</dt>
               <dd className="font-medium">{fullName(f.caller)}</dd>
