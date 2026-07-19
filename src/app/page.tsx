@@ -78,7 +78,7 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-t border-gray-200 py-6 text-center text-sm text-gray-500">
-        קהילת אמונה-שומריה — מערכת ניהול תחזוקה
+        קהילת עצמונה-שומריה — מערכת ניהול תחזוקה
       </footer>
     </div>
   );

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "קהילת אמונה-שומריה — מערכת ניהול תחזוקה",
-  description: "מערכת לניהול תחזוקת המבנים בקהילת אמונה-שומריה",
+  title: "קהילת עצמונה-שומריה — מערכת ניהול תחזוקה",
+  description: "מערכת לניהול תחזוקת המבנים בקהילת עצמונה-שומריה",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
