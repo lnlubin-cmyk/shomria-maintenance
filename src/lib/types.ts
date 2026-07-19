@@ -58,11 +58,28 @@ export interface Resident {
 
 export interface AppUser {
   id: string;
-  resident_id: string;
+  resident_id: string | null; // null for external (non-resident) maintenance staff
   role: UserRole;
+  first_name: string | null; // set only for non-resident users
+  last_name: string | null;
   email: string | null;
   phone: string | null;
   is_active: boolean;
+}
+
+/** A person who can be shown by name — either a linked resident or a user's own name. */
+export interface NamedUser {
+  first_name: string | null;
+  last_name: string | null;
+  resident: Pick<Resident, "first_name" | "last_name"> | null;
+}
+
+/** Display name for a user: their resident's name, or their own (external staff). */
+export function staffName(u: NamedUser | null | undefined): string {
+  if (!u) return "—";
+  if (u.resident) return `${u.resident.first_name} ${u.resident.last_name}`;
+  if (u.first_name && u.last_name) return `${u.first_name} ${u.last_name}`;
+  return "—";
 }
 
 export interface Building {
@@ -95,13 +112,16 @@ export interface Fault {
 export interface FaultRow extends Fault {
   caller: Pick<Resident, "first_name" | "last_name"> | null;
   building: Pick<Building, "building_name"> | null;
-  assignee: { resident: Pick<Resident, "first_name" | "last_name"> | null } | null;
+  // Assignee may be a non-resident staff member, so carry both name sources.
+  assignee: NamedUser | null;
 }
 
-/** The signed-in user plus their resident record. */
+/** The signed-in user. `resident` is null for external maintenance staff. */
 export interface Session {
   user: AppUser;
-  resident: Resident;
+  resident: Resident | null;
+  displayName: string;
+  residentId: string | null;
 }
 
 export function isStaff(role: UserRole): boolean {

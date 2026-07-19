@@ -24,9 +24,23 @@ password.
   and linked automatically; those users sign in with Google and need no password.
 - **Admin-created accounts** have no password yet, so their owner's first login
   uses the same email-code flow to set one.
+- **External maintenance staff** (see below) sign in the same way — their email
+  is on the `users` row, not `residents`, and the code flow recognizes both.
 
-Only an address on a resident record can register. (Phone/SMS login is deferred;
-`phone` stays on the record for the future SMS flow and the map feature.)
+A resident can self-register; anyone else (external staff) is created by an
+admin. (Phone/SMS login is deferred; `phone` stays on the record for the future
+SMS flow and the map feature.)
+
+## Users and residents
+
+Most users are **residents** with an account. But an admin can also create an
+**external maintenance worker/manager** — an outside contractor who is not a
+kibbutz resident. Such a user has no `resident_id` and carries its own name on
+the `users` row. A database check constraint enforces the rule: every user is
+either linked to a resident, or is an `איש תחזוקה` / `מנהל תחזוקה` with a name.
+External users can be assigned to calls and appear by name like anyone else;
+they just have no resident record, home building, or ability to be a call's
+"caller".
 
 Two dashboard settings are required for email login:
 
@@ -47,6 +61,7 @@ Verified end-to-end:
 - **9/9 database guard tests** — a resident with a valid JWT, bypassing the UI entirely, cannot edit תיאור הטיפול, change status, delete calls, self-assign אחריות, read others' calls, dump the residents table, or promote themselves to admin.
 - **7/7 email-login tests** — the residents-table gate recognizes members and normalizes case, doesn't reveal non-members, a real OTP sign-in reaches the right screen, and an authenticated non-resident is refused a `users` row.
 - **7/7 password-login tests** — password login reaches protected pages, a wrong password is rejected, and the first-login round trip (email code → set password → log in with it) works end to end.
+- **8/8 external-staff tests** — the identity constraint rejects invalid non-resident configs; an external maintenance worker can be created (no resident_id), is recognized by the login gate, sets a password, logs in, reaches the management table, and shows by name as a call's assignee.
 
 Not yet exercised with real delivery: the OTP email actually arriving (needs SMTP), the Excel import, and Google SSO against a real Google OAuth client.
 

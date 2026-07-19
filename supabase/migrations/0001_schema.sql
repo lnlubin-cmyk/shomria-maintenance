@@ -78,19 +78,31 @@ create index residents_first_name_idx on residents (first_name);
 -- ---------------------------------------------------------------------
 create table users (
   id           uuid primary key references auth.users (id) on delete cascade,
-  resident_id  text not null references residents (id) on delete restrict,
+  -- Nullable: maintenance staff may be external (not kibbutz residents).
+  resident_id  text references residents (id) on delete restrict,
   role         user_role not null default 'resident',   -- סוג המשתמש
+  -- Name for non-resident users. Resident-linked users take their name from the
+  -- residents row instead; these stay null there.
+  first_name   text,
+  last_name    text,
   email        text,
   phone        text,
   is_active    boolean not null default true,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
 
-  -- One account per resident.
-  constraint users_resident_unique unique (resident_id)
+  -- One account per resident (multiple NULLs allowed, so many external staff).
+  constraint users_resident_unique unique (resident_id),
+
+  -- Every user is either linked to a resident, or is external maintenance staff
+  -- with their own name. Non-residents are limited to the two maintenance roles.
+  constraint users_identity_check check (
+    resident_id is not null
+    or (role in ('maintenance', 'maintenance_manager') and first_name is not null and last_name is not null)
+  )
 );
 
-comment on table users is 'חשבונות משתמש. מקושר לתושב ומגדיר את סוג המשתמש.';
+comment on table users is 'חשבונות משתמש. מקושר לתושב, או עובד תחזוקה חיצוני עם שם משלו.';
 
 create index users_role_idx on users (role);
 

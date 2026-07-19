@@ -21,7 +21,7 @@ const SELECT = `
   created_at,
   caller:residents!faults_caller_resident_id_fkey(first_name, last_name),
   building:buildings!faults_building_plot_number_fkey(building_name),
-  assignee:users!faults_assigned_to_user_id_fkey(resident:residents(first_name, last_name))
+  assignee:users!faults_assigned_to_user_id_fkey(first_name, last_name, resident:residents(first_name, last_name))
 `;
 
 export default async function FaultsPage({
@@ -48,7 +48,7 @@ export default async function FaultsPage({
   const { data: workers } = staff
     ? await supabase
         .from("users")
-        .select("id, role, resident:residents(first_name, last_name)")
+        .select("id, role, first_name, last_name, resident:residents(first_name, last_name)")
         .in("role", ["maintenance", "maintenance_manager"])
         .eq("is_active", true)
     : { data: [] };

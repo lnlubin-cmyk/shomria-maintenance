@@ -15,12 +15,13 @@ export default function NewFaultForm({
 }: {
   buildings: Building[];
   defaultBuildingPlot: string | null;
-  currentResidentId: string;
+  currentResidentId: string | null;
   currentResidentName: string;
 }) {
   const router = useRouter();
 
   // Spec 2a: defaults to the current user, but may be changed to another resident.
+  // External staff have no resident of their own, so they start with no caller.
   const [callerId, setCallerId] = useState<string | null>(currentResidentId);
   const [buildingPlot, setBuildingPlot] = useState(defaultBuildingPlot ?? "");
   const [error, setError] = useState<string | null>(null);

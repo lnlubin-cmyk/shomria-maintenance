@@ -23,15 +23,22 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("residents")
-    .select("id")
-    .eq("email", normalized)
-    .maybeSingle();
 
-  if (error) {
+  // Registered = a resident (may self-register), OR an existing account. The
+  // second case covers admin-created accounts — residents whose email is set,
+  // and external maintenance staff who aren't residents at all — so they can
+  // run the code flow to set their first password.
+  const [{ data: resident, error: rErr }, { data: user, error: uErr }] = await Promise.all([
+    admin.from("residents").select("id").eq("email", normalized).maybeSingle(),
+    admin.from("users").select("id").eq("email", normalized).eq("is_active", true).maybeSingle(),
+  ]);
+
+  if (rErr || uErr) {
     return NextResponse.json({ error: "שגיאת מערכת. נסה שוב." }, { status: 500 });
   }
 
-  return NextResponse.json({ registered: Boolean(data), email: normalized });
+  return NextResponse.json({
+    registered: Boolean(resident) || Boolean(user),
+    email: normalized,
+  });
 }

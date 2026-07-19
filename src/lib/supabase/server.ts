@@ -64,13 +64,29 @@ export async function getSession(): Promise<Session | null> {
 
   const { data, error } = await supabase
     .from("users")
-    .select("id, resident_id, role, email, phone, is_active, resident:residents(id, first_name, last_name, phone, email)")
+    .select(
+      "id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(id, first_name, last_name, phone, email)"
+    )
     .eq("id", authUser.id)
     .single();
 
-  if (error || !data || !data.resident) return null;
+  // A resident-linked user must have its resident row; an external staff user
+  // legitimately has none. Reject only a truly orphaned row.
+  if (error || !data) return null;
   if (!data.is_active) return null;
+  if (data.resident_id && !data.resident) return null;
 
   const { resident, ...user } = data as any;
-  return { user, resident };
+  const displayName = resident
+    ? `${resident.first_name} ${resident.last_name}`
+    : user.first_name && user.last_name
+      ? `${user.first_name} ${user.last_name}`
+      : "משתמש";
+
+  return {
+    user,
+    resident: resident ?? null,
+    displayName,
+    residentId: resident?.id ?? null,
+  };
 }

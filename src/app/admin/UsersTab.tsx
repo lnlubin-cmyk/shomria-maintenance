@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ROLE_LABELS, fullName, type Resident, type UserRole } from "@/lib/types";
+import { ROLE_LABELS, staffName, type Resident, type UserRole } from "@/lib/types";
 import { formatIsraeliPhone } from "@/lib/phone";
 import { createUser, updateUserRole, deleteUser } from "./actions";
 import type { AdminUserRow } from "./AdminTabs";
 
 const ROLES = Object.keys(ROLE_LABELS) as UserRole[];
+// A non-resident account can only hold these roles.
+const EXTERNAL_ROLES: UserRole[] = ["maintenance", "maintenance_manager"];
+
+type NewUserKind = "resident" | "external";
 
 export default function UsersTab({
   users,
@@ -20,6 +24,7 @@ export default function UsersTab({
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [kind, setKind] = useState<NewUserKind>("resident");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -59,53 +64,139 @@ export default function UsersTab({
 
       {adding && (
         <form
+          key={kind}
           className="card space-y-4"
           action={async (fd) => {
-            if (await run(createUser, fd)) setAdding(false);
+            fd.set("kind", kind);
+            if (await run(createUser, fd)) {
+              setAdding(false);
+              setKind("resident");
+            }
           }}
         >
           <h2 className="font-semibold">משתמש חדש</h2>
-          <p className="text-sm text-gray-600">
-            המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם האימייל הרשום לתושב וקוד אימות.
-          </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label" htmlFor="resident_id">
-                תושב *
-              </label>
-              <select id="resident_id" name="resident_id" className="field" required>
-                <option value="">— בחר תושב —</option>
-                {available.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.first_name} {r.last_name} — {r.email}
-                  </option>
-                ))}
-              </select>
-              {available.length === 0 && (
-                <p className="mt-1 text-xs text-amber-700">
-                  אין תושבים זמינים. ודא שלתושב יש אימייל ושעדיין אין לו חשבון.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="label" htmlFor="role">
-                סוג משתמש *
-              </label>
-              <select id="role" name="role" className="field" defaultValue="resident" required>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setKind("resident")}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                kind === "resident"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-gray-300 text-gray-600"
+              }`}
+            >
+              תושב קיים
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind("external")}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                kind === "external"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-gray-300 text-gray-600"
+              }`}
+            >
+              עובד תחזוקה חיצוני
+            </button>
           </div>
 
-          <button type="submit" className="btn-primary" disabled={busy || available.length === 0}>
-            {busy ? "יוצר..." : "יצירת משתמש"}
-          </button>
+          {kind === "resident" ? (
+            <>
+              <p className="text-sm text-gray-600">
+                המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם האימייל הרשום לתושב וקוד אימות.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="resident_id">
+                    תושב *
+                  </label>
+                  <select id="resident_id" name="resident_id" className="field" required>
+                    <option value="">— בחר תושב —</option>
+                    {available.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.first_name} {r.last_name} — {r.email}
+                      </option>
+                    ))}
+                  </select>
+                  {available.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      אין תושבים זמינים. ודא שלתושב יש אימייל ושעדיין אין לו חשבון.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="label" htmlFor="role">
+                    סוג משתמש *
+                  </label>
+                  <select id="role" name="role" className="field" defaultValue="resident" required>
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="btn-primary" disabled={busy || available.length === 0}>
+                {busy ? "יוצר..." : "יצירת משתמש"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                עובד תחזוקה שאינו תושב הישוב (למשל קבלן חיצוני). הכניסה תתבצע עם האימייל שתזין וקוד
+                אימות.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="first_name">
+                    שם פרטי *
+                  </label>
+                  <input id="first_name" name="first_name" className="field" required />
+                </div>
+                <div>
+                  <label className="label" htmlFor="last_name">
+                    שם משפחה *
+                  </label>
+                  <input id="last_name" name="last_name" className="field" required />
+                </div>
+                <div>
+                  <label className="label" htmlFor="ext_email">
+                    אימייל *
+                  </label>
+                  <input id="ext_email" name="email" type="email" dir="ltr" className="field" required />
+                </div>
+                <div>
+                  <label className="label" htmlFor="ext_phone">
+                    טלפון
+                  </label>
+                  <input
+                    id="ext_phone"
+                    name="phone"
+                    dir="ltr"
+                    className="field"
+                    placeholder="050-123-4567"
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="ext_role">
+                    סוג משתמש *
+                  </label>
+                  <select id="ext_role" name="role" className="field" defaultValue="maintenance" required>
+                    {EXTERNAL_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="btn-primary" disabled={busy}>
+                {busy ? "יוצר..." : "יצירת משתמש"}
+              </button>
+            </>
+          )}
         </form>
       )}
 
@@ -114,6 +205,7 @@ export default function UsersTab({
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="px-3 py-3">שם</th>
+              <th className="px-3 py-3">סוג</th>
               <th className="px-3 py-3">תעודת זהות</th>
               <th className="px-3 py-3">טלפון</th>
               <th className="px-3 py-3">אימייל</th>
@@ -124,7 +216,7 @@ export default function UsersTab({
           <tbody className="divide-y divide-gray-100">
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">
                   אין משתמשים במערכת.
                 </td>
               </tr>
@@ -132,13 +224,16 @@ export default function UsersTab({
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-3 py-3 font-medium">
-                  {fullName(u.resident)}
+                  {staffName(u)}
                   {u.id === currentUserId && (
                     <span className="mr-2 text-xs text-gray-500">(אתה)</span>
                   )}
                 </td>
+                <td className="px-3 py-3 text-xs text-gray-500">
+                  {u.resident_id ? "תושב" : "חיצוני"}
+                </td>
                 <td className="px-3 py-3" dir="ltr">
-                  {u.resident_id}
+                  {u.resident_id ?? "—"}
                 </td>
                 <td className="px-3 py-3" dir="ltr">
                   {u.phone ? formatIsraeliPhone(u.phone) : "—"}
@@ -174,7 +269,7 @@ export default function UsersTab({
                         await run(deleteUser, fd);
                       }}
                       onSubmit={(e) => {
-                        if (!confirm(`למחוק את המשתמש ${fullName(u.resident)}?`)) {
+                        if (!confirm(`למחוק את המשתמש ${staffName(u)}?`)) {
                           e.preventDefault();
                         }
                       }}

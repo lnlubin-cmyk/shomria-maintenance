@@ -13,6 +13,7 @@ import {
   PRIORITY_STYLES,
   formatDate,
   fullName,
+  staffName,
   type FaultRow,
   type FaultStatus,
   type TreatmentType,
@@ -67,7 +68,7 @@ export default function StaffFaultTable({
         has(f.fault_description, filters.description) &&
         (!filters.status || f.status === filters.status) &&
         (!filters.priority || f.priority === filters.priority) &&
-        has(fullName(f.assignee?.resident), filters.assignee) &&
+        has(staffName(f.assignee), filters.assignee) &&
         has(f.treatment_description, filters.treatment_description) &&
         (!filters.treatment_type || f.treatment_type === filters.treatment_type) &&
         has(formatDate(f.created_at), filters.created_at)
@@ -364,7 +365,7 @@ export default function StaffFaultTable({
                     {PRIORITY_LABELS[f.priority]}
                   </span>
                 </td>
-                <td className="px-3 py-3">{fullName(f.assignee?.resident)}</td>
+                <td className="px-3 py-3">{staffName(f.assignee)}</td>
                 <td className="max-w-56 px-3 py-3">
                   <div className="truncate" title={f.treatment_description ?? ""}>
                     {f.treatment_description || "—"}

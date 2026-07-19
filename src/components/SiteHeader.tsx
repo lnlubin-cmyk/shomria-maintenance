@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ROLE_LABELS, isStaff, fullName, type Session } from "@/lib/types";
+import { ROLE_LABELS, isStaff, type Session } from "@/lib/types";
 
 /** Shared header. The menu adapts to the signed-in user's role (spec, screen 1). */
 export default function SiteHeader({ session }: { session: Session | null }) {
@@ -36,7 +36,7 @@ export default function SiteHeader({ session }: { session: Session | null }) {
             <>
               <div className="hidden text-left sm:block">
                 <div className="text-sm font-medium leading-tight">
-                  {fullName(session.resident)}
+                  {session.displayName}
                 </div>
                 <div className="text-xs leading-tight text-gray-500">
                   {ROLE_LABELS[session.user.role]}

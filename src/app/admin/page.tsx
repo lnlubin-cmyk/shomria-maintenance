@@ -31,7 +31,7 @@ export default async function AdminPage() {
       .order("plot_number"),
     supabase
       .from("users")
-      .select("id, resident_id, role, email, phone, is_active, resident:residents(first_name, last_name)")
+      .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name)")
       .order("role"),
   ]);
 

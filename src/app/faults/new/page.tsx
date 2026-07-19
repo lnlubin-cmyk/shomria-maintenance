@@ -18,10 +18,14 @@ export default async function NewFaultPage() {
   const list = (buildings ?? []) as Building[];
 
   // Spec 2b: default to the building where this user is registered as a resident.
-  const rid = session.resident.id;
-  const home = list.find(
-    (b) => b.resident_1 === rid || b.resident_2 === rid || b.resident_3 === rid || b.resident_4 === rid
-  );
+  // External (non-resident) staff have no home building — they pick one.
+  const rid = session.residentId;
+  const home = rid
+    ? list.find(
+        (b) =>
+          b.resident_1 === rid || b.resident_2 === rid || b.resident_3 === rid || b.resident_4 === rid
+      )
+    : undefined;
 
   return (
     <div className="min-h-screen">
@@ -35,8 +39,8 @@ export default async function NewFaultPage() {
         <NewFaultForm
           buildings={list}
           defaultBuildingPlot={home?.plot_number ?? null}
-          currentResidentId={session.resident.id}
-          currentResidentName={`${session.resident.first_name} ${session.resident.last_name}`}
+          currentResidentId={session.residentId}
+          currentResidentName={session.residentId ? session.displayName : ""}
         />
       </main>
     </div>

@@ -10,8 +10,10 @@ type Tab = "users" | "residents" | "buildings";
 
 export interface AdminUserRow {
   id: string;
-  resident_id: string;
+  resident_id: string | null;
   role: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   phone: string | null;
   is_active: boolean;

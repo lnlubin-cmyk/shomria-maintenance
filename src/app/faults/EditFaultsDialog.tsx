@@ -8,17 +8,17 @@ import {
   TREATMENT_TYPE_ORDER,
   PRIORITY_LABELS,
   PRIORITY_ORDER,
-  fullName,
+  staffName,
   type FaultRow,
   type FaultStatus,
   type TreatmentType,
   type FaultPriority,
+  type NamedUser,
 } from "@/lib/types";
 
-export interface Worker {
+export interface Worker extends NamedUser {
   id: string;
   role: string;
-  resident: { first_name: string; last_name: string } | null;
 }
 
 /**
@@ -166,7 +166,7 @@ export default function EditFaultsDialog({
               <option value="__none__">— ללא אחראי —</option>
               {workers.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {fullName(w.resident)}
+                  {staffName(w)}
                 </option>
               ))}
             </select>

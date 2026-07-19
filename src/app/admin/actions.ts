@@ -167,9 +167,15 @@ export async function deleteBuilding(formData: FormData): Promise<ActionResult> 
 // משתמשים
 // ---------------------------------------------------------------------------
 
+// Roles allowed for a non-resident (external) account.
+const EXTERNAL_ROLES: UserRole[] = ["maintenance", "maintenance_manager"];
+
 /**
- * Creates an auth account for an existing resident and links it. The resident
- * can then sign in with the phone OTP flow — no password is ever set here.
+ * Creates an account. Two kinds:
+ *  - "resident": linked to an existing resident; email comes from that record.
+ *  - "external": a non-resident maintenance worker/manager with their own name
+ *    and email (e.g. an outside contractor).
+ * No password is set here — the owner signs in with the email-code flow.
  */
 export async function createUser(formData: FormData): Promise<ActionResult> {
   try {
@@ -178,40 +184,79 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     return { error: (e as Error).message };
   }
 
-  const residentId = String(formData.get("resident_id") ?? "").trim();
+  const kind = String(formData.get("kind") ?? "resident").trim();
   const role = String(formData.get("role") ?? "").trim();
-
-  if (!residentId) return { error: "יש לבחור תושב" };
   if (!VALID_ROLES.includes(role as UserRole)) return { error: "סוג משתמש לא חוקי" };
 
   const admin = createAdminClient();
 
-  const { data: resident } = await admin
-    .from("residents")
-    .select("id, phone, email")
-    .eq("id", residentId)
-    .maybeSingle();
+  // Fields for the users row and the auth account, filled per kind below.
+  let residentId: string | null = null;
+  let email: string;
+  let phone: string | null = null;
+  let firstName: string | null = null;
+  let lastName: string | null = null;
 
-  if (!resident) return { error: "התושב אינו קיים" };
+  if (kind === "external") {
+    if (!EXTERNAL_ROLES.includes(role as UserRole)) {
+      return { error: "משתמש שאינו תושב יכול להיות איש תחזוקה או מנהל תחזוקה בלבד" };
+    }
 
-  // Login is by email, so an account can't exist without one. The admin sets
-  // the resident's email on the תושבים tab first.
-  if (!resident.email) {
-    return { error: "לתושב זה אין אימייל. יש להוסיף אימייל בכרטיס התושב לפני יצירת חשבון." };
+    firstName = String(formData.get("first_name") ?? "").trim();
+    lastName = String(formData.get("last_name") ?? "").trim();
+    const emailNorm = normalizeEmail(String(formData.get("email") ?? ""));
+    phone = normalizeIsraeliPhone(String(formData.get("phone") ?? "")) || null;
+
+    if (!firstName) return { error: "שם פרטי חובה" };
+    if (!lastName) return { error: "שם משפחה חובה" };
+    if (!emailNorm) return { error: "כתובת אימייל אינה תקינה" };
+    email = emailNorm;
+
+    // Email must be free across both residents and existing accounts.
+    const { data: takenResident } = await admin
+      .from("residents")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (takenResident) {
+      return { error: "האימייל שייך לתושב קיים. צור עבורו משתמש דרך „תושב קיים”." };
+    }
+    const { data: takenUser } = await admin
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (takenUser) return { error: "כתובת האימייל כבר רשומה למשתמש אחר" };
+  } else {
+    residentId = String(formData.get("resident_id") ?? "").trim();
+    if (!residentId) return { error: "יש לבחור תושב" };
+
+    const { data: resident } = await admin
+      .from("residents")
+      .select("id, phone, email")
+      .eq("id", residentId)
+      .maybeSingle();
+
+    if (!resident) return { error: "התושב אינו קיים" };
+    if (!resident.email) {
+      return { error: "לתושב זה אין אימייל. יש להוסיף אימייל בכרטיס התושב לפני יצירת חשבון." };
+    }
+
+    const { data: existing } = await admin
+      .from("users")
+      .select("id")
+      .eq("resident_id", residentId)
+      .maybeSingle();
+    if (existing) return { error: "לתושב זה כבר קיים חשבון" };
+
+    email = resident.email;
+    phone = resident.phone;
   }
 
-  const { data: existing } = await admin
-    .from("users")
-    .select("id")
-    .eq("resident_id", residentId)
-    .maybeSingle();
-
-  if (existing) return { error: "לתושב זה כבר קיים חשבון" };
-
-  // email_confirm: the admin is vouching for the address, so skip the
-  // confirmation email — the resident just signs in with a code.
+  // email_confirm: the admin vouches for the address, so skip the confirmation
+  // email — the person just signs in with a code.
   const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email: resident.email,
+    email,
     email_confirm: true,
   });
 
@@ -223,8 +268,10 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     id: created.user.id,
     resident_id: residentId,
     role,
-    email: resident.email,
-    phone: resident.phone,
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    phone,
   });
 
   if (error) {
@@ -251,9 +298,21 @@ export async function updateUserRole(formData: FormData): Promise<ActionResult> 
   if (!userId) return { error: "משתמש חסר" };
   if (!VALID_ROLES.includes(role as UserRole)) return { error: "סוג משתמש לא חוקי" };
 
+  const admin = createAdminClient();
+
+  // An external (non-resident) user can only hold a maintenance role — the DB
+  // check constraint enforces this, but catch it here for a clear message.
+  const { data: target } = await admin
+    .from("users")
+    .select("resident_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (target && !target.resident_id && !EXTERNAL_ROLES.includes(role as UserRole)) {
+    return { error: "משתמש שאינו תושב יכול להיות איש תחזוקה או מנהל תחזוקה בלבד" };
+  }
+
   // Guard against the last admin demoting themselves and locking everyone out.
   if (userId === session.user.id && role !== "admin") {
-    const admin = createAdminClient();
     const { count } = await admin
       .from("users")
       .select("id", { count: "exact", head: true })
@@ -264,7 +323,6 @@ export async function updateUserRole(formData: FormData): Promise<ActionResult> 
     }
   }
 
-  const admin = createAdminClient();
   const { error } = await admin.from("users").update({ role }).eq("id", userId);
 
   if (error) return { error: "עדכון סוג המשתמש נכשל" };
