@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -245,8 +246,11 @@ function LoginForm() {
           <Link href="/" className="text-sm text-brand-600 hover:underline">
             ← חזרה לדף הבית
           </Link>
+          <Link href="/" className="mt-4 flex justify-center">
+            <Logo className="h-20 w-auto" />
+          </Link>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">{titles[step]}</h1>
-          <p className="mt-1 text-sm text-gray-600">קיבוץ שומריה — ניהול תחזוקה</p>
+          <p className="mt-1 text-sm text-gray-600">מערכת ניהול תחזוקה</p>
         </div>
 
         <div className="card">

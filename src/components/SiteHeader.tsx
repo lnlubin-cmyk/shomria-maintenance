@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { ROLE_LABELS, isStaff, type Session } from "@/lib/types";
 
 /** Shared header. The menu adapts to the signed-in user's role (spec, screen 1). */
@@ -7,10 +8,7 @@ export default function SiteHeader({ session }: { session: Session | null }) {
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
-            ש
-          </span>
-          <span className="text-base font-bold text-gray-900">קיבוץ שומריה</span>
+          <Logo className="h-11 w-auto" />
         </Link>
 
         <nav className="flex items-center gap-1 text-sm">

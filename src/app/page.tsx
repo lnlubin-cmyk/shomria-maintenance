@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import SiteHeader from "@/components/SiteHeader";
+import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
 
 export default async function HomePage() {
@@ -14,6 +15,7 @@ export default async function HomePage() {
       <main className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div>
+            <Logo className="mb-6 h-24 w-auto" />
             <h1 className="text-4xl font-bold leading-tight text-gray-900">
               מערכת ניהול תחזוקה
             </h1>
@@ -76,7 +78,7 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-t border-gray-200 py-6 text-center text-sm text-gray-500">
-        קיבוץ שומריה — מערכת ניהול תחזוקה
+        קהילת אמונה-שומריה — מערכת ניהול תחזוקה
       </footer>
     </div>
   );
