@@ -1,6 +1,7 @@
 export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager";
 export type FaultStatus = "received" | "in_treatment" | "fixed" | "closed";
 export type TreatmentType = "electricity" | "plumbing" | "other";
+export type FaultPriority = "very_urgent" | "normal" | "can_wait";
 
 /** Hebrew labels — the single source of truth for how each enum renders. */
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -23,14 +24,28 @@ export const TREATMENT_TYPE_LABELS: Record<TreatmentType, string> = {
   other: "אחר",
 };
 
+export const PRIORITY_LABELS: Record<FaultPriority, string> = {
+  very_urgent: "דחוף מאוד",
+  normal: "רגיל",
+  can_wait: "יכול לחכות",
+};
+
 export const STATUS_ORDER: FaultStatus[] = ["received", "in_treatment", "fixed", "closed"];
 export const TREATMENT_TYPE_ORDER: TreatmentType[] = ["electricity", "plumbing", "other"];
+// Most urgent first.
+export const PRIORITY_ORDER: FaultPriority[] = ["very_urgent", "normal", "can_wait"];
 
 export const STATUS_STYLES: Record<FaultStatus, string> = {
   received: "bg-blue-100 text-blue-800",
   in_treatment: "bg-amber-100 text-amber-800",
   fixed: "bg-emerald-100 text-emerald-800",
   closed: "bg-gray-200 text-gray-700",
+};
+
+export const PRIORITY_STYLES: Record<FaultPriority, string> = {
+  very_urgent: "bg-red-100 text-red-800",
+  normal: "bg-gray-100 text-gray-700",
+  can_wait: "bg-slate-100 text-slate-500",
 };
 
 export interface Resident {
@@ -68,6 +83,7 @@ export interface Fault {
   building_plot_number: string;
   fault_description: string;
   status: FaultStatus;
+  priority: FaultPriority;
   assigned_to_user_id: string | null;
   treatment_description: string | null;
   treatment_type: TreatmentType | null;

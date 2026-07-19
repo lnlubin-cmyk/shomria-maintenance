@@ -13,6 +13,7 @@ const SELECT = `
   building_plot_number,
   fault_description,
   status,
+  priority,
   assigned_to_user_id,
   treatment_description,
   treatment_type,

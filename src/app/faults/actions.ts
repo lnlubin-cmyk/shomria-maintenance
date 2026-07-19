@@ -6,10 +6,12 @@ import { createClient, getSession } from "@/lib/supabase/server";
 import {
   STATUS_ORDER,
   TREATMENT_TYPE_ORDER,
+  PRIORITY_ORDER,
   isStaff,
   canDeleteFaults,
   type FaultStatus,
   type TreatmentType,
+  type FaultPriority,
 } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true };
@@ -72,6 +74,14 @@ export async function updateFaults(formData: FormData): Promise<ActionResult> {
       return { error: "סוג טיפול לא חוקי" };
     }
     patch.treatment_type = treatmentType;
+  }
+
+  const priority = String(formData.get("priority") ?? "");
+  if (priority) {
+    if (!PRIORITY_ORDER.includes(priority as FaultPriority)) {
+      return { error: "עדיפות לא חוקית" };
+    }
+    patch.priority = priority;
   }
 
   // Free text. An empty string is a real value here — it clears the field —

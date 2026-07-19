@@ -5,6 +5,8 @@ import {
   STATUS_LABELS,
   STATUS_STYLES,
   TREATMENT_TYPE_LABELS,
+  PRIORITY_LABELS,
+  PRIORITY_STYLES,
   formatDate,
   fullName,
   type FaultRow,
@@ -54,6 +56,16 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
               <dt className="text-gray-500">סוג הטיפול</dt>
               <dd className="font-medium">
                 {f.treatment_type ? TREATMENT_TYPE_LABELS[f.treatment_type] : "טרם נקבע"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">עדיפות</dt>
+              <dd>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_STYLES[f.priority]}`}
+                >
+                  {PRIORITY_LABELS[f.priority]}
+                </span>
               </dd>
             </div>
             <div className="sm:col-span-2">

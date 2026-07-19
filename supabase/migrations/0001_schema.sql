@@ -32,6 +32,13 @@ create type treatment_type as enum (
   'other'          -- אחר
 );
 
+-- עדיפות הטיפול
+create type fault_priority as enum (
+  'very_urgent',   -- דחוף מאוד
+  'normal',        -- רגיל
+  'can_wait'       -- יכול לחכות
+);
+
 -- ---------------------------------------------------------------------
 -- תושבים (residents)
 -- Also serves as the allowlist of who may register for the system.
@@ -137,6 +144,7 @@ create table faults (
 
   fault_description     text not null,                        -- תיאור התקלה (חובה)
   status                fault_status not null default 'received',  -- סטטוס תקלה
+  priority              fault_priority not null default 'normal',  -- עדיפות הטיפול
   assigned_to_user_id   uuid references users (id) on delete set null,  -- אחריות (איש תחזוקה)
   treatment_description text,                                 -- תיאור הטיפול
   treatment_type        treatment_type,                       -- סוג הטיפול

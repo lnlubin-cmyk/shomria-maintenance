@@ -6,10 +6,13 @@ import {
   STATUS_ORDER,
   TREATMENT_TYPE_LABELS,
   TREATMENT_TYPE_ORDER,
+  PRIORITY_LABELS,
+  PRIORITY_ORDER,
   fullName,
   type FaultRow,
   type FaultStatus,
   type TreatmentType,
+  type FaultPriority,
 } from "@/lib/types";
 
 export interface Worker {
@@ -43,6 +46,7 @@ export default function EditFaultsDialog({
   onSave: (patch: {
     status?: FaultStatus | "";
     treatment_type?: TreatmentType | "";
+    priority?: FaultPriority | "";
     treatment_description?: string | null;
     assigned_to_user_id?: string | "";
   }) => void;
@@ -51,6 +55,7 @@ export default function EditFaultsDialog({
   const [treatmentType, setTreatmentType] = useState<TreatmentType | "">(
     single?.treatment_type ?? ""
   );
+  const [priority, setPriority] = useState<FaultPriority | "">(single?.priority ?? "");
   const [treatmentDescription, setTreatmentDescription] = useState(
     single?.treatment_description ?? ""
   );
@@ -64,6 +69,7 @@ export default function EditFaultsDialog({
     onSave({
       status,
       treatment_type: treatmentType,
+      priority,
       treatment_description: writeDescription ? treatmentDescription : undefined,
       // Only send the assignee if it actually changed. Resubmitting an
       // unchanged one re-validates it, so a worker who has since been demoted
@@ -103,6 +109,25 @@ export default function EditFaultsDialog({
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
                   {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="priority">
+              עדיפות
+            </label>
+            <select
+              id="priority"
+              className="field"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as FaultPriority | "")}
+            >
+              <option value="">{single ? "— בחר —" : "— ללא שינוי —"}</option>
+              {PRIORITY_ORDER.map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_LABELS[p]}
                 </option>
               ))}
             </select>

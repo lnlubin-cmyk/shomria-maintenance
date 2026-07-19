@@ -204,6 +204,9 @@ begin
     if new.assigned_to_user_id is distinct from old.assigned_to_user_id then
       raise exception 'רק איש תחזוקה רשאי לשנות אחריות';
     end if;
+    if new.priority is distinct from old.priority then
+      raise exception 'רק איש תחזוקה רשאי לשנות עדיפות';
+    end if;
   end if;
 
   return new;

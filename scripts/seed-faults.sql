@@ -44,4 +44,9 @@ update faults set status = 'closed', treatment_description = 'נוקה צינו�
 update faults set status = 'in_treatment', treatment_description = 'הוזמן חלק חלופי'
   where fault_description like 'שקע חשמל בכיתה%';
 
-select fault_number, status, fault_description from faults order by fault_number;
+-- Priority variety (default is 'normal').
+update faults set priority = 'very_urgent' where fault_description like 'נזילה מתחת לכיור%';
+update faults set priority = 'very_urgent' where fault_description like 'שקע חשמל בכיתה%';
+update faults set priority = 'can_wait'    where fault_description like 'דלת הכניסה%';
+
+select fault_number, status, priority, fault_description from faults order by fault_number;
