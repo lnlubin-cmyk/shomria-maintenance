@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Script from "next/script";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Shared govmap canvas. Loads the govmap SDK, creates a streets-and-buildings
@@ -12,6 +11,9 @@ import Script from "next/script";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const govmap: any;
+
+const SDK_URL = "https://www.govmap.gov.il/govmap/api/govmap.api.js";
+const SDK_ID = "govmap-sdk";
 
 // Kibbutz Shomria center in ITM (from 31.43223°N, 34.88374°E).
 export const SHOMRIA_ITM = { x: 188967, y: 593407 };
@@ -42,9 +44,10 @@ export function drawHouses(points: HousePoint[], fill = "#2f7d5d") {
     names: points.map((p) => p.label),
     labels: points.map((p) => p.label),
     geometryType: g.geometryType.POINT,
-    defaultSymbol: { url: pinDataUri(fill), width: 18, height: 18 },
+    defaultSymbol: { url: pinDataUri(fill), width: 16, height: 16 },
     clearExisting: true,
-    fontLabel: { fontName: "Arial", fontSize: 13, fillColor: "#1c4d38", strokeColor: "#ffffff" },
+    // Crisp dark label, no heavy white halo (the base map is light).
+    fontLabel: { fontName: "Arial", fontSize: 14, fillColor: "#14532d" },
   });
 }
 
@@ -73,39 +76,70 @@ export default function GovMap({
   clickRef.current = onMapClick;
   const [error, setError] = useState<string | null>(null);
 
-  function initMap() {
-    const token = process.env.NEXT_PUBLIC_GOVMAP_TOKEN;
-    try {
-      govmap.createMap("govmap", {
-        token,
-        background: "0", // רחובות ומבנים
-        level,
-        center: SHOMRIA_ITM,
-        onLoad: () => {
-          try {
-            govmap.onEvent(govmap.events.CLICK).progress((e: { mapPoint?: { x: number; y: number } }) => {
-              const mp = e?.mapPoint;
-              if (mp && typeof mp.x === "number") clickRef.current?.(mp.x, mp.y);
-            });
-          } catch {
-            /* clicks optional */
-          }
-          readyRef.current?.();
-        },
-      });
-    } catch (e) {
-      setError(`טעינת המפה נכשלה: ${(e as Error).message}`);
+  useEffect(() => {
+    let cancelled = false;
+
+    function createMap() {
+      if (cancelled || typeof govmap === "undefined") return;
+      try {
+        govmap.createMap("govmap", {
+          token: process.env.NEXT_PUBLIC_GOVMAP_TOKEN,
+          background: "0", // רחובות ומבנים
+          level,
+          center: SHOMRIA_ITM,
+          onLoad: () => {
+            try {
+              govmap
+                .onEvent(govmap.events.CLICK)
+                .progress((e: { mapPoint?: { x: number; y: number } }) => {
+                  const mp = e?.mapPoint;
+                  if (mp && typeof mp.x === "number") clickRef.current?.(mp.x, mp.y);
+                });
+            } catch {
+              /* clicks optional */
+            }
+            readyRef.current?.();
+          },
+        });
+      } catch (e) {
+        setError(`טעינת המפה נכשלה: ${(e as Error).message}`);
+      }
     }
-  }
+
+    // The SDK sets a global. On client-side navigation the script is already
+    // loaded, so next/script's onLoad would never fire — load it ourselves and
+    // create the map whether the SDK is already present or loads now.
+    if (typeof govmap !== "undefined") {
+      createMap();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let script = document.getElementById(SDK_ID) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = SDK_ID;
+      script.src = SDK_URL;
+      script.async = true;
+      document.body.appendChild(script);
+    }
+    const onLoad = () => createMap();
+    const onErr = () => setError("טעינת סקריפט govmap נכשלה (בדוק חיבור לרשת).");
+    script.addEventListener("load", onLoad);
+    script.addEventListener("error", onErr);
+
+    return () => {
+      cancelled = true;
+      script?.removeEventListener("load", onLoad);
+      script?.removeEventListener("error", onErr);
+    };
+    // level is stable for a given mount; callbacks go through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
-      <Script
-        src="https://www.govmap.gov.il/govmap/api/govmap.api.js"
-        strategy="afterInteractive"
-        onLoad={initMap}
-        onError={() => setError("טעינת סקריפט govmap נכשלה (בדוק חיבור לרשת).")}
-      />
       {error && (
         <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">
           {error}
