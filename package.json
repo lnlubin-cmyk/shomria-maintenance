@@ -13,12 +13,14 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "next": "^14.2.15",
+    "proj4": "^2.20.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
+    "@types/proj4": "^2.5.6",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",

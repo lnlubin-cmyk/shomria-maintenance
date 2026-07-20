@@ -20,7 +20,8 @@ import Script from "next/script";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const govmap: any;
 
-const SHOMRIA_ITM = { x: 187500, y: 588500 }; // approximate — adjust after we see it
+// Kibbutz Shomria center in ITM (converted from 31.43223°N, 34.88374°E).
+const SHOMRIA_ITM = { x: 188967, y: 593407 };
 
 // A small green dot as a data URI, so markers are visible without a hosted image.
 const PIN =
@@ -66,9 +67,8 @@ export default function MapSpike({ token }: { token: string }) {
     try {
       govmap.createMap("govmap", {
         token,
-        // background "2" is usually the orthophoto (aerial). If the base map
-        // isn't aerial, tell me and I'll switch the value.
-        background: "2",
+        // "0" = רחובות ומבנים (streets & buildings). ("1"=aerial, "2"=combined.)
+        background: "0",
         level: 8,
         center: SHOMRIA_ITM,
         onLoad: () => {
