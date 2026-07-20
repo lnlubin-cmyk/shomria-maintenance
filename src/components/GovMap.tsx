@@ -80,12 +80,14 @@ export default function GovMap({
   onReady,
   onMapClick,
   onZoom,
+  onDebug,
   height = 560,
 }: {
   level?: number;
   onReady?: () => void;
   onMapClick?: (itmX: number, itmY: number) => void;
   onZoom?: (zoomLevel: number) => void;
+  onDebug?: (msg: string) => void;
   height?: number;
 }) {
   const readyRef = useRef(onReady);
@@ -94,6 +96,8 @@ export default function GovMap({
   clickRef.current = onMapClick;
   const zoomRef = useRef(onZoom);
   zoomRef.current = onZoom;
+  const dbgRef = useRef(onDebug);
+  dbgRef.current = onDebug;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -118,39 +122,50 @@ export default function GovMap({
               /* clicks optional */
             }
             // Report zoom level now and on every view change, so callers can
-            // hide labels when zoomed out. getZoomLevel() may return a number
-            // or a promise; coerce whatever comes back to a number.
+            // hide labels when zoomed out. Instrumented with onDebug so we can
+            // see, in-browser, what getZoomLevel returns and which events exist.
+            const dbg = (m: string) => dbgRef.current?.(m);
             const coerce = (v: unknown): number | null => {
               if (typeof v === "number") return v;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const o = v as any;
-              const n = o?.level ?? o?.zoom ?? Number(o);
+              const n = o?.level ?? o?.zoom ?? o?.zoomLevel ?? Number(o);
               return typeof n === "number" && !Number.isNaN(n) ? n : null;
             };
-            const reportZoom = () => {
+            const readZoom = () => {
               try {
+                if (typeof govmap.getZoomLevel !== "function") {
+                  dbg("getZoomLevel: not a function");
+                  return;
+                }
                 const r = govmap.getZoomLevel();
                 if (r && typeof r.then === "function") {
                   r.then((lvl: unknown) => {
+                    dbg("zoom=" + JSON.stringify(lvl));
                     const n = coerce(lvl);
                     if (n != null) zoomRef.current?.(n);
                   });
                 } else {
+                  dbg("zoom(sync)=" + JSON.stringify(r));
                   const n = coerce(r);
                   if (n != null) zoomRef.current?.(n);
                 }
-              } catch {
-                /* zoom reporting optional */
+              } catch (e) {
+                dbg("getZoomLevel threw: " + (e as Error).message);
               }
             };
-            for (const ev of ["EXTENT_CHANGE", "PAN"]) {
-              try {
-                govmap.onEvent(govmap.events[ev]).progress(reportZoom);
-              } catch {
-                /* event optional */
+            dbg("events: " + (govmap.events ? Object.keys(govmap.events).join(",") : "none"));
+            for (const ev of ["EXTENT_CHANGE", "PAN", "ZOOM", "EXTENTCHANGE"]) {
+              if (govmap.events && ev in govmap.events) {
+                try {
+                  govmap.onEvent(govmap.events[ev]).progress(readZoom);
+                  dbg("subscribed " + ev);
+                } catch {
+                  dbg("subscribe failed " + ev);
+                }
               }
             }
-            reportZoom();
+            readZoom();
             readyRef.current?.();
           },
         });

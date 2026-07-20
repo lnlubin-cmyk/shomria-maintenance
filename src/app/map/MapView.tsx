@@ -30,6 +30,7 @@ export default function MapView({
   const [selected, setSelected] = useState<Building | null>(null);
   const [labelsHidden, setLabelsHidden] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number | null>(null); // shown for calibration
+  const [debug, setDebug] = useState<string[]>([]);
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
 
@@ -205,11 +206,20 @@ export default function MapView({
             </span>
           )}
         </div>
+        {debug.length > 0 && (
+          <pre
+            className="mb-2 max-h-32 overflow-auto rounded-lg bg-gray-900 p-2 text-[11px] text-gray-100"
+            dir="ltr"
+          >
+            {debug.join("\n")}
+          </pre>
+        )}
         <GovMap
           level={9}
           onReady={onReady}
           onMapClick={onMapClick}
           onZoom={onZoom}
+          onDebug={(m) => setDebug((d) => [...d.slice(-14), m])}
           height={620}
         />
       </div>
