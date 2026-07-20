@@ -29,6 +29,7 @@ export default function MapView({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Building | null>(null);
   const [labelsHidden, setLabelsHidden] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number | null>(null); // shown for calibration
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
 
@@ -58,6 +59,7 @@ export default function MapView({
   }
 
   function onZoom(level: number) {
+    setZoomLevel(level);
     const show = level >= LABEL_MIN_ZOOM;
     if (show !== showLabelsRef.current) {
       showLabelsRef.current = show;
@@ -192,11 +194,17 @@ export default function MapView({
       </div>
 
       <div>
-        {labelsHidden && (
-          <div className="mb-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
-            התקרב במפה כדי לראות את שמות הבתים.
-          </div>
-        )}
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+          {/* Temporary readout for calibrating the label zoom threshold. */}
+          <span className="rounded-lg bg-gray-100 px-2 py-1 text-gray-600" dir="ltr">
+            zoom: {zoomLevel != null ? zoomLevel.toFixed(2) : "—"}
+          </span>
+          {labelsHidden && (
+            <span className="rounded-lg bg-blue-50 px-2 py-1 text-blue-800">
+              התקרב במפה כדי לראות את שמות הבתים.
+            </span>
+          )}
+        </div>
         <GovMap
           level={9}
           onReady={onReady}

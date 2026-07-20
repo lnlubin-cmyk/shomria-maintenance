@@ -28,6 +28,12 @@ export function pinDataUri(fill: string): string {
   );
 }
 
+// A 1×1 transparent symbol — used when we want the label alone, with no dot
+// overlapping the text.
+const TRANSPARENT_PIN =
+  "data:image/svg+xml," +
+  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>`);
+
 export interface HousePoint {
   itm_x: number;
   itm_y: number;
@@ -49,9 +55,13 @@ export function drawHouses(
   g.displayGeometries({
     wkts: points.map((p) => `POINT(${p.itm_x} ${p.itm_y})`),
     names: points.map((p) => p.label),
+    // Text-only when zoomed in (a dot would sit on top of the label and muddy
+    // it); dots-only when zoomed out for a clean overview.
     labels: points.map((p) => (showLabels ? p.label : "")),
     geometryType: g.geometryType.POINT,
-    defaultSymbol: { url: pinDataUri(fill), width: 16, height: 16 },
+    defaultSymbol: showLabels
+      ? { url: TRANSPARENT_PIN, width: 1, height: 1 }
+      : { url: pinDataUri(fill), width: 14, height: 14 },
     clearExisting: true,
     fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
   });
@@ -107,19 +117,38 @@ export default function GovMap({
             } catch {
               /* clicks optional */
             }
-            // Report zoom level now and on every zoom change, so callers can
-            // hide labels when zoomed out.
+            // Report zoom level now and on every view change, so callers can
+            // hide labels when zoomed out. getZoomLevel() may return a number
+            // or a promise; coerce whatever comes back to a number.
+            const coerce = (v: unknown): number | null => {
+              if (typeof v === "number") return v;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const o = v as any;
+              const n = o?.level ?? o?.zoom ?? Number(o);
+              return typeof n === "number" && !Number.isNaN(n) ? n : null;
+            };
             const reportZoom = () => {
               try {
-                govmap.getZoomLevel().then((lvl: number) => zoomRef.current?.(lvl));
+                const r = govmap.getZoomLevel();
+                if (r && typeof r.then === "function") {
+                  r.then((lvl: unknown) => {
+                    const n = coerce(lvl);
+                    if (n != null) zoomRef.current?.(n);
+                  });
+                } else {
+                  const n = coerce(r);
+                  if (n != null) zoomRef.current?.(n);
+                }
               } catch {
                 /* zoom reporting optional */
               }
             };
-            try {
-              govmap.onEvent(govmap.events.EXTENT_CHANGE).progress(reportZoom);
-            } catch {
-              /* zoom events optional */
+            for (const ev of ["EXTENT_CHANGE", "PAN"]) {
+              try {
+                govmap.onEvent(govmap.events[ev]).progress(reportZoom);
+              } catch {
+                /* event optional */
+              }
             }
             reportZoom();
             readyRef.current?.();
