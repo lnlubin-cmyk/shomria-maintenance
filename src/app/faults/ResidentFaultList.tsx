@@ -11,6 +11,7 @@ import {
   PRIORITY_STYLES,
   formatDate,
   fullName,
+  buildingLabel,
   type FaultRow,
   type FaultStatus,
 } from "@/lib/types";
@@ -96,7 +97,7 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
                   {STATUS_LABELS[f.status]}
                 </span>
               </div>
-              <h2 className="mt-1 font-semibold">{f.building?.building_name ?? "—"}</h2>
+              <h2 className="mt-1 font-semibold">{buildingLabel(f.building)}</h2>
             </div>
             <div className="text-sm text-gray-500">נפתחה: {formatDate(f.created_at)}</div>
           </div>

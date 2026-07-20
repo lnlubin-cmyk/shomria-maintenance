@@ -20,7 +20,7 @@ const SELECT = `
   closed_at,
   created_at,
   caller:residents!faults_caller_resident_id_fkey(first_name, last_name),
-  building:buildings!faults_building_plot_number_fkey(building_name),
+  building:buildings!faults_building_plot_number_fkey(building_name, layer:building_layers(prefix)),
   assignee:users!faults_assigned_to_user_id_fkey(first_name, last_name, resident:residents(first_name, last_name))
 `;
 

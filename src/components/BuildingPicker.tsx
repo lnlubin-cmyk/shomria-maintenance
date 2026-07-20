@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Building } from "@/lib/types";
+import { buildingLabel, type Building } from "@/lib/types";
 
-/** "בית משפחת לוי — הגפן 1" */
-export function buildingLabel(b: Building): string {
+/** "בית משפחת לוי — הגפן 1" — prefixed name plus street address. */
+function buildingOption(b: Building): string {
   const addr = b.street_name ? ` — ${b.street_name} ${b.house_number ?? ""}`.trimEnd() : "";
-  return `${b.building_name}${addr}`;
+  return `${buildingLabel(b)}${addr}`;
 }
 
 /**
@@ -30,7 +30,7 @@ export default function BuildingPicker({
 }) {
   const [query, setQuery] = useState(() => {
     const b = buildings.find((x) => x.plot_number === value);
-    return b ? buildingLabel(b) : "";
+    return b ? buildingOption(b) : "";
   });
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -46,10 +46,10 @@ export default function BuildingPicker({
   const q = query.trim();
   // While a building is selected, focusing shows the whole list again so the
   // user can rebrowse; typing (which clears value) narrows it.
-  const filtered = q && !value ? buildings.filter((b) => buildingLabel(b).includes(q)) : buildings;
+  const filtered = q && !value ? buildings.filter((b) => buildingOption(b).includes(q)) : buildings;
 
   function select(b: Building) {
-    const label = buildingLabel(b);
+    const label = buildingOption(b);
     setQuery(label);
     onChange(b.plot_number, label);
     setOpen(false);
@@ -92,7 +92,7 @@ export default function BuildingPicker({
                   select(b);
                 }}
               >
-                {buildingLabel(b)}
+                {buildingOption(b)}
               </button>
             </li>
           ))}

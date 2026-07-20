@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession, createClient } from "@/lib/supabase/server";
 import SiteHeader from "@/components/SiteHeader";
 import AdminTabs from "./AdminTabs";
-import type { Building, Resident } from "@/lib/types";
+import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
   const session = await getSession();
@@ -23,17 +23,21 @@ export default async function AdminPage() {
 
   const supabase = createClient();
 
-  const [{ data: residents }, { data: buildings }, { data: users }] = await Promise.all([
-    supabase.from("residents").select("id, first_name, last_name, phone, email").order("last_name"),
-    supabase
-      .from("buildings")
-      .select("plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4")
-      .order("plot_number"),
-    supabase
-      .from("users")
-      .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name)")
-      .order("role"),
-  ]);
+  const [{ data: residents }, { data: buildings }, { data: users }, { data: layers }] =
+    await Promise.all([
+      supabase.from("residents").select("id, first_name, last_name, phone, email").order("last_name"),
+      supabase
+        .from("buildings")
+        .select(
+          "plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4, layer_id, latitude, longitude, itm_x, itm_y, layer:building_layers(name, prefix)"
+        )
+        .order("plot_number"),
+      supabase
+        .from("users")
+        .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name)")
+        .order("role"),
+      supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
+    ]);
 
   return (
     <div className="min-h-screen">
@@ -44,8 +48,9 @@ export default async function AdminPage() {
 
         <AdminTabs
           residents={(residents ?? []) as Resident[]}
-          buildings={(buildings ?? []) as Building[]}
+          buildings={(buildings ?? []) as unknown as Building[]}
           users={(users ?? []) as any[]}
+          layers={(layers ?? []) as BuildingLayer[]}
           currentUserId={session.user.id}
         />
       </main>

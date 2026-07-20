@@ -108,9 +108,13 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
 
   const plotNumber = String(formData.get("plot_number") ?? "").trim();
   const buildingName = String(formData.get("building_name") ?? "").trim();
+  const layerRaw = String(formData.get("layer_id") ?? "").trim();
 
   if (!plotNumber) return { error: "מספר מגרש חובה" };
   if (!buildingName) return { error: "שם המבנה חובה" };
+  if (!layerRaw) return { error: "יש לבחור שכבה" };
+  const layerId = Number(layerRaw);
+  if (!Number.isInteger(layerId)) return { error: "שכבה לא חוקית" };
 
   const optional = (key: string) => {
     const v = String(formData.get(key) ?? "").trim();
@@ -122,6 +126,7 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
     {
       plot_number: plotNumber,
       building_name: buildingName,
+      layer_id: layerId,
       street_name: optional("street_name"),
       house_number: optional("house_number"),
       resident_1: optional("resident_1"),
@@ -133,7 +138,9 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
   );
 
   if (error) {
-    if (error.code === "23503") return { error: "אחת מתעודות הזהות אינה קיימת בטבלת התושבים" };
+    if (error.code === "23503") {
+      return { error: "אחת מתעודות הזהות אינה קיימת, או שהשכבה אינה קיימת" };
+    }
     return { error: "שמירת המבנה נכשלה" };
   }
 

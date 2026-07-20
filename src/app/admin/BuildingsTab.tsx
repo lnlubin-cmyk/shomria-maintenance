@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Building, Resident } from "@/lib/types";
+import { buildingLabel, type Building, type BuildingLayer, type Resident } from "@/lib/types";
 import { upsertBuilding, deleteBuilding } from "./actions";
 
 export default function BuildingsTab({
   buildings,
   residents,
+  layers,
 }: {
   buildings: Building[];
   residents: Resident[];
+  layers: BuildingLayer[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -120,9 +122,31 @@ export default function BuildingsTab({
                 id="building_name"
                 name="building_name"
                 className="field"
+                placeholder="לוי"
                 defaultValue={editing?.building_name}
                 required
               />
+              <p className="mt-1 text-xs text-gray-500">ללא קידומת — הקידומת נקבעת לפי השכבה.</p>
+            </div>
+            <div>
+              <label className="label" htmlFor="layer_id">
+                שכבה *
+              </label>
+              <select
+                id="layer_id"
+                name="layer_id"
+                className="field"
+                defaultValue={editing?.layer_id ?? ""}
+                required
+              >
+                <option value="">— בחר שכבה —</option>
+                {layers.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                    {l.prefix ? ` (${l.prefix})` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="label" htmlFor="street_name">
@@ -199,6 +223,7 @@ export default function BuildingsTab({
             <tr>
               <th className="px-3 py-3">מגרש</th>
               <th className="px-3 py-3">שם המבנה</th>
+              <th className="px-3 py-3">שכבה</th>
               <th className="px-3 py-3">כתובת</th>
               <th className="px-3 py-3">תושבים</th>
               <th className="px-3 py-3">פעולות</th>
@@ -207,7 +232,7 @@ export default function BuildingsTab({
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו מבנים.
                 </td>
               </tr>
@@ -222,7 +247,8 @@ export default function BuildingsTab({
                   <td className="px-3 py-3 font-medium" dir="ltr">
                     {b.plot_number}
                   </td>
-                  <td className="px-3 py-3">{b.building_name}</td>
+                  <td className="px-3 py-3">{buildingLabel(b)}</td>
+                  <td className="px-3 py-3 text-gray-600">{b.layer?.name ?? "—"}</td>
                   <td className="px-3 py-3">
                     {b.street_name ? `${b.street_name} ${b.house_number ?? ""}`.trim() : "—"}
                   </td>

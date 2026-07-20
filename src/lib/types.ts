@@ -90,15 +90,41 @@ export function staffName(u: NamedUser | null | undefined): string {
   return "—";
 }
 
+export interface BuildingLayer {
+  id: number;
+  name: string; // "בתים", "מבני ציבור"
+  prefix: string; // "בית משפחת", ""
+  sort_order: number;
+}
+
 export interface Building {
   plot_number: string;
   street_name: string | null;
   house_number: string | null;
-  building_name: string;
+  building_name: string; // bare name — "לוי" (no "בית משפחת" prefix)
   resident_1: string | null;
   resident_2: string | null;
   resident_3: string | null;
   resident_4: string | null;
+  layer_id: number | null;
+  layer?: Pick<BuildingLayer, "name" | "prefix"> | null;
+  latitude: number | null;
+  longitude: number | null;
+  itm_x: number | null;
+  itm_y: number | null;
+}
+
+/**
+ * How a building reads in dropdowns and lists: the layer prefix + the bare name
+ * ("בית משפחת לוי"), or just the name when the layer has no prefix ("חדר אוכל").
+ * The map, by contrast, shows only the bare name.
+ */
+export function buildingLabel(
+  b: { building_name: string; layer?: { prefix: string } | null } | null | undefined
+): string {
+  if (!b) return "—";
+  const prefix = b.layer?.prefix?.trim();
+  return prefix ? `${prefix} ${b.building_name}` : b.building_name;
 }
 
 export interface Fault {
@@ -119,7 +145,7 @@ export interface Fault {
 /** A fault joined with the names needed to display it. */
 export interface FaultRow extends Fault {
   caller: Pick<Resident, "first_name" | "last_name"> | null;
-  building: Pick<Building, "building_name"> | null;
+  building: { building_name: string; layer: { prefix: string } | null } | null;
   // Assignee may be a non-resident staff member, so carry both name sources.
   assignee: NamedUser | null;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Building, Resident } from "@/lib/types";
+import type { Building, BuildingLayer, Resident } from "@/lib/types";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
@@ -30,11 +30,13 @@ export default function AdminTabs({
   residents,
   buildings,
   users,
+  layers,
   currentUserId,
 }: {
   residents: Resident[];
   buildings: Building[];
   users: AdminUserRow[];
+  layers: BuildingLayer[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");
@@ -61,7 +63,9 @@ export default function AdminTabs({
         <UsersTab users={users} residents={residents} currentUserId={currentUserId} />
       )}
       {tab === "residents" && <ResidentsTab residents={residents} />}
-      {tab === "buildings" && <BuildingsTab buildings={buildings} residents={residents} />}
+      {tab === "buildings" && (
+        <BuildingsTab buildings={buildings} residents={residents} layers={layers} />
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   formatDate,
   fullName,
   staffName,
+  buildingLabel,
   type FaultRow,
   type FaultStatus,
   type TreatmentType,
@@ -64,7 +65,7 @@ export default function StaffFaultTable({
       (f) =>
         has(String(f.fault_number), filters.fault_number) &&
         has(fullName(f.caller), filters.caller) &&
-        has(f.building?.building_name, filters.building) &&
+        has(f.building ? buildingLabel(f.building) : "", filters.building) &&
         has(f.fault_description, filters.description) &&
         (!filters.status || f.status === filters.status) &&
         (!filters.priority || f.priority === filters.priority) &&
@@ -345,7 +346,7 @@ export default function StaffFaultTable({
                 </td>
                 <td className="px-3 py-3 font-medium">{f.fault_number}</td>
                 <td className="px-3 py-3">{fullName(f.caller)}</td>
-                <td className="px-3 py-3">{f.building?.building_name ?? "—"}</td>
+                <td className="px-3 py-3">{buildingLabel(f.building)}</td>
                 <td className="max-w-56 px-3 py-3">
                   <div className="truncate" title={f.fault_description}>
                     {f.fault_description}
