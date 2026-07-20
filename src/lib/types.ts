@@ -62,6 +62,8 @@ export interface Resident {
   last_name: string;
   phone: string;
   email: string | null;
+  share_phone: boolean;
+  share_house: boolean;
 }
 
 export interface AppUser {

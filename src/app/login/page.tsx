@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { CONSENT_PHONE, CONSENT_HOUSE } from "@/lib/consent";
+import { saveConsent } from "@/app/profile/actions";
 
 /**
  * login       — returning user: email + password (no email code).
@@ -47,6 +49,33 @@ const SSO_ERRORS: Record<string, string> = {
 
 const MIN_PASSWORD = 8;
 
+/** A forced מאשר / לא מאשר choice for one consent statement. */
+function ConsentChoice({
+  statement,
+  value,
+  onChange,
+}: {
+  statement: string;
+  value: boolean | null;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-gray-700">{statement}</p>
+      <div className="mt-1 flex gap-4 text-sm">
+        <label className="flex items-center gap-1.5">
+          <input type="radio" checked={value === true} onChange={() => onChange(true)} />
+          מאשר
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="radio" checked={value === false} onChange={() => onChange(false)} />
+          לא מאשר
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -58,6 +87,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [code, setCode] = useState("");
+  // Forced privacy choices at registration; null = not answered yet.
+  const [sharePhone, setSharePhone] = useState<boolean | null>(null);
+  const [shareHouse, setShareHouse] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(() => {
     const e = params.get("error");
     return e ? (SSO_ERRORS[e] ?? null) : null;
@@ -204,6 +236,10 @@ function LoginForm() {
       setError("הסיסמאות אינן תואמות.");
       return;
     }
+    if (sharePhone === null || shareHouse === null) {
+      setError("יש לענות על שאלות הפרטיות.");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -213,6 +249,7 @@ function LoginForm() {
         setError("שמירת הסיסמה נכשלה. נסה סיסמה אחרת.");
         return;
       }
+      await saveConsent(sharePhone, shareHouse);
       router.push(next);
       router.refresh();
     } catch {
@@ -437,6 +474,12 @@ function LoginForm() {
                   onChange={(e) => setConfirm(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <p className="text-sm font-medium text-gray-700">הגדרות פרטיות</p>
+                <ConsentChoice statement={CONSENT_HOUSE} value={shareHouse} onChange={setShareHouse} />
+                <ConsentChoice statement={CONSENT_PHONE} value={sharePhone} onChange={setSharePhone} />
               </div>
 
               <button type="submit" className="btn-primary w-full" disabled={busy}>

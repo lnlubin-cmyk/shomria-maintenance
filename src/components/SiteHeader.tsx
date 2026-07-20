@@ -133,10 +133,13 @@ export default function SiteHeader({ session }: { session: Session | null }) {
         <div className="flex items-center gap-3">
           {session ? (
             <>
-              <div className="hidden text-left leading-tight sm:block">
+              <Link
+                href="/profile"
+                className="hidden rounded-lg px-2 py-1 text-left leading-tight hover:bg-gray-100 sm:block"
+              >
                 <div className="text-sm font-medium">{session.displayName}</div>
-                <div className="text-xs text-gray-500">{ROLE_LABELS[session.user.role]}</div>
-              </div>
+                <div className="text-xs text-gray-500">{ROLE_LABELS[session.user.role]} · פרופיל</div>
+              </Link>
               <form action="/auth/signout" method="post" className="hidden sm:block">
                 <button type="submit" className="btn-secondary">
                   יציאה
@@ -171,10 +174,14 @@ export default function SiteHeader({ session }: { session: Session | null }) {
       {session && mobileOpen && (
         <div className="border-t border-gray-200 bg-white md:hidden">
           <div className="mx-auto max-w-6xl space-y-4 px-4 py-4">
-            <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+            <Link
+              href="/profile"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-lg bg-gray-50 px-3 py-2 text-sm hover:bg-gray-100"
+            >
               <span className="font-medium">{session.displayName}</span>
-              <span className="text-gray-500"> · {ROLE_LABELS[session.user.role]}</span>
-            </div>
+              <span className="text-gray-500"> · פרופיל</span>
+            </Link>
 
             {sections.map((s) => (
               <div key={s.key}>

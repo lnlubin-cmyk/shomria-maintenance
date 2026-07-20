@@ -65,7 +65,7 @@ export async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase
     .from("users")
     .select(
-      "id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(id, first_name, last_name, phone, email)"
+      "id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(id, first_name, last_name, phone, email, share_phone, share_house)"
     )
     .eq("id", authUser.id)
     .single();
