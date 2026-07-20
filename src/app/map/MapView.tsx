@@ -22,14 +22,15 @@ export default function MapView({
     return [...s];
   }, [buildings]);
 
-  // Labels declutter: only shown once zoomed in past this govmap level (0–10).
-  const LABEL_MIN_ZOOM = 9;
+  // Labels declutter: shown only when the visible map is narrower than this
+  // (meters east–west). Tunable once calibrated in-browser.
+  const LABEL_MAX_WIDTH_M = 700;
 
   const [active, setActive] = useState<Set<string>>(() => new Set(layerNames));
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Building | null>(null);
   const [labelsHidden, setLabelsHidden] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState<number | null>(null); // shown for calibration
+  const [viewWidth, setViewWidth] = useState<number | null>(null); // shown for calibration
   const [debug, setDebug] = useState<string[]>([]);
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
@@ -59,9 +60,30 @@ export default function MapView({
     drawHouses(pts, { showLabels: showLabelsRef.current });
   }
 
-  function onZoom(level: number) {
-    setZoomLevel(level);
-    const show = level >= LABEL_MIN_ZOOM;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function onExtent(payload: any) {
+    // Pull [xmin, ymin, xmax, ymax] (ITM meters) from whatever shape govmap
+    // sends. The raw payload is also logged (debug box) for calibration.
+    let xmin: unknown, xmax: unknown;
+    const p = payload;
+    if (Array.isArray(p) && p.length >= 4) {
+      xmin = p[0];
+      xmax = p[2];
+    } else if (p && typeof p === "object") {
+      const e = p.extent ?? p.mapExtent ?? p.newExtent ?? p;
+      if (Array.isArray(e) && e.length >= 4) {
+        xmin = e[0];
+        xmax = e[2];
+      } else if (e && typeof e === "object") {
+        xmin = e.xmin ?? e.xMin ?? e.minx ?? e.left ?? e.west;
+        xmax = e.xmax ?? e.xMax ?? e.maxx ?? e.right ?? e.east;
+      }
+    }
+    if (typeof xmin !== "number" || typeof xmax !== "number") return;
+
+    const widthM = Math.abs(xmax - xmin);
+    setViewWidth(widthM);
+    const show = widthM <= LABEL_MAX_WIDTH_M;
     if (show !== showLabelsRef.current) {
       showLabelsRef.current = show;
       setLabelsHidden(!show);
@@ -196,9 +218,9 @@ export default function MapView({
 
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-          {/* Temporary readout for calibrating the label zoom threshold. */}
+          {/* Temporary readout for calibrating the label width threshold. */}
           <span className="rounded-lg bg-gray-100 px-2 py-1 text-gray-600" dir="ltr">
-            zoom: {zoomLevel != null ? zoomLevel.toFixed(2) : "—"}
+            width: {viewWidth != null ? Math.round(viewWidth) + "m" : "—"}
           </span>
           {labelsHidden && (
             <span className="rounded-lg bg-blue-50 px-2 py-1 text-blue-800">
@@ -218,7 +240,7 @@ export default function MapView({
           level={9}
           onReady={onReady}
           onMapClick={onMapClick}
-          onZoom={onZoom}
+          onExtent={onExtent}
           onDebug={(m) => setDebug((d) => [...d.slice(-14), m])}
           height={620}
         />

@@ -79,14 +79,15 @@ export default function GovMap({
   level = 9,
   onReady,
   onMapClick,
-  onZoom,
+  onExtent,
   onDebug,
   height = 560,
 }: {
   level?: number;
   onReady?: () => void;
   onMapClick?: (itmX: number, itmY: number) => void;
-  onZoom?: (zoomLevel: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onExtent?: (payload: any) => void;
   onDebug?: (msg: string) => void;
   height?: number;
 }) {
@@ -94,8 +95,8 @@ export default function GovMap({
   readyRef.current = onReady;
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
-  const zoomRef = useRef(onZoom);
-  zoomRef.current = onZoom;
+  const extentRef = useRef(onExtent);
+  extentRef.current = onExtent;
   const dbgRef = useRef(onDebug);
   dbgRef.current = onDebug;
   const [error, setError] = useState<string | null>(null);
@@ -121,51 +122,26 @@ export default function GovMap({
             } catch {
               /* clicks optional */
             }
-            // Report zoom level now and on every view change, so callers can
-            // hide labels when zoomed out. Instrumented with onDebug so we can
-            // see, in-browser, what getZoomLevel returns and which events exist.
+            // The token is domain-locked to production, so the authenticated
+            // getZoomLevel API returns 401 on localhost. Instead read the view
+            // extent from the EXTENT_CHANGE event payload (no auth needed) —
+            // logged here to inspect its shape, then used to hide labels when
+            // the map covers a wide area.
             const dbg = (m: string) => dbgRef.current?.(m);
-            const coerce = (v: unknown): number | null => {
-              if (typeof v === "number") return v;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const o = v as any;
-              const n = o?.level ?? o?.zoom ?? o?.zoomLevel ?? Number(o);
-              return typeof n === "number" && !Number.isNaN(n) ? n : null;
-            };
-            const readZoom = () => {
+            const onExtent = (arg: unknown) => {
               try {
-                if (typeof govmap.getZoomLevel !== "function") {
-                  dbg("getZoomLevel: not a function");
-                  return;
-                }
-                const r = govmap.getZoomLevel();
-                if (r && typeof r.then === "function") {
-                  r.then((lvl: unknown) => {
-                    dbg("zoom=" + JSON.stringify(lvl));
-                    const n = coerce(lvl);
-                    if (n != null) zoomRef.current?.(n);
-                  });
-                } else {
-                  dbg("zoom(sync)=" + JSON.stringify(r));
-                  const n = coerce(r);
-                  if (n != null) zoomRef.current?.(n);
-                }
-              } catch (e) {
-                dbg("getZoomLevel threw: " + (e as Error).message);
+                dbg("EXTENT=" + JSON.stringify(arg));
+              } catch {
+                dbg("EXTENT (unserializable)");
               }
+              extentRef.current?.(arg);
             };
-            dbg("events: " + (govmap.events ? Object.keys(govmap.events).join(",") : "none"));
-            for (const ev of ["EXTENT_CHANGE", "PAN", "ZOOM", "EXTENTCHANGE"]) {
-              if (govmap.events && ev in govmap.events) {
-                try {
-                  govmap.onEvent(govmap.events[ev]).progress(readZoom);
-                  dbg("subscribed " + ev);
-                } catch {
-                  dbg("subscribe failed " + ev);
-                }
-              }
+            try {
+              govmap.onEvent(govmap.events.EXTENT_CHANGE).progress(onExtent);
+              dbg("subscribed EXTENT_CHANGE");
+            } catch {
+              dbg("EXTENT_CHANGE subscribe failed");
             }
-            readZoom();
             readyRef.current?.();
           },
         });
