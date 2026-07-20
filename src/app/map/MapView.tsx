@@ -22,15 +22,22 @@ export default function MapView({
     return [...s];
   }, [buildings]);
 
+  // Labels declutter: only shown once zoomed in past this govmap level (0–10).
+  const LABEL_MIN_ZOOM = 9;
+
   const [active, setActive] = useState<Set<string>>(() => new Set(layerNames));
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Building | null>(null);
+  const [labelsHidden, setLabelsHidden] = useState(false);
   const readyRef = useRef(false);
+  const showLabelsRef = useRef(true);
 
   const visible = useMemo(
     () => buildings.filter((b) => b.layer?.name && active.has(b.layer.name)),
     [buildings, active]
   );
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   const listed = useMemo(() => {
     const q = query.trim();
@@ -43,11 +50,20 @@ export default function MapView({
     );
   }, [visible, query]);
 
-  function redraw(list: Building[]) {
-    const pts: HousePoint[] = list
+  function redraw() {
+    const pts: HousePoint[] = visibleRef.current
       .filter((b) => b.itm_x != null && b.itm_y != null)
       .map((b) => ({ itm_x: b.itm_x as number, itm_y: b.itm_y as number, label: b.building_name }));
-    drawHouses(pts);
+    drawHouses(pts, { showLabels: showLabelsRef.current });
+  }
+
+  function onZoom(level: number) {
+    const show = level >= LABEL_MIN_ZOOM;
+    if (show !== showLabelsRef.current) {
+      showLabelsRef.current = show;
+      setLabelsHidden(!show);
+      if (readyRef.current) redraw();
+    }
   }
 
   function select(b: Building) {
@@ -57,7 +73,7 @@ export default function MapView({
 
   function onReady() {
     readyRef.current = true;
-    redraw(visible);
+    redraw();
     if (focusPlot) {
       const b = buildings.find((x) => x.plot_number === focusPlot);
       if (b) select(b);
@@ -80,7 +96,7 @@ export default function MapView({
 
   // Redraw when the visible set changes (layer toggle), once the map is ready.
   useEffect(() => {
-    if (readyRef.current) redraw(visible);
+    if (readyRef.current) redraw();
   }, [visible]);
 
   function toggleLayer(name: string) {
@@ -175,7 +191,20 @@ export default function MapView({
         </ul>
       </div>
 
-      <GovMap level={9} onReady={onReady} onMapClick={onMapClick} height={620} />
+      <div>
+        {labelsHidden && (
+          <div className="mb-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
+            התקרב במפה כדי לראות את שמות הבתים.
+          </div>
+        )}
+        <GovMap
+          level={9}
+          onReady={onReady}
+          onMapClick={onMapClick}
+          onZoom={onZoom}
+          height={620}
+        />
+      </div>
     </div>
   );
 }

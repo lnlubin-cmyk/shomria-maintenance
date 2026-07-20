@@ -34,20 +34,26 @@ export interface HousePoint {
   label: string;
 }
 
-/** Draw the given houses as labeled markers (replaces whatever was drawn). */
-export function drawHouses(points: HousePoint[], fill = "#2f7d5d") {
+/**
+ * Draw the given houses as markers (replaces whatever was drawn). Labels can be
+ * suppressed (dots only) — used to declutter when zoomed out.
+ */
+export function drawHouses(
+  points: HousePoint[],
+  opts: { fill?: string; showLabels?: boolean } = {}
+) {
+  const { fill = "#2f7d5d", showLabels = true } = opts;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = (window as any).govmap;
   if (!g) return;
   g.displayGeometries({
     wkts: points.map((p) => `POINT(${p.itm_x} ${p.itm_y})`),
     names: points.map((p) => p.label),
-    labels: points.map((p) => p.label),
+    labels: points.map((p) => (showLabels ? p.label : "")),
     geometryType: g.geometryType.POINT,
     defaultSymbol: { url: pinDataUri(fill), width: 16, height: 16 },
     clearExisting: true,
-    // Crisp dark label, no heavy white halo (the base map is light).
-    fontLabel: { fontName: "Arial", fontSize: 14, fillColor: "#14532d" },
+    fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
   });
 }
 
@@ -63,17 +69,21 @@ export default function GovMap({
   level = 9,
   onReady,
   onMapClick,
+  onZoom,
   height = 560,
 }: {
   level?: number;
   onReady?: () => void;
   onMapClick?: (itmX: number, itmY: number) => void;
+  onZoom?: (zoomLevel: number) => void;
   height?: number;
 }) {
   const readyRef = useRef(onReady);
   readyRef.current = onReady;
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const zoomRef = useRef(onZoom);
+  zoomRef.current = onZoom;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,6 +107,21 @@ export default function GovMap({
             } catch {
               /* clicks optional */
             }
+            // Report zoom level now and on every zoom change, so callers can
+            // hide labels when zoomed out.
+            const reportZoom = () => {
+              try {
+                govmap.getZoomLevel().then((lvl: number) => zoomRef.current?.(lvl));
+              } catch {
+                /* zoom reporting optional */
+              }
+            };
+            try {
+              govmap.onEvent(govmap.events.EXTENT_CHANGE).progress(reportZoom);
+            } catch {
+              /* zoom events optional */
+            }
+            reportZoom();
             readyRef.current?.();
           },
         });
