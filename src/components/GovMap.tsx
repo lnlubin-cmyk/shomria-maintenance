@@ -80,7 +80,6 @@ export default function GovMap({
     let cancelled = false;
 
     function createMap() {
-      if (cancelled || typeof govmap === "undefined") return;
       try {
         govmap.createMap("govmap", {
           token: process.env.NEXT_PUBLIC_GOVMAP_TOKEN,
@@ -106,33 +105,41 @@ export default function GovMap({
       }
     }
 
-    // The SDK sets a global. On client-side navigation the script is already
-    // loaded, so next/script's onLoad would never fire — load it ourselves and
-    // create the map whether the SDK is already present or loads now.
-    if (typeof govmap !== "undefined") {
-      createMap();
-      return () => {
-        cancelled = true;
-      };
-    }
+    // The SDK sets the `govmap` global before createMap is actually attached,
+    // and next/script's onLoad doesn't fire on client-side navigation. So load
+    // the script if needed and poll until createMap is genuinely available.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const isReady = () => w.govmap && typeof w.govmap.createMap === "function";
 
-    let script = document.getElementById(SDK_ID) as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
+    if (!isReady() && !document.getElementById(SDK_ID)) {
+      const script = document.createElement("script");
       script.id = SDK_ID;
       script.src = SDK_URL;
       script.async = true;
+      script.addEventListener("error", () =>
+        setError("טעינת סקריפט govmap נכשלה (בדוק חיבור לרשת).")
+      );
       document.body.appendChild(script);
     }
-    const onLoad = () => createMap();
-    const onErr = () => setError("טעינת סקריפט govmap נכשלה (בדוק חיבור לרשת).");
-    script.addEventListener("load", onLoad);
-    script.addEventListener("error", onErr);
+
+    let tries = 0;
+    function whenReady() {
+      if (cancelled) return;
+      if (isReady()) {
+        createMap();
+        return;
+      }
+      if (tries++ > 200) {
+        setError("המפה לא נטענה בזמן. רענן את הדף.");
+        return;
+      }
+      window.setTimeout(whenReady, 50);
+    }
+    whenReady();
 
     return () => {
       cancelled = true;
-      script?.removeEventListener("load", onLoad);
-      script?.removeEventListener("error", onErr);
     };
     // level is stable for a given mount; callbacks go through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
