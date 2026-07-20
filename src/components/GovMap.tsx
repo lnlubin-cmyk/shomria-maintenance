@@ -61,7 +61,7 @@ export function drawHouses(
     geometryType: g.geometryType.POINT,
     defaultSymbol: showLabels
       ? { url: TRANSPARENT_PIN, width: 1, height: 1 }
-      : { url: pinDataUri(fill), width: 14, height: 14 },
+      : { url: pinDataUri(fill), width: 9, height: 9 },
     clearExisting: true,
     fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
   });
@@ -80,7 +80,6 @@ export default function GovMap({
   onReady,
   onMapClick,
   onExtent,
-  onDebug,
   height = 560,
 }: {
   level?: number;
@@ -88,7 +87,6 @@ export default function GovMap({
   onMapClick?: (itmX: number, itmY: number) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onExtent?: (payload: any) => void;
-  onDebug?: (msg: string) => void;
   height?: number;
 }) {
   const readyRef = useRef(onReady);
@@ -97,8 +95,6 @@ export default function GovMap({
   clickRef.current = onMapClick;
   const extentRef = useRef(onExtent);
   extentRef.current = onExtent;
-  const dbgRef = useRef(onDebug);
-  dbgRef.current = onDebug;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,23 +120,14 @@ export default function GovMap({
             }
             // The token is domain-locked to production, so the authenticated
             // getZoomLevel API returns 401 on localhost. Instead read the view
-            // extent from the EXTENT_CHANGE event payload (no auth needed) —
-            // logged here to inspect its shape, then used to hide labels when
-            // the map covers a wide area.
-            const dbg = (m: string) => dbgRef.current?.(m);
-            const onExtent = (arg: unknown) => {
-              try {
-                dbg("EXTENT=" + JSON.stringify(arg));
-              } catch {
-                dbg("EXTENT (unserializable)");
-              }
-              extentRef.current?.(arg);
-            };
+            // extent from the EXTENT_CHANGE event payload (no auth needed) and
+            // let the caller decide when to hide labels.
             try {
-              govmap.onEvent(govmap.events.EXTENT_CHANGE).progress(onExtent);
-              dbg("subscribed EXTENT_CHANGE");
+              govmap
+                .onEvent(govmap.events.EXTENT_CHANGE)
+                .progress((arg: unknown) => extentRef.current?.(arg));
             } catch {
-              dbg("EXTENT_CHANGE subscribe failed");
+              /* extent events optional */
             }
             readyRef.current?.();
           },

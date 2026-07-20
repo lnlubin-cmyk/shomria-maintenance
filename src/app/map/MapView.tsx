@@ -22,16 +22,14 @@ export default function MapView({
     return [...s];
   }, [buildings]);
 
-  // Labels declutter: shown only when the visible map is narrower than this
-  // (meters east–west). Tunable once calibrated in-browser.
-  const LABEL_MAX_WIDTH_M = 700;
+  // Labels declutter: shown only when the visible map is at most this wide
+  // (meters east–west); dots-only above it.
+  const LABEL_MAX_WIDTH_M = 1053;
 
   const [active, setActive] = useState<Set<string>>(() => new Set(layerNames));
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Building | null>(null);
   const [labelsHidden, setLabelsHidden] = useState(false);
-  const [viewWidth, setViewWidth] = useState<number | null>(null); // shown for calibration
-  const [debug, setDebug] = useState<string[]>([]);
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
 
@@ -82,7 +80,6 @@ export default function MapView({
     if (typeof xmin !== "number" || typeof xmax !== "number") return;
 
     const widthM = Math.abs(xmax - xmin);
-    setViewWidth(widthM);
     const show = widthM <= LABEL_MAX_WIDTH_M;
     if (show !== showLabelsRef.current) {
       showLabelsRef.current = show;
@@ -217,33 +214,12 @@ export default function MapView({
       </div>
 
       <div>
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-          {/* Temporary readout for calibrating the label width threshold. */}
-          <span className="rounded-lg bg-gray-100 px-2 py-1 text-gray-600" dir="ltr">
-            width: {viewWidth != null ? Math.round(viewWidth) + "m" : "—"}
-          </span>
-          {labelsHidden && (
-            <span className="rounded-lg bg-blue-50 px-2 py-1 text-blue-800">
-              התקרב במפה כדי לראות את שמות הבתים.
-            </span>
-          )}
-        </div>
-        {debug.length > 0 && (
-          <pre
-            className="mb-2 max-h-32 overflow-auto rounded-lg bg-gray-900 p-2 text-[11px] text-gray-100"
-            dir="ltr"
-          >
-            {debug.join("\n")}
-          </pre>
+        {labelsHidden && (
+          <div className="mb-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
+            התקרב במפה כדי לראות את שמות הבתים.
+          </div>
         )}
-        <GovMap
-          level={9}
-          onReady={onReady}
-          onMapClick={onMapClick}
-          onExtent={onExtent}
-          onDebug={(m) => setDebug((d) => [...d.slice(-14), m])}
-          height={620}
-        />
+        <GovMap level={9} onReady={onReady} onMapClick={onMapClick} onExtent={onExtent} height={620} />
       </div>
     </div>
   );
