@@ -53,7 +53,7 @@ export default function SiteHeader({ session }: { session: Session | null }) {
       key: "info",
       label: "מידע לתושב",
       items: [
-        { label: "חפש בית בישוב", soon: true },
+        { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", soon: true },
         { label: "קו העירוב", soon: true },
         { label: "זמני תפילות", soon: true },

@@ -5,8 +5,9 @@ import type { Building, BuildingLayer, Resident } from "@/lib/types";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
+import BuildingsMapTab from "./BuildingsMapTab";
 
-type Tab = "users" | "residents" | "buildings";
+type Tab = "users" | "residents" | "buildings" | "map";
 
 export interface AdminUserRow {
   id: string;
@@ -24,6 +25,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "users", label: "משתמשים" },
   { key: "residents", label: "תושבים" },
   { key: "buildings", label: "מבנים" },
+  { key: "map", label: "מפה" },
 ];
 
 export default function AdminTabs({
@@ -66,6 +68,7 @@ export default function AdminTabs({
       {tab === "buildings" && (
         <BuildingsTab buildings={buildings} residents={residents} layers={layers} />
       )}
+      {tab === "map" && <BuildingsMapTab buildings={buildings} />}
     </div>
   );
 }

@@ -125,7 +125,7 @@ export default async function HomePage() {
           <section>
             <SectionTitle>מידע לתושב</SectionTitle>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Tile soon tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
+              <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile soon tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
               <Tile soon tone="accent" icon="🔗" title="קו העירוב" desc="סטטוס העירוב לשבת." />
               <Tile soon tone="accent" icon="🕰️" title="זמני תפילות" desc="זמני התפילות בישוב." />

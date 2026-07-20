@@ -4,9 +4,66 @@ import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { normalizeIsraeliPhone } from "@/lib/phone";
 import { normalizeEmail } from "@/lib/email";
+import { itmToWgs84 } from "@/lib/geo";
 import { ROLE_LABELS, type UserRole } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
+
+/**
+ * Store a building's location on the map. The admin clicked it on the govmap
+ * map (ITM), so we save the ITM and its WGS84 equivalent (navigation links and
+ * mobile maps need WGS84). Admin only.
+ */
+export async function saveBuildingLocation(
+  plotNumber: string,
+  itmX: number,
+  itmY: number
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  if (!plotNumber) return { error: "מבנה חסר" };
+  if (!Number.isFinite(itmX) || !Number.isFinite(itmY)) return { error: "קואורדינטה לא תקינה" };
+
+  const { lat, lng } = itmToWgs84(itmX, itmY);
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("buildings")
+    .update({ itm_x: itmX, itm_y: itmY, latitude: lat, longitude: lng })
+    .eq("plot_number", plotNumber);
+
+  if (error) return { error: "שמירת המיקום נכשלה" };
+
+  revalidatePath("/admin");
+  revalidatePath("/map");
+  return { ok: true };
+}
+
+/** Remove a building's location (unplace it). Admin only. */
+export async function clearBuildingLocation(plotNumber: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  if (!plotNumber) return { error: "מבנה חסר" };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("buildings")
+    .update({ itm_x: null, itm_y: null, latitude: null, longitude: null })
+    .eq("plot_number", plotNumber);
+
+  if (error) return { error: "הסרת המיקום נכשלה" };
+
+  revalidatePath("/admin");
+  revalidatePath("/map");
+  return { ok: true };
+}
 
 /**
  * Every action here re-checks the caller is an admin. The service-role client
