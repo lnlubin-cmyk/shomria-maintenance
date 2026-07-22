@@ -55,7 +55,7 @@ export default function SiteHeader({ session }: { session: Session | null }) {
       items: [
         { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", soon: true },
-        { label: "קו העירוב", soon: true },
+        { label: "קו העירוב", href: "/eruv" },
         { label: "זמני תפילות", soon: true },
       ],
     },
