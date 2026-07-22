@@ -18,12 +18,16 @@ const SDK_ID = "govmap-sdk";
 // Kibbutz Shomria center in ITM (from 31.43223°N, 34.88374°E).
 export const SHOMRIA_ITM = { x: 188967, y: 593407 };
 
-// A small colored dot as a data URI, so markers show without a hosted image.
-export function pinDataUri(fill: string): string {
+// A colored dot as a data URI, so markers show without a hosted image. The SVG's
+// intrinsic size matches `size` so govmap doesn't scale it (scaling a mismatched
+// SVG made the dot render wrong/invisible).
+export function pinDataUri(fill: string, size = 18): string {
+  const c = size / 2;
+  const r = c - 2;
   return (
     "data:image/svg+xml," +
     encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="9" cy="9" r="6" fill="${fill}" stroke="#fff" stroke-width="2"/></svg>`
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${c}" cy="${c}" r="${r}" fill="${fill}" stroke="#fff" stroke-width="2"/></svg>`
     )
   );
 }
@@ -52,19 +56,33 @@ export function drawHouses(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = (window as any).govmap;
   if (!g) return;
-  g.displayGeometries({
+
+  const common = {
     wkts: points.map((p) => `POINT(${p.itm_x} ${p.itm_y})`),
     names: points.map((p) => p.label),
-    // Text-only when zoomed in (a dot would sit on top of the label and muddy
-    // it); dots-only when zoomed out for a clean overview.
-    labels: points.map((p) => (showLabels ? p.label : "")),
     geometryType: g.geometryType.POINT,
-    defaultSymbol: showLabels
-      ? { url: TRANSPARENT_PIN, width: 1, height: 1 }
-      : { url: pinDataUri(fill), width: 9, height: 9 },
     clearExisting: true,
-    fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
-  });
+  };
+
+  if (showLabels) {
+    // Text-only when zoomed in: a transparent symbol so the label stands alone
+    // (a dot would sit on top of the text and muddy it).
+    g.displayGeometries({
+      ...common,
+      labels: points.map((p) => p.label),
+      defaultSymbol: { url: TRANSPARENT_PIN, width: 1, height: 1 },
+      fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
+    });
+  } else {
+    // Dots-only when zoomed out for a clean overview. Do NOT pass `labels` —
+    // govmap drops a geometry whose label is an empty string, so empty labels
+    // would render nothing at all (the bug that hid the dots).
+    const S = 14;
+    g.displayGeometries({
+      ...common,
+      defaultSymbol: { url: pinDataUri(fill, S), width: S, height: S },
+    });
+  }
 }
 
 /** Center + zoom the map on a coordinate, dropping govmap's own highlight marker. */
