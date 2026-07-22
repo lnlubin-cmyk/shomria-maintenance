@@ -163,11 +163,12 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
     return { error: (e as Error).message };
   }
 
+  // Blank on a new house → the DB sequence assigns the plot number (migration
+  // 0010). On edit the field carries the existing (read-only) plot number.
   const plotNumber = String(formData.get("plot_number") ?? "").trim();
   const buildingName = String(formData.get("building_name") ?? "").trim();
   const layerRaw = String(formData.get("layer_id") ?? "").trim();
 
-  if (!plotNumber) return { error: "מספר מגרש חובה" };
   if (!buildingName) return { error: "שם המבנה חובה" };
   if (!layerRaw) return { error: "יש לבחור שכבה" };
   const layerId = Number(layerRaw);
@@ -178,21 +179,23 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
     return v === "" ? null : v;
   };
 
+  const payload = {
+    building_name: buildingName,
+    layer_id: layerId,
+    street_name: optional("street_name"),
+    house_number: optional("house_number"),
+    resident_1: optional("resident_1"),
+    resident_2: optional("resident_2"),
+    resident_3: optional("resident_3"),
+    resident_4: optional("resident_4"),
+  };
+
   const admin = createAdminClient();
-  const { error } = await admin.from("buildings").upsert(
-    {
-      plot_number: plotNumber,
-      building_name: buildingName,
-      layer_id: layerId,
-      street_name: optional("street_name"),
-      house_number: optional("house_number"),
-      resident_1: optional("resident_1"),
-      resident_2: optional("resident_2"),
-      resident_3: optional("resident_3"),
-      resident_4: optional("resident_4"),
-    },
-    { onConflict: "plot_number" }
-  );
+  const { error } = plotNumber
+    ? await admin
+        .from("buildings")
+        .upsert({ plot_number: plotNumber, ...payload }, { onConflict: "plot_number" })
+    : await admin.from("buildings").insert(payload); // plot_number auto-assigned
 
   if (error) {
     if (error.code === "23503") {

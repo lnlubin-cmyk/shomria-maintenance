@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildingLabel, type Building, type BuildingLayer, type Resident } from "@/lib/types";
 import { upsertBuilding, deleteBuilding } from "./actions";
+import ImportBuildings from "./ImportBuildings";
 
 export default function BuildingsTab({
   buildings,
@@ -62,6 +63,8 @@ export default function BuildingsTab({
         </div>
       )}
 
+      <ImportBuildings layers={layers} onImported={() => router.refresh()} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <input
           className="field max-w-xs"
@@ -102,7 +105,7 @@ export default function BuildingsTab({
           <div className="grid gap-4 sm:grid-cols-4">
             <div>
               <label className="label" htmlFor="plot_number">
-                מספר מגרש *
+                מספר מגרש
               </label>
               <input
                 id="plot_number"
@@ -111,8 +114,11 @@ export default function BuildingsTab({
                 dir="ltr"
                 defaultValue={editing?.plot_number}
                 readOnly={Boolean(editing)}
-                required
+                placeholder={editing ? undefined : "יוקצה אוטומטית"}
               />
+              {!editing && (
+                <p className="mt-1 text-xs text-gray-500">השאר ריק — המספר יוקצה אוטומטית.</p>
+              )}
             </div>
             <div>
               <label className="label" htmlFor="building_name">
