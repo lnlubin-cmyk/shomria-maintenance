@@ -18,20 +18,6 @@ const SDK_ID = "govmap-sdk";
 // Kibbutz Shomria center in ITM (from 31.43223°N, 34.88374°E).
 export const SHOMRIA_ITM = { x: 188967, y: 593407 };
 
-// A colored dot as a data URI, so markers show without a hosted image. The SVG's
-// intrinsic size matches `size` so govmap doesn't scale it (scaling a mismatched
-// SVG made the dot render wrong/invisible).
-export function pinDataUri(fill: string, size = 18): string {
-  const c = size / 2;
-  const r = c - 2;
-  return (
-    "data:image/svg+xml," +
-    encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${c}" cy="${c}" r="${r}" fill="${fill}" stroke="#fff" stroke-width="2"/></svg>`
-    )
-  );
-}
-
 // A 1×1 transparent symbol — used when we want the label alone, with no dot
 // overlapping the text.
 const TRANSPARENT_PIN =
@@ -48,11 +34,8 @@ export interface HousePoint {
  * Draw the given houses as markers (replaces whatever was drawn). Labels can be
  * suppressed (dots only) — used to declutter when zoomed out.
  */
-export function drawHouses(
-  points: HousePoint[],
-  opts: { fill?: string; showLabels?: boolean } = {}
-) {
-  const { fill = "#2f7d5d", showLabels = true } = opts;
+export function drawHouses(points: HousePoint[], opts: { showLabels?: boolean } = {}) {
+  const { showLabels = true } = opts;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = (window as any).govmap;
   if (!g) return;
@@ -74,13 +57,13 @@ export function drawHouses(
       fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
     });
   } else {
-    // Dots-only when zoomed out for a clean overview. Do NOT pass `labels` —
-    // govmap drops a geometry whose label is an empty string, so empty labels
-    // would render nothing at all (the bug that hid the dots).
-    const S = 14;
+    // Zoomed out: show nothing at all — no labels and no markers. Clearing the
+    // existing geometries with an empty set leaves a clean map.
     g.displayGeometries({
-      ...common,
-      defaultSymbol: { url: pinDataUri(fill, S), width: S, height: S },
+      wkts: [],
+      names: [],
+      geometryType: g.geometryType.POINT,
+      clearExisting: true,
     });
   }
 }
