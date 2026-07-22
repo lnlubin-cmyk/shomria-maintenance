@@ -87,6 +87,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [code, setCode] = useState("");
+  // Registration verification: by email code or by SMS code.
+  const [verifyMethod, setVerifyMethod] = useState<"email" | "sms">("email");
+  const [phone, setPhone] = useState("");
+  const [normalizedPhone, setNormalizedPhone] = useState("");
   // Forced privacy choices at registration; null = not answered yet.
   const [sharePhone, setSharePhone] = useState<boolean | null>(null);
   const [shareHouse, setShareHouse] = useState<boolean | null>(null);
@@ -142,12 +146,30 @@ function LoginForm() {
     }
   }
 
-  // First login / forgot password: send an email code.
+  // First login / forgot password: send a code by email or by SMS.
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     resetMessages();
     setBusy(true);
     try {
+      if (verifyMethod === "sms") {
+        const res = await fetch("/api/auth/sms/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error ?? "שגיאה. נסה שוב.");
+          return;
+        }
+        setNormalizedPhone(phone);
+        setStep("verify-code");
+        setNotice("אם המספר רשום ברשימת התושבים, נשלח אליו קוד אימות ב-SMS.");
+        return;
+      }
+
+      // email
       const res = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,13 +206,40 @@ function LoginForm() {
     }
   }
 
-  // Verify the emailed code, then move on to choosing a password.
+  // Verify the code (email or SMS), then move on to choosing a password.
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
     resetMessages();
     setBusy(true);
     try {
       const supabase = createClient();
+
+      if (verifyMethod === "sms") {
+        // Our route checks the code, ensures the account, and returns a one-time
+        // token we exchange for a session.
+        const res = await fetch("/api/auth/sms/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: normalizedPhone, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error ?? "הקוד שגוי או פג תוקף.");
+          return;
+        }
+        const { error: sessErr } = await supabase.auth.verifyOtp({
+          token_hash: data.tokenHash,
+          type: "email",
+        });
+        if (sessErr) {
+          setError("אירעה שגיאה בהתחברות. נסה שוב.");
+          return;
+        }
+        setStep("set-password");
+        return;
+      }
+
+      // email
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email: normalizedEmail,
         token: code,
@@ -359,27 +408,73 @@ function LoginForm() {
           {step === "verify-email" && (
             <form onSubmit={handleSendCode} className="space-y-4">
               <p className="text-sm text-gray-600">
-                בכניסה הראשונה, או אם שכחת את הסיסמה, נשלח קוד אימות לאימייל שלך ולאחר מכן תוכל לבחור
-                סיסמה.
+                בכניסה הראשונה, או אם שכחת את הסיסמה, נשלח קוד אימות ולאחר מכן תוכל לבחור סיסמה. בחר
+                כיצד לקבל את הקוד:
               </p>
-              <div>
-                <label className="label" htmlFor="verify-email-input">
-                  כתובת אימייל
-                </label>
-                <input
-                  id="verify-email-input"
-                  className="field"
-                  type="email"
-                  dir="ltr"
-                  inputMode="email"
-                  autoComplete="username"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
+
+              {/* Verification-method toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                {(["email", "sms"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      resetMessages();
+                      setVerifyMethod(m);
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                      verifyMethod === m
+                        ? "border-brand-500 bg-brand-50 text-brand-700"
+                        : "border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    {m === "email" ? "קוד באימייל" : "קוד ב-SMS"}
+                  </button>
+                ))}
               </div>
+
+              {verifyMethod === "email" ? (
+                <div>
+                  <label className="label" htmlFor="verify-email-input">
+                    כתובת אימייל
+                  </label>
+                  <input
+                    id="verify-email-input"
+                    className="field"
+                    type="email"
+                    dir="ltr"
+                    inputMode="email"
+                    autoComplete="username"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="label" htmlFor="verify-phone-input">
+                    מספר טלפון
+                  </label>
+                  <input
+                    id="verify-phone-input"
+                    className="field"
+                    type="tel"
+                    dir="ltr"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="050-123-4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    נשלח קוד ב-SMS למספר הרשום ברשימת התושבים.
+                  </p>
+                </div>
+              )}
 
               <button type="submit" className="btn-primary w-full" disabled={busy}>
                 {busy ? "שולח..." : "שלח קוד אימות"}
