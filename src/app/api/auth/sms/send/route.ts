@@ -8,10 +8,9 @@ import { sendSms019 } from "@/lib/sms019";
  * Registration by SMS — step 1: send a code.
  *
  * Gated on the residents table: a code is generated and sent only if the phone
- * belongs to a resident who also has an email on file (login stays email +
- * password, so an email is required to finish). Deliberately returns the same
- * response either way, so an unauthenticated caller can't enumerate residents'
- * phone numbers or burn SMS credits on arbitrary numbers.
+ * belongs to a resident. Deliberately returns the same response either way, so
+ * an unauthenticated caller can't enumerate residents' phone numbers or burn
+ * SMS credits on arbitrary numbers.
  */
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
@@ -36,12 +35,12 @@ export async function POST(request: Request) {
 
   const { data: resident } = await admin
     .from("residents")
-    .select("id, email")
+    .select("id")
     .eq("phone", normalized)
     .maybeSingle();
 
-  // Only send to a resident who can actually finish (needs an email to log in).
-  if (resident?.email) {
+  // Send to any resident with this phone (email no longer required).
+  if (resident) {
     // Cooldown: don't resend within 30s of the last code.
     const { data: existing } = await admin
       .from("sms_otps")

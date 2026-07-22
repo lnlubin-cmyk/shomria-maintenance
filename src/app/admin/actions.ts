@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
-import { normalizeIsraeliPhone } from "@/lib/phone";
+import { normalizeIsraeliPhone, phoneAccountEmail } from "@/lib/phone";
 import { normalizeEmail } from "@/lib/email";
 import { itmToWgs84 } from "@/lib/geo";
 import { ROLE_LABELS, type UserRole } from "@/lib/types";
@@ -236,10 +236,13 @@ const EXTERNAL_ROLES: UserRole[] = ["maintenance", "maintenance_manager"];
 
 /**
  * Creates an account. Two kinds:
- *  - "resident": linked to an existing resident; email comes from that record.
+ *  - "resident": linked to an existing resident. The auth account is always
+ *    keyed on a synthetic phone-based email so login-by-phone works for every
+ *    resident (matches the SMS registration flow); the real email, if any, is
+ *    kept only as contact info.
  *  - "external": a non-resident maintenance worker/manager with their own name
  *    and email (e.g. an outside contractor).
- * No password is set here — the owner signs in with the email-code flow.
+ * No password is set here — the owner signs in with the code flow.
  */
 export async function createUser(formData: FormData): Promise<ActionResult> {
   try {
@@ -255,8 +258,11 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   const admin = createAdminClient();
 
   // Fields for the users row and the auth account, filled per kind below.
+  // accountEmail is the auth login identifier (may be synthetic for phone-only
+  // residents); contactEmail is the real email stored on the users row, or null.
   let residentId: string | null = null;
-  let email: string;
+  let accountEmail: string;
+  let contactEmail: string | null = null;
   let phone: string | null = null;
   let firstName: string | null = null;
   let lastName: string | null = null;
@@ -274,13 +280,14 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     if (!firstName) return { error: "שם פרטי חובה" };
     if (!lastName) return { error: "שם משפחה חובה" };
     if (!emailNorm) return { error: "כתובת אימייל אינה תקינה" };
-    email = emailNorm;
+    accountEmail = emailNorm;
+    contactEmail = emailNorm;
 
     // Email must be free across both residents and existing accounts.
     const { data: takenResident } = await admin
       .from("residents")
       .select("id")
-      .eq("email", email)
+      .eq("email", accountEmail)
       .maybeSingle();
     if (takenResident) {
       return { error: "האימייל שייך לתושב קיים. צור עבורו משתמש דרך „תושב קיים”." };
@@ -288,7 +295,7 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     const { data: takenUser } = await admin
       .from("users")
       .select("id")
-      .eq("email", email)
+      .eq("email", accountEmail)
       .maybeSingle();
     if (takenUser) return { error: "כתובת האימייל כבר רשומה למשתמש אחר" };
   } else {
@@ -302,9 +309,6 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
       .maybeSingle();
 
     if (!resident) return { error: "התושב אינו קיים" };
-    if (!resident.email) {
-      return { error: "לתושב זה אין אימייל. יש להוסיף אימייל בכרטיס התושב לפני יצירת חשבון." };
-    }
 
     const { data: existing } = await admin
       .from("users")
@@ -313,14 +317,17 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
       .maybeSingle();
     if (existing) return { error: "לתושב זה כבר קיים חשבון" };
 
-    email = resident.email;
     phone = resident.phone;
+    contactEmail = resident.email ?? null;
+    // Auth login is always by phone → synthetic email, so login-by-phone works
+    // for every resident regardless of whether they have a real email on file.
+    accountEmail = phoneAccountEmail(resident.phone);
   }
 
   // email_confirm: the admin vouches for the address, so skip the confirmation
   // email — the person just signs in with a code.
   const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email,
+    email: accountEmail,
     email_confirm: true,
   });
 
@@ -334,7 +341,7 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     role,
     first_name: firstName,
     last_name: lastName,
-    email,
+    email: contactEmail,
     phone,
   });
 

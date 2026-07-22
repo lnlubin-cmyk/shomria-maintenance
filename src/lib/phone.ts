@@ -33,3 +33,18 @@ export function formatIsraeliPhone(e164: string): string {
   if (!m) return e164;
   return `0${m[1]}-${m[2]}-${m[3]}`;
 }
+
+/**
+ * The internal auth-account email for a phone-based (email-less) resident.
+ * Deterministic from the phone, never delivered anywhere — Supabase just needs
+ * a unique email as the account identifier. Login by phone recomputes it, so no
+ * lookup and no way to enumerate real emails.
+ */
+export function phoneAccountEmail(e164: string): string {
+  return `${e164.replace(/\D/g, "")}@sms.shomria.local`;
+}
+
+/** True if the input looks like an email address (vs a phone). */
+export function looksLikeEmail(input: string): boolean {
+  return input.includes("@");
+}

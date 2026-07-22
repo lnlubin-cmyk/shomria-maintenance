@@ -28,10 +28,11 @@ export default function UsersTab({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // A resident who already has an account cannot get a second one, and login is
-  // by email — so only residents WITH an email can be given an account.
+  // A resident who already has an account cannot get a second one. Login is by
+  // phone (or email, if the resident has one), so any unlinked resident is
+  // eligible — an email is no longer required.
   const linkedIds = new Set(users.map((u) => u.resident_id));
-  const available = residents.filter((r) => !linkedIds.has(r.id) && r.email);
+  const available = residents.filter((r) => !linkedIds.has(r.id));
 
   async function run(action: (fd: FormData) => Promise<any>, fd: FormData) {
     setError(null);
@@ -104,7 +105,8 @@ export default function UsersTab({
           {kind === "resident" ? (
             <>
               <p className="text-sm text-gray-600">
-                המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם האימייל הרשום לתושב וקוד אימות.
+                המשתמש נוצר עבור תושב קיים. הכניסה תתבצע עם מספר הטלפון הרשום לתושב (או האימייל, אם
+                קיים) וקוד אימות ב-SMS.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -115,13 +117,13 @@ export default function UsersTab({
                     <option value="">— בחר תושב —</option>
                     {available.map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.first_name} {r.last_name} — {r.email}
+                        {r.first_name} {r.last_name} — {r.email ?? formatIsraeliPhone(r.phone)}
                       </option>
                     ))}
                   </select>
                   {available.length === 0 && (
                     <p className="mt-1 text-xs text-amber-700">
-                      אין תושבים זמינים. ודא שלתושב יש אימייל ושעדיין אין לו חשבון.
+                      אין תושבים זמינים. כל התושבים כבר קושרו לחשבון.
                     </p>
                   )}
                 </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
-import { normalizeIsraeliPhone } from "@/lib/phone";
+import { normalizeIsraeliPhone, phoneAccountEmail } from "@/lib/phone";
 
 /**
  * Registration by SMS — step 2: verify the code.
@@ -63,26 +63,26 @@ export async function POST(request: Request) {
   if (!resident) {
     return NextResponse.json({ error: "מספר הטלפון אינו רשום ברשימת התושבים." }, { status: 403 });
   }
-  if (!resident.email) {
-    return NextResponse.json(
-      { error: "לתושב זה אין אימייל במערכת, ולכן לא ניתן להשלים רישום. פנה למזכירות." },
-      { status: 409 }
-    );
-  }
 
-  // Ensure an account (on the resident's email) and a users row exist.
+  // The account's auth email: for a new phone-based account it's the internal
+  // synthetic email derived from the phone (no real email required); for an
+  // existing account, whatever it was created with.
   const { data: existingUser } = await admin
     .from("users")
     .select("id")
     .eq("resident_id", resident.id)
     .maybeSingle();
 
-  if (!existingUser) {
+  let accountEmail: string;
+
+  if (existingUser) {
+    const { data: authUser } = await admin.auth.admin.getUserById(existingUser.id);
+    accountEmail = authUser?.user?.email ?? phoneAccountEmail(phone);
+  } else {
+    accountEmail = phoneAccountEmail(phone);
     const { data: created, error: authErr } = await admin.auth.admin.createUser({
-      email: resident.email,
-      phone: resident.phone,
+      email: accountEmail,
       email_confirm: true,
-      phone_confirm: true,
     });
     if (authErr || !created.user) {
       return NextResponse.json({ error: "יצירת החשבון נכשלה." }, { status: 500 });
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       id: created.user.id,
       resident_id: resident.id,
       role: "resident",
-      email: resident.email,
+      email: resident.email ?? null, // real email kept as contact info, if any
       phone: resident.phone,
     });
     if (insErr) {
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   // Hand back a one-time token the client verifies to get a session.
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: resident.email,
+    email: accountEmail,
   });
   if (linkErr || !link.properties?.hashed_token) {
     return NextResponse.json({ error: "יצירת ההתחברות נכשלה." }, { status: 500 });
