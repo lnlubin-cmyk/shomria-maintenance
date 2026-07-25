@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
@@ -15,11 +16,6 @@ async function requireAdmin() {
   return session;
 }
 
-/** Storage key for an item's PDF. One key per item; replacing overwrites it. */
-function filePath(id: string): string {
-  return `${id}.pdf`;
-}
-
 function readPdf(formData: FormData): { file: File | null; error?: string } {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { file: null };
@@ -29,13 +25,26 @@ function readPdf(formData: FormData): { file: File | null; error?: string } {
   return { file };
 }
 
-async function uploadPdf(id: string, file: File): Promise<string | null> {
+/**
+ * Upload a PDF to a fresh, random storage key and return that key. Uploading
+ * first (before touching the DB) means a failed upload can't leave an orphaned
+ * row, and a random key means each file is independent of the row id.
+ */
+async function uploadPdf(file: File): Promise<{ path?: string; error?: string }> {
   const admin = createAdminClient();
+  const path = `${randomUUID()}.pdf`;
   const bytes = await file.arrayBuffer();
   const { error } = await admin.storage
     .from(COMMUNITY_BUCKET)
-    .upload(filePath(id), bytes, { contentType: "application/pdf", upsert: true });
-  return error ? error.message : null;
+    .upload(path, bytes, { contentType: "application/pdf", upsert: false });
+  if (error) return { error: error.message };
+  return { path };
+}
+
+async function removeFile(path: string | null | undefined) {
+  if (!path) return;
+  const admin = createAdminClient();
+  await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
 }
 
 function revalidate() {
@@ -43,7 +52,11 @@ function revalidate() {
   revalidatePath("/", "layout"); // refresh the nav menu across the site
 }
 
-/** Add an item: subject required; a PDF is optional (can be added later). */
+/**
+ * Add an item. If a PDF is attached, the item defaults to VISIBLE so it appears
+ * in the menu right away (admins can hide it later). Without a file it's hidden
+ * (it can't be shown until a file is added anyway).
+ */
 export async function createCommunityItem(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -57,24 +70,22 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const { file, error: fileErr } = readPdf(formData);
   if (fileErr) return { error: fileErr };
 
-  const admin = createAdminClient();
-  const { data: inserted, error } = await admin
-    .from("community_items")
-    .insert({ subject })
-    .select("id")
-    .single();
-  if (error || !inserted) return { error: "יצירת הפריט נכשלה" };
-
+  let file_path: string | null = null;
+  let file_name: string | null = null;
   if (file) {
-    const upErr = await uploadPdf(inserted.id, file);
-    if (upErr) {
-      await admin.from("community_items").delete().eq("id", inserted.id);
-      return { error: "העלאת הקובץ נכשלה" };
-    }
-    await admin
-      .from("community_items")
-      .update({ file_path: filePath(inserted.id), file_name: file.name })
-      .eq("id", inserted.id);
+    const { path, error } = await uploadPdf(file);
+    if (error || !path) return { error: "העלאת הקובץ נכשלה" };
+    file_path = path;
+    file_name = file.name;
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("community_items")
+    .insert({ subject, file_path, file_name, is_visible: !!file });
+  if (error) {
+    await removeFile(file_path); // don't leave the just-uploaded file orphaned
+    return { error: "יצירת הפריט נכשלה" };
   }
 
   revalidate();
@@ -101,7 +112,7 @@ export async function updateCommunitySubject(formData: FormData): Promise<Action
   return { ok: true };
 }
 
-/** Replace (or add) the item's PDF. */
+/** Replace (or add) the item's PDF: upload the new one, then drop the old file. */
 export async function replaceCommunityFile(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -116,16 +127,26 @@ export async function replaceCommunityFile(formData: FormData): Promise<ActionRe
   if (fileErr) return { error: fileErr };
   if (!file) return { error: "לא נבחר קובץ" };
 
-  const upErr = await uploadPdf(id, file);
-  if (upErr) return { error: "העלאת הקובץ נכשלה" };
-
   const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("community_items")
+    .select("file_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { path, error: upErr } = await uploadPdf(file);
+  if (upErr || !path) return { error: "העלאת הקובץ נכשלה" };
+
   const { error } = await admin
     .from("community_items")
-    .update({ file_path: filePath(id), file_name: file.name })
+    .update({ file_path: path, file_name: file.name })
     .eq("id", id);
-  if (error) return { error: "עדכון הפריט נכשל" };
+  if (error) {
+    await removeFile(path);
+    return { error: "עדכון הפריט נכשל" };
+  }
 
+  await removeFile(existing?.file_path); // old file no longer referenced
   revalidate();
   return { ok: true };
 }
@@ -142,13 +163,19 @@ export async function removeCommunityFile(formData: FormData): Promise<ActionRes
   if (!id) return { error: "פריט חסר" };
 
   const admin = createAdminClient();
-  await admin.storage.from(COMMUNITY_BUCKET).remove([filePath(id)]);
+  const { data: existing } = await admin
+    .from("community_items")
+    .select("file_path")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await admin
     .from("community_items")
-    .update({ file_path: null, file_name: null })
+    .update({ file_path: null, file_name: null, is_visible: false })
     .eq("id", id);
   if (error) return { error: "הסרת הקובץ נכשלה" };
 
+  await removeFile(existing?.file_path);
   revalidate();
   return { ok: true };
 }
@@ -183,10 +210,16 @@ export async function deleteCommunityItem(formData: FormData): Promise<ActionRes
   if (!id) return { error: "פריט חסר" };
 
   const admin = createAdminClient();
-  await admin.storage.from(COMMUNITY_BUCKET).remove([filePath(id)]);
+  const { data: existing } = await admin
+    .from("community_items")
+    .select("file_path")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await admin.from("community_items").delete().eq("id", id);
   if (error) return { error: "מחיקת הפריט נכשלה" };
 
+  await removeFile(existing?.file_path);
   revalidate();
   return { ok: true };
 }
