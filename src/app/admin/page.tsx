@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession, createClient } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 import AdminTabs from "./AdminTabs";
+import { getAllCommunityItems } from "@/lib/community";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
@@ -12,7 +13,7 @@ export default async function AdminPage() {
   if (session.user.role !== "admin") {
     return (
       <div className="min-h-screen">
-        <SiteHeader session={session} />
+        <AppHeader session={session} />
         <main className="mx-auto max-w-2xl px-4 py-16 text-center">
           <h1 className="text-2xl font-bold">אין גישה</h1>
           <p className="mt-2 text-gray-600">מסך ניהול המערכת פתוח למשתמשי אדמין בלבד.</p>
@@ -42,9 +43,11 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
+  const community = await getAllCommunityItems();
+
   return (
     <div className="min-h-screen">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
       <main className="mx-auto max-w-7xl px-4 py-8">
         <h1 className="mb-1 text-2xl font-bold">ניהול מערכת</h1>
         <p className="mb-6 text-sm text-gray-600">ניהול משתמשים, תושבים ומבנים.</p>
@@ -54,6 +57,7 @@ export default async function AdminPage() {
           buildings={(buildings ?? []) as unknown as Building[]}
           users={(users ?? []) as any[]}
           layers={(layers ?? []) as BuildingLayer[]}
+          community={community}
           currentUserId={session.user.id}
         />
       </main>

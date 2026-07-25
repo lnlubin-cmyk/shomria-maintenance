@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import { getCommunityMenu } from "@/lib/community";
+import AppHeader from "@/components/AppHeader";
 import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
 
@@ -78,10 +79,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
+  const community = session ? await getCommunityMenu() : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
 
       <main>
         {/* Hero band */}
@@ -131,6 +133,25 @@ export default async function HomePage() {
               <Tile soon tone="accent" icon="🕰️" title="זמני תפילות" desc="זמני התפילות בישוב." />
             </div>
           </section>
+
+          {/* קהילה — dynamic, admin-managed items (shown only when there are any) */}
+          {community.length > 0 && (
+            <section className="mt-12">
+              <SectionTitle>קהילה</SectionTitle>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {community.map((c) => (
+                  <Tile
+                    key={c.id}
+                    href={`/community/${c.id}`}
+                    tone="accent"
+                    icon="📄"
+                    title={c.subject}
+                    desc="לחצו לצפייה במסמך."
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* פנייה לצוות חצר — the existing maintenance features */}
           <section className="mt-12">

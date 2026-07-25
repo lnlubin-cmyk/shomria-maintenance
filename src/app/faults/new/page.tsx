@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, getSession } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 import NewFaultForm from "./NewFaultForm";
 import type { Building } from "@/lib/types";
 
@@ -31,7 +31,7 @@ export default async function NewFaultPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="mb-1 text-2xl font-bold">פתיחת קריאה חדשה</h1>
         <p className="mb-6 text-sm text-gray-600">

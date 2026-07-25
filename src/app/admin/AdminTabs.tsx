@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { Building, BuildingLayer, Resident } from "@/lib/types";
+import type { Building, BuildingLayer, CommunityItem, Resident } from "@/lib/types";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
+import CommunityTab from "./CommunityTab";
 
-type Tab = "users" | "residents" | "buildings" | "map";
+type Tab = "users" | "residents" | "buildings" | "map" | "community";
 
 export interface AdminUserRow {
   id: string;
@@ -26,6 +27,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "residents", label: "תושבים" },
   { key: "buildings", label: "מבנים" },
   { key: "map", label: "מפה" },
+  { key: "community", label: "קהילה" },
 ];
 
 export default function AdminTabs({
@@ -33,12 +35,14 @@ export default function AdminTabs({
   buildings,
   users,
   layers,
+  community,
   currentUserId,
 }: {
   residents: Resident[];
   buildings: Building[];
   users: AdminUserRow[];
   layers: BuildingLayer[];
+  community: CommunityItem[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");
@@ -69,6 +73,7 @@ export default function AdminTabs({
         <BuildingsTab buildings={buildings} residents={residents} layers={layers} />
       )}
       {tab === "map" && <BuildingsMapTab buildings={buildings} />}
+      {tab === "community" && <CommunityTab items={community} />}
     </div>
   );
 }

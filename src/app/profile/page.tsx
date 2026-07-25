@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 import { ROLE_LABELS } from "@/lib/types";
 import { formatIsraeliPhone } from "@/lib/phone";
 import ProfileForm from "./ProfileForm";
@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="mb-1 text-2xl font-bold">הפרופיל שלי</h1>
         <p className="mb-6 text-sm text-gray-600">פרטים אישיים והגדרות פרטיות.</p>

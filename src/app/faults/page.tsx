@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getSession } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 import { isStaff, canDeleteFaults, type FaultRow } from "@/lib/types";
 import ResidentFaultList from "./ResidentFaultList";
 import StaffFaultTable from "./StaffFaultTable";
@@ -55,7 +55,7 @@ export default async function FaultsPage({
 
   return (
     <div className="min-h-screen">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

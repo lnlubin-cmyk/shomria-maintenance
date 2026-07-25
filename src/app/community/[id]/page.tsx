@@ -1,0 +1,37 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/supabase/server";
+import { getCommunityItemForView } from "@/lib/community";
+import AppHeader from "@/components/AppHeader";
+import PdfViewer from "@/components/PdfViewer";
+
+/**
+ * View a "קהילה" item: its PDF rendered inline (PDF.js). Login-gated, and only
+ * complete + visible items are reachable (getCommunityItemForView enforces it).
+ */
+export default async function CommunityItemPage({ params }: { params: { id: string } }) {
+  const session = await getSession();
+  if (!session) redirect(`/login?next=/community/${params.id}`);
+
+  const data = await getCommunityItemForView(params.id);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AppHeader session={session} />
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        {!data ? (
+          <div className="card text-center text-gray-600">הפריט אינו זמין.</div>
+        ) : (
+          <>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">{data.item.subject}</h1>
+              <a href={data.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+                פתח / הורד PDF
+              </a>
+            </div>
+            <PdfViewer url={data.url} />
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

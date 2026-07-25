@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { ROLE_LABELS, isStaff, type Session } from "@/lib/types";
+import { ROLE_LABELS, isStaff, type Session, type CommunityMenuItem } from "@/lib/types";
 
 type MenuItem = { label: string; href?: string; soon?: boolean };
 type MenuSection = { key: string; label: string; items: MenuItem[] };
@@ -34,7 +34,13 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 /** Modern sticky header with dropdown section menus and a mobile panel. */
-export default function SiteHeader({ session }: { session: Session | null }) {
+export default function SiteHeader({
+  session,
+  community = [],
+}: {
+  session: Session | null;
+  community?: CommunityMenuItem[];
+}) {
   const staff = session ? isStaff(session.user.role) : false;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,6 +65,17 @@ export default function SiteHeader({ session }: { session: Session | null }) {
         { label: "זמני תפילות", soon: true },
       ],
     },
+    // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each
+    // already filtered to visible + has subject + has file).
+    ...(community.length > 0
+      ? [
+          {
+            key: "community",
+            label: "קהילה",
+            items: community.map((c) => ({ label: c.subject, href: `/community/${c.id}` })),
+          } as MenuSection,
+        ]
+      : []),
     {
       key: "yard",
       label: "פנייה לצוות חצר",

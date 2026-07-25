@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 
 /**
  * קו העירוב — presents the community eruv committee's published update: the
@@ -27,7 +27,7 @@ export default async function EruvPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
 
       <main className="mx-auto max-w-3xl px-4 py-8">
         <header className="mb-6">

@@ -152,6 +152,24 @@ export interface FaultRow extends Fault {
   assignee: NamedUser | null;
 }
 
+/** A "קהילה" item: an admin-managed menu entry with an attached PDF. */
+export interface CommunityItem {
+  id: string;
+  subject: string;
+  file_path: string | null;
+  file_name: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A community item reduced to what the nav needs (only visible + complete ones). */
+export interface CommunityMenuItem {
+  id: string;
+  subject: string;
+}
+
 /** The signed-in user. `resident` is null for external maintenance staff. */
 export interface Session {
   user: AppUser;

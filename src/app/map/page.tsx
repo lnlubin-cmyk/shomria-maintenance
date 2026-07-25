@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
-import SiteHeader from "@/components/SiteHeader";
+import AppHeader from "@/components/AppHeader";
 import MapView from "./MapView";
 import type { Building } from "@/lib/types";
 
@@ -72,7 +72,7 @@ export default async function MapPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SiteHeader session={session} />
+      <AppHeader session={session} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <h1 className="mb-1 text-2xl font-bold">מפת הישוב</h1>
         <p className="mb-5 text-sm text-gray-600">
