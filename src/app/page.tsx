@@ -133,11 +133,13 @@ export default async function HomePage() {
           {/* מידע לתושב — all coming soon for now */}
           <section>
             <SectionTitle>מידע לתושב</SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
-              <Tile soon tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
-              <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Tile soon tone="accent" icon="🙏" title="זמני תפילות" desc="זמני התפילות בישוב." />
+              <Tile soon tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי תורה בישוב." />
               <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
+              <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
+              <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
+              <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
             </div>
           </section>
 

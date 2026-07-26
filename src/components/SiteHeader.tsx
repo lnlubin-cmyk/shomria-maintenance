@@ -59,10 +59,12 @@ export default function SiteHeader({
       key: "info",
       label: "מידע לתושב",
       items: [
-        { label: "חפש בית בישוב", href: "/map" },
-        { label: "חפש מספר טלפון", soon: true },
-        { label: "קו העירוב", href: "/eruv" },
+        { label: "זמני תפילות", soon: true },
+        { label: "שיעורי תורה", soon: true },
         { label: "זמנים הלכתיים", href: "/halachic-times" },
+        { label: "קו העירוב", href: "/eruv" },
+        { label: "חפש בית בישוב", href: "/map" },
+        { label: "חפש מספר טלפון", href: "/phone-directory" },
       ],
     },
     // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each
