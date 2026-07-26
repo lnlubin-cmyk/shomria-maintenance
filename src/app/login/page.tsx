@@ -80,7 +80,7 @@ function ConsentChoice({
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/faults";
+  const next = params.get("next") ?? "/";
 
   const [step, setStep] = useState<Step>("login");
   const [email, setEmail] = useState(""); // login identifier: email or phone
@@ -273,7 +273,7 @@ function LoginForm() {
             <Logo className="h-20 w-auto" />
           </Link>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">{titles[step]}</h1>
-          <p className="mt-1 text-sm text-gray-600">מערכת ניהול תחזוקה</p>
+          <p className="mt-1 text-sm text-gray-600">מידע ושירות לתושב</p>
         </div>
 
         <div className="card">

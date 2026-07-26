@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -16,6 +17,7 @@ const DISMISS_KEY = "pwa-install-dismissed";
  * installed or previously dismissed.
  */
 export default function InstallPrompt() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [iosHint, setIosHint] = useState(false);
   const [hidden, setHidden] = useState(true);
@@ -83,7 +85,8 @@ export default function InstallPrompt() {
     setHidden(true);
   }
 
-  if (hidden) return null;
+  // Don't cover the login/registration form.
+  if (hidden || pathname?.startsWith("/login")) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 p-3">
