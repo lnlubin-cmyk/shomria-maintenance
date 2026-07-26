@@ -27,9 +27,26 @@ function loadYouTubeApi(): Promise<unknown> {
   return ytApi;
 }
 
-function ytEmbedUrl(id: string, single: boolean): string {
-  const base = `https://www.youtube.com/embed/${id}?enablejsapi=1&autoplay=1&mute=1&rel=0&playsinline=1&modestbranding=1`;
-  return single ? `${base}&loop=1&playlist=${id}` : base;
+/**
+ * Build a privacy-enhanced (youtube-nocookie) embed URL. enablejsapi is added
+ * ONLY when we attach the IFrame API (multi-item carousels) — combining it with
+ * a looping single video caused repeated origin/consent reloads and an
+ * ERR_TOO_MANY_REDIRECTS on google.com.
+ */
+function ytEmbedUrl(id: string, opts: { loop: boolean; jsapi: boolean }): string {
+  const p = new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    rel: "0",
+    playsinline: "1",
+    modestbranding: "1",
+  });
+  if (opts.jsapi) p.set("enablejsapi", "1");
+  if (opts.loop) {
+    p.set("loop", "1");
+    p.set("playlist", id); // required for loop to work
+  }
+  return `https://www.youtube-nocookie.com/embed/${id}?${p.toString()}`;
 }
 
 /**
@@ -92,7 +109,7 @@ export default function HeroCarousel({ items }: { items: HomeMediaItem[] }) {
         <iframe
           key={cur.id}
           ref={ytIframeRef}
-          src={ytEmbedUrl(cur.youtubeId ?? "", count === 1)}
+          src={ytEmbedUrl(cur.youtubeId ?? "", { loop: count === 1, jsapi: count > 1 })}
           className="h-full w-full"
           title="וידאו"
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
