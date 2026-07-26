@@ -93,6 +93,58 @@ export async function createHomeMedia(
   return { ok: true };
 }
 
+/** Extract an 11-char YouTube video id from a URL or a bare id. */
+function parseYoutubeId(input: string): string | null {
+  const s = input.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+  try {
+    const u = new URL(s);
+    if (u.hostname.includes("youtu.be")) {
+      const id = u.pathname.slice(1).split("/")[0];
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    const v = u.searchParams.get("v");
+    if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+    const m = u.pathname.match(/\/(embed|shorts|v|live)\/([a-zA-Z0-9_-]{11})/);
+    if (m) return m[2];
+  } catch {
+    /* not a URL */
+  }
+  return null;
+}
+
+/** Add a YouTube video (by URL or id). Active by default, so it plays now. */
+export async function createYoutubeMedia(url: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  const youtubeId = parseYoutubeId(url ?? "");
+  if (!youtubeId) return { error: "כתובת YouTube אינה תקינה" };
+
+  const admin = createAdminClient();
+  const { data: maxRow } = await admin
+    .from("home_media")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sort_order = (maxRow?.sort_order ?? -1) + 1;
+
+  const { error } = await admin.from("home_media").insert({
+    kind: "youtube",
+    youtube_id: youtubeId,
+    is_active: true,
+    sort_order,
+  });
+  if (error) return { error: "שמירת הסרטון נכשלה" };
+
+  revalidate();
+  return { ok: true };
+}
+
 export async function setHomeMediaActive(id: string, isActive: boolean): Promise<ActionResult> {
   try {
     await requireAdmin();

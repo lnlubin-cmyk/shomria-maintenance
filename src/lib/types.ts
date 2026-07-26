@@ -170,13 +170,16 @@ export interface CommunityMenuItem {
   subject: string;
 }
 
-/** Home-page carousel media (image or video), admin-managed. */
+export type HomeMediaKind = "image" | "video" | "youtube";
+
+/** Home-page carousel media (image, uploaded video, or YouTube), admin-managed. */
 export interface HomeMedia {
   id: string;
-  kind: "image" | "video";
-  file_path: string;
+  kind: HomeMediaKind;
+  file_path: string | null; // null for youtube
   file_name: string | null;
   mime_type: string | null;
+  youtube_id: string | null; // set only for youtube
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -186,8 +189,9 @@ export interface HomeMedia {
 /** A media item reduced to what the carousel needs. */
 export interface HomeMediaItem {
   id: string;
-  kind: "image" | "video";
-  url: string;
+  kind: HomeMediaKind;
+  url?: string; // image/video: public file URL
+  youtubeId?: string; // youtube: the video id
 }
 
 /** The signed-in user. `resident` is null for external maintenance staff. */

@@ -46,7 +46,7 @@ export default function AdminTabs({
   users: AdminUserRow[];
   layers: BuildingLayer[];
   community: CommunityItem[];
-  homeMedia: (HomeMedia & { url: string })[];
+  homeMedia: (HomeMedia & { previewUrl: string })[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");

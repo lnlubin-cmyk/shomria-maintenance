@@ -7,6 +7,7 @@ import type { HomeMedia } from "@/lib/types";
 import {
   createSignedUpload,
   createHomeMedia,
+  createYoutubeMedia,
   setHomeMediaActive,
   deleteHomeMedia,
   moveHomeMedia,
@@ -15,11 +16,14 @@ import {
 const BUCKET = "home-media";
 const MAX_BYTES = 50 * 1024 * 1024;
 
-export default function HomeMediaTab({ items }: { items: (HomeMedia & { url: string })[] }) {
+const KIND_LABEL: Record<string, string> = { image: "תמונה", video: "וידאו", youtube: "YouTube" };
+
+export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewUrl: string })[] }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ytUrl, setYtUrl] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function run(p: Promise<any>): Promise<boolean> {
@@ -114,6 +118,33 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { url: str
         </div>
       </div>
 
+      <div className="card">
+        <h2 className="font-semibold">הוספת סרטון YouTube</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          לסרטונים ארוכים או כבדים — הדבק קישור לסרטון מהערוץ שלנו (ללא הגבלת גודל). ודא שהסרטון
+          מוגדר „ציבורי” או „לא רשום” ושהטמעה מותרת.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <input
+            type="url"
+            dir="ltr"
+            placeholder="https://www.youtube.com/watch?v=..."
+            value={ytUrl}
+            onChange={(e) => setYtUrl(e.target.value)}
+            className="field flex-1"
+          />
+          <button
+            className="btn-secondary"
+            disabled={busy || !ytUrl.trim()}
+            onClick={async () => {
+              if (await run(createYoutubeMedia(ytUrl))) setYtUrl("");
+            }}
+          >
+            הוספה
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-3">
         {items.length === 0 && (
           <div className="card text-center text-sm text-gray-500">עדיין לא הועלתה מדיה.</div>
@@ -121,20 +152,25 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { url: str
 
         {items.map((m, i) => (
           <div key={m.id} className="card flex flex-wrap items-center gap-4">
-            <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+            <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
               {m.kind === "video" ? (
                 // eslint-disable-next-line jsx-a11y/media-has-caption
-                <video src={m.url} className="h-full w-full object-cover" muted preload="metadata" />
+                <video src={m.previewUrl} className="h-full w-full object-cover" muted preload="metadata" />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.url} alt={m.file_name ?? ""} className="h-full w-full object-cover" />
+                <img src={m.previewUrl} alt={m.file_name ?? ""} className="h-full w-full object-cover" />
+              )}
+              {m.kind === "youtube" && (
+                <span className="absolute inset-0 flex items-center justify-center text-2xl text-white drop-shadow">
+                  ▶
+                </span>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                  {m.kind === "video" ? "וידאו" : "תמונה"}
+                  {KIND_LABEL[m.kind] ?? m.kind}
                 </span>
                 {m.is_active ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
@@ -146,7 +182,9 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { url: str
                   </span>
                 )}
               </div>
-              <p className="mt-1 truncate text-sm text-gray-700">{m.file_name ?? "מדיה"}</p>
+              <p className="mt-1 truncate text-sm text-gray-700" dir="ltr">
+                {m.kind === "youtube" ? `YouTube · ${m.youtube_id}` : (m.file_name ?? "מדיה")}
+              </p>
             </div>
 
             <div className="flex items-center gap-3 text-sm">
