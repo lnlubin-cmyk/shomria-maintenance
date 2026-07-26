@@ -62,7 +62,7 @@ export default function SiteHeader({
         { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", soon: true },
         { label: "קו העירוב", href: "/eruv" },
-        { label: "זמני תפילות", soon: true },
+        { label: "זמנים הלכתיים", href: "/halachic-times" },
       ],
     },
     // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each

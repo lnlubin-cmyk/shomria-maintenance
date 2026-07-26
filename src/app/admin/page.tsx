@@ -4,6 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import AdminTabs from "./AdminTabs";
 import { getAllCommunityItems } from "@/lib/community";
 import { getAllHomeMedia } from "@/lib/home-media";
+import { getLoadedHalachicYears } from "@/lib/halachic";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
@@ -44,7 +45,11 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const [community, homeMedia] = await Promise.all([getAllCommunityItems(), getAllHomeMedia()]);
+  const [community, homeMedia, halachicYears] = await Promise.all([
+    getAllCommunityItems(),
+    getAllHomeMedia(),
+    getLoadedHalachicYears(),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -60,6 +65,7 @@ export default async function AdminPage() {
           layers={(layers ?? []) as BuildingLayer[]}
           community={community}
           homeMedia={homeMedia}
+          halachicYears={halachicYears}
           currentUserId={session.user.id}
         />
       </main>
