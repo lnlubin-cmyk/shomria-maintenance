@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { buildingLabel, type Building, type BuildingLayer, type Resident } from "@/lib/types";
 import { upsertBuilding, deleteBuilding } from "./actions";
 import ImportBuildings from "./ImportBuildings";
+import ResidentPicker from "./ResidentPicker";
 
 export default function BuildingsTab({
   buildings,
@@ -183,24 +184,13 @@ export default function BuildingsTab({
             {([1, 2, 3, 4] as const).map((n) => {
               const key = `resident_${n}` as const;
               return (
-                <div key={n}>
-                  <label className="label" htmlFor={key}>
-                    תושב {n}
-                  </label>
-                  <select
-                    id={key}
-                    name={key}
-                    className="field"
-                    defaultValue={editing?.[key] ?? ""}
-                  >
-                    <option value="">— ללא —</option>
-                    {residents.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.first_name} {r.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <ResidentPicker
+                  key={n}
+                  name={key}
+                  label={`תושב ${n}`}
+                  residents={residents}
+                  defaultValue={editing?.[key] ?? null}
+                />
               );
             })}
           </div>
