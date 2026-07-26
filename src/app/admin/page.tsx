@@ -3,6 +3,7 @@ import { getSession, createClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import AdminTabs from "./AdminTabs";
 import { getAllCommunityItems } from "@/lib/community";
+import { getAllHomeMedia } from "@/lib/home-media";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
@@ -43,7 +44,7 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const community = await getAllCommunityItems();
+  const [community, homeMedia] = await Promise.all([getAllCommunityItems(), getAllHomeMedia()]);
 
   return (
     <div className="min-h-screen">
@@ -58,6 +59,7 @@ export default async function AdminPage() {
           users={(users ?? []) as any[]}
           layers={(layers ?? []) as BuildingLayer[]}
           community={community}
+          homeMedia={homeMedia}
           currentUserId={session.user.id}
         />
       </main>

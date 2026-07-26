@@ -2,7 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getCommunityMenu } from "@/lib/community";
+import { getActiveHomeMedia } from "@/lib/home-media";
 import AppHeader from "@/components/AppHeader";
+import HeroCarousel from "@/components/HeroCarousel";
 import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
 
@@ -80,6 +82,7 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   const community = session ? await getCommunityMenu() : [];
+  const media = await getActiveHomeMedia();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -108,17 +111,21 @@ export default async function HomePage() {
               )}
             </div>
 
-            {/* Temporary hero image — to be replaced. */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft">
-              <Image
-                src="/hero.svg"
-                alt="איור של מבני הקיבוץ"
-                width={800}
-                height={450}
-                priority
-                className="h-auto w-full"
-              />
-            </div>
+            {/* Hero: admin-managed media carousel, or a static image if none. */}
+            {media.length > 0 ? (
+              <HeroCarousel items={media} />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft">
+                <Image
+                  src="/hero.svg"
+                  alt="איור של מבני הקיבוץ"
+                  width={800}
+                  height={450}
+                  priority
+                  className="h-auto w-full"
+                />
+              </div>
+            )}
           </div>
         </section>
 

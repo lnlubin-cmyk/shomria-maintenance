@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Building, BuildingLayer, CommunityItem, Resident } from "@/lib/types";
+import type { Building, BuildingLayer, CommunityItem, HomeMedia, Resident } from "@/lib/types";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
+import HomeMediaTab from "./HomeMediaTab";
 
-type Tab = "users" | "residents" | "buildings" | "map" | "community";
+type Tab = "users" | "residents" | "buildings" | "map" | "community" | "media";
 
 export interface AdminUserRow {
   id: string;
@@ -28,6 +29,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "buildings", label: "מבנים" },
   { key: "map", label: "מפה" },
   { key: "community", label: "קהילה" },
+  { key: "media", label: "מדיה בדף הבית" },
 ];
 
 export default function AdminTabs({
@@ -36,6 +38,7 @@ export default function AdminTabs({
   users,
   layers,
   community,
+  homeMedia,
   currentUserId,
 }: {
   residents: Resident[];
@@ -43,6 +46,7 @@ export default function AdminTabs({
   users: AdminUserRow[];
   layers: BuildingLayer[];
   community: CommunityItem[];
+  homeMedia: (HomeMedia & { url: string })[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");
@@ -74,6 +78,7 @@ export default function AdminTabs({
       )}
       {tab === "map" && <BuildingsMapTab buildings={buildings} />}
       {tab === "community" && <CommunityTab items={community} />}
+      {tab === "media" && <HomeMediaTab items={homeMedia} />}
     </div>
   );
 }

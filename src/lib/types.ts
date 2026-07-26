@@ -170,6 +170,26 @@ export interface CommunityMenuItem {
   subject: string;
 }
 
+/** Home-page carousel media (image or video), admin-managed. */
+export interface HomeMedia {
+  id: string;
+  kind: "image" | "video";
+  file_path: string;
+  file_name: string | null;
+  mime_type: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A media item reduced to what the carousel needs. */
+export interface HomeMediaItem {
+  id: string;
+  kind: "image" | "video";
+  url: string;
+}
+
 /** The signed-in user. `resident` is null for external maintenance staff. */
 export interface Session {
   user: AppUser;
