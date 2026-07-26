@@ -160,6 +160,31 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
             </p>
           </div>
 
+          <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-sm font-medium text-gray-700">הגדרות פרטיות</p>
+            <p className="text-xs text-gray-500">
+              ניתן לעדכן עבור תושב שאישר בעל-פה (למשל תושב מבוגר שאינו נרשם למערכת).
+            </p>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                name="share_phone"
+                className="h-4 w-4"
+                defaultChecked={editing ? editing.share_phone : false}
+              />
+              התושב מאשר לשתף את מספר הטלפון שלו ב„חפש מספר טלפון”
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                name="share_house"
+                className="h-4 w-4"
+                defaultChecked={editing ? editing.share_house : true}
+              />
+              התושב מאשר להציג את ביתו במפת הישוב
+            </label>
+          </div>
+
           <div className="flex gap-3">
             <button type="submit" className="btn-primary" disabled={busy}>
               {busy ? "שומר..." : "שמירה"}
@@ -187,13 +212,14 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
               <th className="px-3 py-3">שם משפחה</th>
               <th className="px-3 py-3">טלפון</th>
               <th className="px-3 py-3">אימייל</th>
+              <th className="px-3 py-3">שיתוף טלפון</th>
               <th className="px-3 py-3">פעולות</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תושבים.
                 </td>
               </tr>
@@ -210,6 +236,15 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                 </td>
                 <td className="px-3 py-3" dir="ltr">
                   {r.email ?? <span className="text-gray-400">—</span>}
+                </td>
+                <td className="px-3 py-3">
+                  {r.share_phone ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      משתף
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
                 </td>
                 <td className="px-3 py-3">
                   <div className="flex gap-3">

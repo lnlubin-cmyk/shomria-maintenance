@@ -111,10 +111,26 @@ export async function upsertResident(formData: FormData): Promise<ActionResult> 
     if (!email) return { error: "כתובת האימייל אינה תקינה" };
   }
 
+  // Privacy consents the admin can set on the resident's behalf (e.g. an elderly
+  // resident who agreed verbally but won't register). An unchecked box is absent.
+  const sharePhone = formData.get("share_phone") !== null;
+  const shareHouse = formData.get("share_house") !== null;
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("residents")
-    .upsert({ id, first_name: firstName, last_name: lastName, phone, email }, { onConflict: "id" });
+    .upsert(
+      {
+        id,
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+        email,
+        share_phone: sharePhone,
+        share_house: shareHouse,
+      },
+      { onConflict: "id" }
+    );
 
   if (error) {
     if (error.code === "23505") {
