@@ -30,6 +30,10 @@ export default function MapView({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Building | null>(null);
   const [labelsHidden, setLabelsHidden] = useState(false);
+  // The house list is a dropdown shown only while searching, so on mobile the
+  // map isn't pushed far down the page by a long list.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
 
@@ -90,6 +94,7 @@ export default function MapView({
 
   function select(b: Building) {
     setSelected(b);
+    setSearchOpen(false);
     if (b.itm_x != null && b.itm_y != null) zoomTo(b.itm_x, b.itm_y, 10);
   }
 
@@ -121,6 +126,15 @@ export default function MapView({
     if (readyRef.current) redraw();
   }, [visible]);
 
+  // Close the search dropdown when clicking/tapping outside it.
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
   function toggleLayer(name: string) {
     setActive((prev) => {
       const next = new Set(prev);
@@ -140,12 +154,40 @@ export default function MapView({
   return (
     <div className="grid gap-4 md:grid-cols-[340px_1fr]">
       <div className="space-y-4">
-        <input
-          className="field"
-          placeholder="חיפוש לפי שם משפחה / מבנה"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        {/* Search box; the house list drops down only while searching. */}
+        <div className="relative" ref={searchRef}>
+          <input
+            className="field"
+            placeholder="חיפוש לפי שם משפחה / מבנה"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSearchOpen(true);
+            }}
+            onFocus={() => setSearchOpen(true)}
+          />
+          {searchOpen && (
+            <ul className="absolute z-30 mt-1 max-h-[320px] w-full divide-y divide-gray-100 overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+              {listed.length === 0 && (
+                <li className="px-3 py-3 text-sm text-gray-500">לא נמצאו בתים.</li>
+              )}
+              {listed.map((b) => (
+                <li key={b.plot_number}>
+                  <button
+                    type="button"
+                    onClick={() => select(b)}
+                    className={`block w-full px-3 py-2 text-right text-sm hover:bg-brand-50 ${
+                      selected?.plot_number === b.plot_number ? "bg-brand-50 font-medium" : ""
+                    }`}
+                  >
+                    {buildingLabel(b)}
+                    {address(b) && <span className="text-gray-500"> · {address(b)}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {layerNames.length > 1 && (
           <div className="flex flex-wrap gap-4">
@@ -191,26 +233,6 @@ export default function MapView({
             )}
           </div>
         )}
-
-        <ul className="max-h-[360px] divide-y divide-gray-100 overflow-auto rounded-xl border border-gray-200 bg-white">
-          {listed.length === 0 && (
-            <li className="px-3 py-3 text-sm text-gray-500">לא נמצאו בתים.</li>
-          )}
-          {listed.map((b) => (
-            <li key={b.plot_number}>
-              <button
-                type="button"
-                onClick={() => select(b)}
-                className={`block w-full px-3 py-2 text-right text-sm hover:bg-brand-50 ${
-                  selected?.plot_number === b.plot_number ? "bg-brand-50 font-medium" : ""
-                }`}
-              >
-                {buildingLabel(b)}
-                {address(b) && <span className="text-gray-500"> · {address(b)}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div>
