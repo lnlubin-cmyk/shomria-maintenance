@@ -8,70 +8,85 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISS_KEY = "pwa-install-dismissed";
+// New key (was "pwa-install-dismissed", a permanent flag) — bumping it resets any
+// prior permanent dismissals, and now it only snoozes for a while.
+const SNOOZE_KEY = "pwa-install-snooze";
+const SNOOZE_MS = 14 * 24 * 60 * 60 * 1000; // re-offer after 14 days
+
+// Capture beforeinstallprompt as soon as this client chunk loads, so we don't
+// miss it if it fires before the component mounts.
+let captured: BeforeInstallPromptEvent | null = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    captured = e as BeforeInstallPromptEvent;
+    window.dispatchEvent(new Event("pwa-installable"));
+  });
+}
 
 /**
  * Dismissible "install app" banner. Shows a real install button where the
- * browser fires beforeinstallprompt (Android Chrome + desktop Chrome/Edge on
- * Windows/Mac/Linux), or iOS Safari instructions otherwise. Hidden when already
- * installed or previously dismissed.
+ * browser supports it (Android Chrome + desktop Chrome/Edge), or iOS Safari
+ * instructions otherwise. Hidden when already installed, on the login screen, or
+ * while snoozed.
  */
 export default function InstallPrompt() {
   const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [iosHint, setIosHint] = useState(false);
-  const [hidden, setHidden] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nav = navigator as any;
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
-    if (standalone) return; // already installed
+    if (standalone) {
+      setDismissed(true);
+      return; // already installed
+    }
     try {
-      if (localStorage.getItem(DISMISS_KEY)) return;
+      const ts = Number(localStorage.getItem(SNOOZE_KEY) || 0);
+      if (ts && Date.now() - ts < SNOOZE_MS) {
+        setDismissed(true);
+        return; // snoozed
+      }
     } catch {
       /* storage blocked — still show */
     }
+
+    if (captured) setDeferred(captured); // event fired before mount
+
+    const onInstallable = () => captured && setDeferred(captured);
+    const onInstalled = () => {
+      setDeferred(null);
+      setDismissed(true);
+      try {
+        localStorage.setItem(SNOOZE_KEY, String(Date.now()));
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("pwa-installable", onInstallable);
+    window.addEventListener("appinstalled", onInstalled);
 
     const ua = navigator.userAgent;
     const isIOS =
       /iphone|ipad|ipod/i.test(ua) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const isSafari = /safari/i.test(ua) && !/crios|fxios|android|chrome|edg/i.test(ua);
-
-    function onBip(e: Event) {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-      setHidden(false);
-    }
-    function onInstalled() {
-      setHidden(true);
-      try {
-        localStorage.setItem(DISMISS_KEY, "1");
-      } catch {
-        /* ignore */
-      }
-    }
-    window.addEventListener("beforeinstallprompt", onBip);
-    window.addEventListener("appinstalled", onInstalled);
-
-    // iOS Safari never fires beforeinstallprompt — offer manual instructions.
-    if (isIOS && isSafari) {
-      setIosHint(true);
-      setHidden(false);
-    }
+    if (isIOS && isSafari) setIosHint(true);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBip);
+      window.removeEventListener("pwa-installable", onInstallable);
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 
   function dismiss() {
-    setHidden(true);
+    setDismissed(true);
     try {
-      localStorage.setItem(DISMISS_KEY, "1");
+      localStorage.setItem(SNOOZE_KEY, String(Date.now()));
     } catch {
       /* ignore */
     }
@@ -82,11 +97,11 @@ export default function InstallPrompt() {
     await deferred.prompt();
     await deferred.userChoice;
     setDeferred(null);
-    setHidden(true);
+    setDismissed(true);
   }
 
-  // Don't cover the login/registration form.
-  if (hidden || pathname?.startsWith("/login")) return null;
+  const show = !dismissed && (deferred || iosHint) && !pathname?.startsWith("/login");
+  if (!show) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 p-3">
@@ -95,10 +110,8 @@ export default function InstallPrompt() {
         <img src="/icons/icon-192.png" alt="" className="h-10 w-10 shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1 text-sm">
           <p className="font-medium text-gray-900">התקינו את אפליקציית שומריה</p>
-          {iosHint ? (
-            <p className="text-gray-600">
-              בספארי: לחצו על כפתור השיתוף ואז „הוסף למסך הבית”.
-            </p>
+          {iosHint && !deferred ? (
+            <p className="text-gray-600">בספארי: לחצו על כפתור השיתוף ואז „הוסף למסך הבית”.</p>
           ) : (
             <p className="text-gray-600">גישה מהירה ממסך הבית, כמו אפליקציה.</p>
           )}
