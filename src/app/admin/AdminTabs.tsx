@@ -9,8 +9,18 @@ import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
+import PrayerTimesTab from "./PrayerTimesTab";
+import type { PrayerSchedule } from "@/lib/prayer-times";
 
-type Tab = "users" | "residents" | "buildings" | "map" | "community" | "media" | "halachic";
+type Tab =
+  | "users"
+  | "residents"
+  | "buildings"
+  | "map"
+  | "community"
+  | "media"
+  | "halachic"
+  | "prayers";
 
 export interface AdminUserRow {
   id: string;
@@ -32,6 +42,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "community", label: "קהילה" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
+  { key: "prayers", label: "זמני תפילות" },
 ];
 
 export default function AdminTabs({
@@ -42,6 +53,7 @@ export default function AdminTabs({
   community,
   homeMedia,
   halachicYears,
+  schedules,
   currentUserId,
 }: {
   residents: Resident[];
@@ -51,6 +63,7 @@ export default function AdminTabs({
   community: CommunityItem[];
   homeMedia: (HomeMedia & { previewUrl: string })[];
   halachicYears: { year: number; days: number }[];
+  schedules: PrayerSchedule[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");
@@ -84,6 +97,7 @@ export default function AdminTabs({
       {tab === "community" && <CommunityTab items={community} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
+      {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}
     </div>
   );
 }

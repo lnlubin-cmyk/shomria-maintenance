@@ -59,7 +59,7 @@ export default function SiteHeader({
       key: "info",
       label: "מידע לתושב",
       items: [
-        { label: "זמני תפילות", soon: true },
+        { label: "זמני תפילות", href: "/prayer-times" },
         { label: "שיעורי תורה", soon: true },
         { label: "זמנים הלכתיים", href: "/halachic-times" },
         { label: "קו העירוב", href: "/eruv" },
