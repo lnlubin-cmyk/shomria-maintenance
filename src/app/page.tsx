@@ -8,6 +8,25 @@ import HeroCarousel from "@/components/HeroCarousel";
 import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
 
+/** Line clock icon (Lucide) for the "זמני תפילות" tile. */
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.4 2" />
+    </svg>
+  );
+}
+
 /**
  * A portal tile. A working tile links somewhere and lifts on hover; a "בקרוב"
  * tile is inert and shows a coming-soon badge (feature not built yet).
@@ -21,7 +40,7 @@ function Tile({
   tone = "brand",
 }: {
   href?: string;
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   desc: string;
   soon?: boolean;
@@ -134,7 +153,7 @@ export default async function HomePage() {
           <section>
             <SectionTitle>מידע לתושב</SectionTitle>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Tile href="/prayer-times" tone="accent" icon="🙏" title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
+              <Tile href="/prayer-times" tone="accent" icon={<ClockIcon />} title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
               <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
               <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
               <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
