@@ -135,7 +135,7 @@ export default async function HomePage() {
             <SectionTitle>מידע לתושב</SectionTitle>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/prayer-times" tone="accent" icon="🙏" title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
-              <Tile soon tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי תורה בישוב." />
+              <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
               <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
               <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />

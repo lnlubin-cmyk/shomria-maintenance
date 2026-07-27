@@ -194,6 +194,16 @@ export interface HomeMediaItem {
   youtubeId?: string; // youtube: the video id
 }
 
+/** A Torah lesson (שיעור תורה), admin-managed. */
+export interface TorahLesson {
+  id: string;
+  subject: string;
+  occurrence: string; // free text, e.g. "כל יום ראשון ושלישי"
+  hour: string; // free text
+  is_visible: boolean;
+  sort_order: number;
+}
+
 /** The signed-in user. `resident` is null for external maintenance staff. */
 export interface Session {
   user: AppUser;

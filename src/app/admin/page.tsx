@@ -6,6 +6,7 @@ import { getAllCommunityItems } from "@/lib/community";
 import { getAllHomeMedia } from "@/lib/home-media";
 import { getLoadedHalachicYears } from "@/lib/halachic";
 import { getAllSchedules } from "@/lib/prayer-times-server";
+import { getAllLessons } from "@/lib/torah-lessons";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
@@ -46,11 +47,12 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const [community, homeMedia, halachicYears, schedules] = await Promise.all([
+  const [community, homeMedia, halachicYears, schedules, lessons] = await Promise.all([
     getAllCommunityItems(),
     getAllHomeMedia(),
     getLoadedHalachicYears(),
     getAllSchedules(),
+    getAllLessons(),
   ]);
 
   return (
@@ -69,6 +71,7 @@ export default async function AdminPage() {
           homeMedia={homeMedia}
           halachicYears={halachicYears}
           schedules={schedules}
+          lessons={lessons}
           currentUserId={session.user.id}
         />
       </main>

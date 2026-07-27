@@ -60,7 +60,7 @@ export default function SiteHeader({
       label: "מידע לתושב",
       items: [
         { label: "זמני תפילות", href: "/prayer-times" },
-        { label: "שיעורי תורה", soon: true },
+        { label: "שיעורי תורה", href: "/torah-lessons" },
         { label: "זמנים הלכתיים", href: "/halachic-times" },
         { label: "קו העירוב", href: "/eruv" },
         { label: "חפש בית בישוב", href: "/map" },
