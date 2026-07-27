@@ -51,6 +51,12 @@ export default async function TorahLessonsPage() {
                       <dd dir="ltr">{l.hour}</dd>
                     </div>
                   )}
+                  {l.notes && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500">הערות:</dt>
+                      <dd className="whitespace-pre-line">{l.notes}</dd>
+                    </div>
+                  )}
                 </dl>
               </li>
             ))}

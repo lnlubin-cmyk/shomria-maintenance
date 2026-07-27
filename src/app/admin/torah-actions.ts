@@ -26,6 +26,7 @@ export async function createLesson(formData: FormData): Promise<ActionResult> {
   const lecturer = String(formData.get("lecturer") ?? "").trim();
   const occurrence = String(formData.get("occurrence") ?? "").trim();
   const hour = String(formData.get("hour") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
   if (!subject) return { error: "יש להזין נושא לשיעור" };
 
   const admin = createAdminClient();
@@ -39,7 +40,7 @@ export async function createLesson(formData: FormData): Promise<ActionResult> {
 
   const { error } = await admin
     .from("torah_lessons")
-    .insert({ subject, lecturer, occurrence, hour, sort_order });
+    .insert({ subject, lecturer, occurrence, hour, notes, sort_order });
   if (error) return { error: "יצירת השיעור נכשלה" };
 
   revalidate();
@@ -57,13 +58,14 @@ export async function updateLesson(formData: FormData): Promise<ActionResult> {
   const lecturer = String(formData.get("lecturer") ?? "").trim();
   const occurrence = String(formData.get("occurrence") ?? "").trim();
   const hour = String(formData.get("hour") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
   if (!id) return { error: "שיעור חסר" };
   if (!subject) return { error: "יש להזין נושא לשיעור" };
 
   const admin = createAdminClient();
   const { error } = await admin
     .from("torah_lessons")
-    .update({ subject, lecturer, occurrence, hour })
+    .update({ subject, lecturer, occurrence, hour, notes })
     .eq("id", id);
   if (error) return { error: "עדכון השיעור נכשל" };
 

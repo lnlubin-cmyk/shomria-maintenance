@@ -33,22 +33,28 @@ export default function TorahLessonsTab({ lessons }: { lessons: TorahLesson[] })
   }
 
   const fields = (l?: TorahLesson) => (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div>
-        <label className="label">נושא *</label>
-        <input name="subject" className="field" defaultValue={l?.subject} required />
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">נושא *</label>
+          <input name="subject" className="field" defaultValue={l?.subject} required />
+        </div>
+        <div>
+          <label className="label">מעביר השיעור</label>
+          <input name="lecturer" className="field" placeholder="שם מעביר השיעור" defaultValue={l?.lecturer} />
+        </div>
+        <div>
+          <label className="label">מועד</label>
+          <input name="occurrence" className="field" placeholder="לדוגמה: כל יום ראשון ושלישי" defaultValue={l?.occurrence} />
+        </div>
+        <div>
+          <label className="label">שעה</label>
+          <input name="hour" className="field" placeholder="לדוגמה: 20:30" defaultValue={l?.hour} />
+        </div>
       </div>
       <div>
-        <label className="label">מעביר השיעור</label>
-        <input name="lecturer" className="field" placeholder="שם מעביר השיעור" defaultValue={l?.lecturer} />
-      </div>
-      <div>
-        <label className="label">מועד</label>
-        <input name="occurrence" className="field" placeholder="לדוגמה: כל יום ראשון ושלישי" defaultValue={l?.occurrence} />
-      </div>
-      <div>
-        <label className="label">שעה</label>
-        <input name="hour" className="field" placeholder="לדוגמה: 20:30" defaultValue={l?.hour} />
+        <label className="label">הערות</label>
+        <textarea name="notes" className="field" rows={2} defaultValue={l?.notes} />
       </div>
     </div>
   );

@@ -5,7 +5,8 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { ROLE_LABELS, isStaff, type Session, type CommunityMenuItem } from "@/lib/types";
 
-type MenuItem = { label: string; href?: string; soon?: boolean };
+type SubItem = { label: string; href: string };
+type MenuItem = { label: string; href?: string; soon?: boolean; children?: SubItem[] };
 type MenuSection = { key: string; label: string; items: MenuItem[] };
 
 function ComingSoon() {
@@ -37,9 +38,11 @@ function Chevron({ open }: { open: boolean }) {
 export default function SiteHeader({
   session,
   community = [],
+  prayerSchedules = [],
 }: {
   session: Session | null;
   community?: CommunityMenuItem[];
+  prayerSchedules?: { id: string; title: string }[];
 }) {
   const staff = session ? isStaff(session.user.role) : false;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -54,12 +57,22 @@ export default function SiteHeader({
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
+  // "זמני תפילות" shows the schedules directly as sub-items in the menu (no
+  // intermediate list page); falls back to a link if none are defined yet.
+  const prayerItem: MenuItem =
+    prayerSchedules.length > 0
+      ? {
+          label: "זמני תפילות",
+          children: prayerSchedules.map((s) => ({ label: s.title, href: `/prayer-times/${s.id}` })),
+        }
+      : { label: "זמני תפילות", href: "/prayer-times" };
+
   const sections: MenuSection[] = [
     {
       key: "info",
       label: "מידע לתושב",
       items: [
-        { label: "זמני תפילות", href: "/prayer-times" },
+        prayerItem,
         { label: "שיעורי תורה", href: "/torah-lessons" },
         { label: "זמנים הלכתיים", href: "/halachic-times" },
         { label: "קו העירוב", href: "/eruv" },
@@ -113,7 +126,21 @@ export default function SiteHeader({
                 {openMenu === s.key && (
                   <div className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg">
                     {s.items.map((it) =>
-                      it.soon || !it.href ? (
+                      it.children ? (
+                        <div key={it.label} className="py-1">
+                          <div className="px-3 py-1 text-xs font-semibold text-gray-500">{it.label}</div>
+                          {it.children.map((c) => (
+                            <Link
+                              key={c.href}
+                              href={c.href}
+                              onClick={() => setOpenMenu(null)}
+                              className="block rounded-lg px-5 py-2 text-sm text-gray-700 transition hover:bg-brand-50 hover:text-brand-700"
+                            >
+                              {c.label}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : it.soon || !it.href ? (
                         <div
                           key={it.label}
                           className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-gray-400"
@@ -207,7 +234,21 @@ export default function SiteHeader({
                 <div className="px-1 pb-1 text-xs font-semibold uppercase text-gray-500">{s.label}</div>
                 <div className="space-y-0.5">
                   {s.items.map((it) =>
-                    it.soon || !it.href ? (
+                    it.children ? (
+                      <div key={it.label}>
+                        <div className="px-3 py-1 text-xs font-semibold text-gray-500">{it.label}</div>
+                        {it.children.map((c) => (
+                          <Link
+                            key={c.href}
+                            href={c.href}
+                            onClick={() => setMobileOpen(false)}
+                            className="block rounded-lg px-5 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700"
+                          >
+                            {c.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : it.soon || !it.href ? (
                       <div
                         key={it.label}
                         className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-gray-400"

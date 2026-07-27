@@ -201,6 +201,7 @@ export interface TorahLesson {
   lecturer: string; // מעביר השיעור — free text
   occurrence: string; // free text, e.g. "כל יום ראשון ושלישי"
   hour: string; // free text
+  notes: string; // הערות — free text
   is_visible: boolean;
   sort_order: number;
 }
