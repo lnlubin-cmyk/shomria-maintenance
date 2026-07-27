@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { TorahLesson } from "@/lib/types";
 
-const SELECT = "id, subject, occurrence, hour, is_visible, sort_order";
+const SELECT = "id, subject, lecturer, occurrence, hour, is_visible, sort_order";
 
 /** All lessons (visible + hidden), for the admin tab. */
 export async function getAllLessons(): Promise<TorahLesson[]> {

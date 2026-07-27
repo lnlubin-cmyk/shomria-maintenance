@@ -33,6 +33,12 @@ export default async function TorahLessonsPage() {
               <li key={l.id} className="card">
                 <h2 className="font-semibold text-gray-900">{l.subject}</h2>
                 <dl className="mt-1 space-y-0.5 text-sm text-gray-600">
+                  {l.lecturer && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500">מעביר השיעור:</dt>
+                      <dd>{l.lecturer}</dd>
+                    </div>
+                  )}
                   {l.occurrence && (
                     <div className="flex gap-2">
                       <dt className="text-gray-500">מועד:</dt>

@@ -33,10 +33,14 @@ export default function TorahLessonsTab({ lessons }: { lessons: TorahLesson[] })
   }
 
   const fields = (l?: TorahLesson) => (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       <div>
         <label className="label">נושא *</label>
         <input name="subject" className="field" defaultValue={l?.subject} required />
+      </div>
+      <div>
+        <label className="label">מעביר השיעור</label>
+        <input name="lecturer" className="field" placeholder="שם מעביר השיעור" defaultValue={l?.lecturer} />
       </div>
       <div>
         <label className="label">מועד</label>
@@ -107,7 +111,7 @@ export default function TorahLessonsTab({ lessons }: { lessons: TorahLesson[] })
                   )}
                 </div>
                 <p className="text-sm text-gray-600">
-                  {[l.occurrence, l.hour].filter(Boolean).join(" · ") || "—"}
+                  {[l.lecturer, l.occurrence, l.hour].filter(Boolean).join(" · ") || "—"}
                 </p>
               </div>
 

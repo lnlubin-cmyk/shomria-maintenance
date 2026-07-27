@@ -198,6 +198,7 @@ export interface HomeMediaItem {
 export interface TorahLesson {
   id: string;
   subject: string;
+  lecturer: string; // מעביר השיעור — free text
   occurrence: string; // free text, e.g. "כל יום ראשון ושלישי"
   hour: string; // free text
   is_visible: boolean;
