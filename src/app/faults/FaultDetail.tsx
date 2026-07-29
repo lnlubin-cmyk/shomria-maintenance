@@ -24,7 +24,13 @@ import {
   type FaultCostItem,
   type NamedUser,
 } from "@/lib/types";
-import { updateFaults, sendFaultMessage, addCostItem, deleteCostItem } from "./actions";
+import {
+  updateFaults,
+  sendFaultMessage,
+  resendFaultMessage,
+  addCostItem,
+  deleteCostItem,
+} from "./actions";
 import type { Worker } from "./EditFaultsDialog";
 
 interface DetailFault {
@@ -251,10 +257,30 @@ export default function FaultDetail({
                   <span>{formatDateTime(m.created_at)}</span>
                   <span>{m.is_automatic ? "הודעה אוטומטית" : staffName(m.sender)}</span>
                   {staff &&
-                    (m.sms_ok ? (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">נשלח ב-SMS</span>
+                    (m.sms_ok === true ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
+                        נשלח ב-SMS
+                      </span>
+                    ) : m.sms_ok === false ? (
+                      <>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+                          SMS לא נשלח
+                        </span>
+                        {editable && (
+                          <button
+                            type="button"
+                            className="font-medium text-brand-600 hover:underline disabled:opacity-50"
+                            disabled={busy}
+                            onClick={() => run(resendFaultMessage(m.id, fault.fault_number))}
+                          >
+                            שלח שוב
+                          </button>
+                        )}
+                      </>
                     ) : (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">SMS לא נשלח</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">
+                        בשליחה…
+                      </span>
                     ))}
                 </div>
               </li>

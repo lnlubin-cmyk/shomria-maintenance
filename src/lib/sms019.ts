@@ -47,7 +47,7 @@ export async function sendSms019(
   // Bound the request: if 019 is slow/unreachable, fail fast instead of hanging
   // until the OS TCP timeout (~2 minutes) and freezing the caller's screen.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
+  const timer = setTimeout(() => controller.abort(), 8_000);
   try {
     const res = await fetch(API + (opts.test ? "/test" : ""), {
       method: "POST",

@@ -7,10 +7,16 @@ export const FAULT_RECEIVED_MESSAGE =
   "והועברה לטיפולו של צוות חצר\n" +
   "צוות חצר יעדכן על המשך הטיפול בפנייתך ויצור איתך קשר במידת הצורך";
 
+function statusOf(r: { ok: boolean; status?: number; message?: string }): string {
+  return r.status !== undefined ? String(r.status) : (r.message ?? (r.ok ? "0" : "failed"));
+}
+
 /**
- * Send an SMS to a fault's caller and record it in fault_messages (always logged,
- * even if the SMS itself fails — the delivery status is stored on the row).
- * Uses the service-role client so it works from the resident's own creation flow.
+ * Send an SMS to a fault's caller and record it in fault_messages.
+ *
+ * The row is inserted BEFORE contacting the provider, so the message is never
+ * lost — even if the SMS provider hangs and the serverless function is killed
+ * before it returns. The delivery status is then updated in place.
  */
 export async function sendFaultSms(
   faultNumber: number,
@@ -27,23 +33,63 @@ export async function sendFaultSms(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const phone = (data as any)?.caller?.phone as string | undefined;
 
-  let smsOk = false;
-  let smsStatus: string | null = "no phone";
-  if (phone) {
-    const r = await sendSms019(phone, body);
-    smsOk = r.ok;
-    smsStatus = r.status !== undefined ? String(r.status) : (r.message ?? (r.ok ? "0" : "failed"));
+  // 1. Log first (always saved).
+  const { data: row } = await admin
+    .from("fault_messages")
+    .insert({
+      fault_number: faultNumber,
+      body,
+      to_phone: phone ?? null,
+      sms_ok: null,
+      sms_status: phone ? "pending" : "no phone",
+      is_automatic: !!opts.automatic,
+      created_by_user_id: opts.senderUserId ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (!phone) return { ok: false };
+
+  // 2. Attempt delivery.
+  const r = await sendSms019(phone, body);
+
+  // 3. Record the result in place.
+  if (row) {
+    await admin
+      .from("fault_messages")
+      .update({ sms_ok: r.ok, sms_status: statusOf(r) })
+      .eq("id", row.id);
+  }
+  return { ok: r.ok };
+}
+
+/** Re-send an existing (failed) message and update its delivery status. */
+export async function resendFaultSms(messageId: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient();
+
+  const { data: msg } = await admin
+    .from("fault_messages")
+    .select("body, fault_number")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (!msg) return { ok: false, error: "הודעה חסרה" };
+
+  const { data: f } = await admin
+    .from("faults")
+    .select("caller:residents!faults_caller_resident_id_fkey(phone)")
+    .eq("fault_number", msg.fault_number)
+    .maybeSingle();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const phone = (f as any)?.caller?.phone as string | undefined;
+  if (!phone) {
+    await admin.from("fault_messages").update({ sms_status: "no phone" }).eq("id", messageId);
+    return { ok: false, error: "אין מספר טלפון לתושב" };
   }
 
-  await admin.from("fault_messages").insert({
-    fault_number: faultNumber,
-    body,
-    to_phone: phone ?? null,
-    sms_ok: smsOk,
-    sms_status: smsStatus,
-    is_automatic: !!opts.automatic,
-    created_by_user_id: opts.senderUserId ?? null,
-  });
-
-  return { ok: smsOk };
+  const r = await sendSms019(phone, msg.body);
+  await admin
+    .from("fault_messages")
+    .update({ sms_ok: r.ok, sms_status: statusOf(r), to_phone: phone })
+    .eq("id", messageId);
+  return { ok: r.ok };
 }

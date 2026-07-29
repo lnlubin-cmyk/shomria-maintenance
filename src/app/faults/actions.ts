@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient, getSession } from "@/lib/supabase/server";
-import { sendFaultSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
+import { sendFaultSms, resendFaultSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
 import {
   STATUS_ORDER,
   TREATMENT_TYPE_ORDER,
@@ -199,6 +199,24 @@ export async function sendFaultMessage(faultNumber: number, body: string): Promi
 
   revalidatePath(`/faults/${faultNumber}`);
   revalidatePath("/faults");
+  return { ok: true };
+}
+
+/** Re-send a message whose SMS previously failed. */
+export async function resendFaultMessage(
+  messageId: string,
+  faultNumber: number
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה לשלוח הודעות" };
+  if (!messageId) return { error: "הודעה חסרה" };
+
+  const r = await resendFaultSms(messageId);
+
+  revalidatePath(`/faults/${faultNumber}`);
+  revalidatePath("/faults");
+  if (!r.ok) return { error: r.error ?? "השליחה נכשלה שוב. נסו שוב מאוחר יותר." };
   return { ok: true };
 }
 
