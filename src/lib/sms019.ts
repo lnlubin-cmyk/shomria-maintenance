@@ -44,15 +44,23 @@ export async function sendSms019(
     },
   };
 
+  // Bound the request: if 019 is slow/unreachable, fail fast instead of hanging
+  // until the OS TCP timeout (~2 minutes) and freezing the caller's screen.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12_000);
   try {
     const res = await fetch(API + (opts.test ? "/test" : ""), {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
     const data = (await res.json().catch(() => null)) as { status?: number; message?: string } | null;
     return { ok: data?.status === 0, status: data?.status, message: data?.message };
   } catch (e) {
-    return { ok: false, message: (e as Error).message };
+    const err = e as Error;
+    return { ok: false, message: err.name === "AbortError" ? "timeout" : err.message };
+  } finally {
+    clearTimeout(timer);
   }
 }

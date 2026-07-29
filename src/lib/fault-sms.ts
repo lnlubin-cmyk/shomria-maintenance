@@ -32,7 +32,7 @@ export async function sendFaultSms(
   if (phone) {
     const r = await sendSms019(phone, body);
     smsOk = r.ok;
-    smsStatus = r.status !== undefined ? String(r.status) : (r.message ?? null);
+    smsStatus = r.status !== undefined ? String(r.status) : (r.message ?? (r.ok ? "0" : "failed"));
   }
 
   await admin.from("fault_messages").insert({
