@@ -4,7 +4,7 @@ import {
   getVoteById,
   getVoteOptions,
   getVoteCommittee,
-  getVoteResults,
+  getVoteOutcome,
   getVoteRoster,
   isCommitteeMember,
   hasResidentVoted,
@@ -12,12 +12,14 @@ import {
 import AppHeader from "@/components/AppHeader";
 import BallotForm from "../BallotForm";
 import CommitteePanel from "../CommitteePanel";
+import PaperTallyPanel from "../PaperTallyPanel";
 import {
   formatDateTime,
   voteState,
   VOTE_STATE_LABELS,
   VOTE_STATE_STYLES,
   VOTE_FORMAT_LABELS,
+  type VoteOptionOutcome,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +38,13 @@ export default async function VotePage({ params }: { params: { id: string } }) {
   ]);
 
   const isAdmin = session.user.role === "admin";
-  const onCommittee = isAdmin || (await isCommitteeMember(vote.id, session.residentId));
+  const memberOfCommittee = await isCommitteeMember(vote.id, session.residentId);
+  const onCommittee = isAdmin || memberOfCommittee;
   const alreadyVoted = await hasResidentVoted(vote.id, session.residentId);
 
-  const results = state === "closed" ? await getVoteResults(vote) : null;
+  const outcome = state === "closed" ? await getVoteOutcome(vote) : null;
   const roster = onCommittee ? await getVoteRoster(vote.id) : null;
+  const iApproved = !!session.residentId && !!outcome?.paper.approvedResidentIds.includes(session.residentId);
 
   const optionsForBallot = options.map((o) => ({ id: o.id, label: o.label }));
 
@@ -91,16 +95,22 @@ export default async function VotePage({ params }: { params: { id: string } }) {
         <section className="card">
           <h2 className="text-base font-semibold text-gray-900">{vote.subject}</h2>
 
-          {/* Closed → results */}
-          {state === "closed" && results && (
-            <div className="mt-4">
-              <p className="mb-3 text-sm text-gray-500">
-                סה״כ הצביעו: <span className="font-semibold text-gray-800">{results.totalVoters}</span>{" "}
-                תושבים
+          {/* Closed → results (or a pending notice while the manual count is approved) */}
+          {state === "closed" &&
+            outcome &&
+            (outcome.ready ? (
+              <div className="mt-4">
+                <p className="mb-3 text-sm text-gray-500">
+                  סה״כ הצביעו:{" "}
+                  <span className="font-semibold text-gray-800">{outcome.totalVoters}</span> תושבים
+                </p>
+                <ResultsBars options={outcome.options} />
+              </div>
+            ) : (
+              <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                ההצבעה הסתיימה. התוצאות יפורסמו לאחר שועדת הקלפי תזין ותאשר את ספירת הקולות שבנייר.
               </p>
-              <ResultsBars results={results} />
-            </div>
-          )}
+            ))}
 
           {/* Upcoming */}
           {state === "upcoming" && (
@@ -131,11 +141,24 @@ export default async function VotePage({ params }: { params: { id: string } }) {
           )}
         </section>
 
-        {/* Committee management */}
+        {/* Committee: manual paper counting after closure */}
+        {onCommittee && state === "closed" && outcome && (
+          <PaperTallyPanel
+            voteId={vote.id}
+            options={outcome.options}
+            paper={outcome.paper}
+            committee={committee}
+            amCommittee={memberOfCommittee}
+            iApproved={iApproved}
+          />
+        )}
+
+        {/* Committee: open-vote actions + turnout (turnout also shown after closure) */}
         {onCommittee && roster && (
           <CommitteePanel
             voteId={vote.id}
             canManage={state === "open"}
+            allowProxy={vote.allow_proxy_vote}
             options={optionsForBallot}
             maxSelections={vote.max_selections}
             voted={roster.voted}
@@ -147,24 +170,26 @@ export default async function VotePage({ params }: { params: { id: string } }) {
   );
 }
 
-function ResultsBars({
-  results,
-}: {
-  results: { options: { id: string; label: string; count: number }[] };
-}) {
-  const max = Math.max(1, ...results.options.map((o) => o.count));
+function ResultsBars({ options }: { options: VoteOptionOutcome[] }) {
+  const max = Math.max(1, ...options.map((o) => o.total));
+  const anyPaper = options.some((o) => o.paper > 0);
   return (
     <ul className="space-y-2.5">
-      {results.options.map((o) => (
+      {options.map((o) => (
         <li key={o.id}>
           <div className="mb-1 flex items-center justify-between text-sm">
             <span className="font-medium text-gray-800">{o.label}</span>
-            <span className="tabular-nums text-gray-600">{o.count}</span>
+            <span className="tabular-nums text-gray-600">
+              {o.total}
+              {anyPaper && (
+                <span className="text-gray-400"> ({o.electronic} + {o.paper} נייר)</span>
+              )}
+            </span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
             <div
               className="h-full rounded-full bg-brand-500"
-              style={{ width: `${(o.count / max) * 100}%` }}
+              style={{ width: `${(o.total / max) * 100}%` }}
             />
           </div>
         </li>

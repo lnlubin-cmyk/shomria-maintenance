@@ -72,6 +72,83 @@ export async function castVoteOnBehalf(
   return { ok: true };
 }
 
+/**
+ * Mark a resident as having voted on paper — turnout only, no choice and no
+ * electronic tally. The paper ballots are counted by hand and entered later.
+ */
+export async function markPaperVote(voteId: string, residentId: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+
+  const allowed = session.user.role === "admin" || (await isCommitteeMember(voteId, session.residentId));
+  if (!allowed) return { error: "רק חבר ועדת קלפי רשאי לסמן הצבעה" };
+
+  const rid = String(residentId ?? "").trim();
+  if (!rid) return { error: "יש לבחור תושב" };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("mark_paper_vote", {
+    p_vote_id: voteId,
+    p_resident_id: rid,
+  });
+  if (error) return { error: error.message || "הסימון נכשל. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
+/**
+ * Enter (or re-enter) the manually counted paper votes per option, after
+ * closure. Re-entry resets the committee's approvals.
+ */
+export async function submitPaperCounts(
+  voteId: string,
+  counts: { optionId: string; count: number }[]
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+
+  const allowed = session.user.role === "admin" || (await isCommitteeMember(voteId, session.residentId));
+  if (!allowed) return { error: "רק חבר ועדת קלפי רשאי להזין ספירת קולות" };
+
+  const rows = (counts ?? []).filter((c) => c && c.optionId);
+  if (rows.length === 0) return { error: "לא הוזנו קולות" };
+  for (const r of rows) {
+    const n = Number(r.count);
+    if (!Number.isInteger(n) || n < 0) return { error: "מספר קולות לא תקין" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("submit_paper_counts", {
+    p_vote_id: voteId,
+    p_option_ids: rows.map((r) => r.optionId),
+    p_counts: rows.map((r) => Math.trunc(Number(r.count))),
+  });
+  if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
+/** A committee member approves the entered manual paper count. */
+export async function approvePaperCounts(voteId: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!(await isCommitteeMember(voteId, session.residentId))) {
+    return { error: "רק חבר ועדת קלפי רשאי לאשר את הספירה" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("approve_paper_counts", { p_vote_id: voteId });
+  if (error) return { error: error.message || "האישור נכשל. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
 /** Close a vote early. Any committee member (or admin) may do this. */
 export async function closeVote(voteId: string): Promise<ActionResult> {
   const session = await getSession();

@@ -14,6 +14,7 @@ export interface CreateVoteInput {
   startAt: string; // ISO
   closureMode: "manual" | "scheduled";
   closesAt: string | null; // ISO, required when scheduled
+  allowProxy: boolean; // may ועדת קלפי enter an electronic vote for another resident
   optionLabels: string[]; // format === "options"
   candidateIds: string[]; // format === "election"
   memberIds: string[]; // ועדת קלפי
@@ -27,6 +28,7 @@ export interface UpdateVoteMetaInput {
   startAt: string;
   closureMode: "manual" | "scheduled";
   closesAt: string | null;
+  allowProxy: boolean;
   maxSelections: number;
 }
 
@@ -133,6 +135,7 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
       start_at: startAt,
       closure_mode: input.closureMode,
       closes_at: closesAt,
+      allow_proxy_vote: !!input.allowProxy,
       created_by_user_id: session.user.id,
     })
     .select("id")
@@ -216,6 +219,7 @@ export async function updateVoteMeta(input: UpdateVoteMetaInput): Promise<Action
       start_at: startAt,
       closure_mode: input.closureMode,
       closes_at: closesAt,
+      allow_proxy_vote: !!input.allowProxy,
       max_selections: maxSel,
     })
     .eq("id", input.id);

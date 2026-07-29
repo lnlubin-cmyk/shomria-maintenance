@@ -302,8 +302,12 @@ export interface Vote {
   closure_mode: VoteClosureMode;
   closes_at: string | null;
   closed_at: string | null;
+  allow_proxy_vote: boolean;
   created_at: string;
 }
+
+/** How a resident's participation was recorded. */
+export type VoteMethod = "self" | "proxy" | "paper";
 
 export interface VoteOption {
   id: string;
@@ -318,16 +322,38 @@ export interface VoteCommitteeMember {
   last_name: string;
 }
 
-/** One option's result line — only ever assembled after the vote is closed. */
-export interface VoteOptionResult {
+/** One option's outcome line — only ever assembled after the vote is closed. */
+export interface VoteOptionOutcome {
   id: string;
   label: string;
-  count: number;
+  electronic: number; // votes cast in the app
+  paper: number; // approved manual paper count
+  total: number; // electronic + paper (paper counted only once approved)
 }
 
-export interface VoteResults {
+/** State of the manual paper count for a closed vote. */
+export interface PaperTallyState {
+  paperVoters: number; // residents marked as having voted on paper
+  required: boolean; // paperVoters > 0 → results wait for the approved count
+  submissionExists: boolean;
+  enteredByName: string | null;
+  enteredAt: string | null;
+  counts: Record<string, number>; // option_id → entered paper count
+  approvedResidentIds: string[]; // committee members who approved
+  committeeSize: number;
+  finalized: boolean; // approved by every committee member
+}
+
+/**
+ * Everything the vote page needs once a vote is closed. `ready` is false while a
+ * vote with paper ballots still awaits its approved manual count — until then no
+ * final numbers are published.
+ */
+export interface VoteOutcome {
+  ready: boolean;
   totalVoters: number;
-  options: VoteOptionResult[];
+  options: VoteOptionOutcome[];
+  paper: PaperTallyState;
 }
 
 /** A resident row in the committee's turnout lists (voted / not-yet-voted). */
@@ -335,7 +361,7 @@ export interface VoteRosterEntry {
   resident_id: string;
   first_name: string;
   last_name: string;
-  by_self?: boolean; // in the "voted" list: true = voted themselves, false = entered on their behalf
+  method?: VoteMethod; // in the "voted" list: how their participation was recorded
 }
 
 /**

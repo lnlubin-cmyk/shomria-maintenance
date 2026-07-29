@@ -5,7 +5,7 @@ import {
   type Vote,
   type VoteOption,
   type VoteCommitteeMember,
-  type VoteResults,
+  type VoteOutcome,
   type VoteRosterEntry,
 } from "@/lib/types";
 
@@ -97,12 +97,12 @@ export async function hasResidentVoted(
 }
 
 /**
- * The results of a vote — the per-option counts and turnout. Returns null while
- * the vote is still open or upcoming: results are never revealed before closure.
- * Election results are ordered by count (winners first); option votes keep the
- * admin's order.
+ * A vote's outcome — per-option electronic + approved paper counts, turnout, and
+ * the paper-count approval state. Returns null while the vote is open or upcoming
+ * (results are never revealed before closure). `ready` is false while a vote with
+ * paper ballots still awaits its unanimously approved manual count.
  */
-export async function getVoteResults(vote: Vote): Promise<VoteResults | null> {
+export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
   if (voteState(vote) !== "closed") return null;
 
   const admin = createAdminClient();
@@ -114,20 +114,81 @@ export async function getVoteResults(vote: Vote): Promise<VoteResults | null> {
   const opts = options ?? [];
   const ids = opts.map((o) => o.id);
 
-  const { data: tallies } = ids.length
-    ? await admin.from("vote_tallies").select("option_id, count").in("option_id", ids)
-    : { data: [] as { option_id: string; count: number }[] };
-  const countById = new Map((tallies ?? []).map((t) => [t.option_id, t.count]));
+  const [{ data: tallies }, { data: paperRows }, { data: submission }, { data: approvals }] =
+    await Promise.all([
+      ids.length
+        ? admin.from("vote_tallies").select("option_id, count").in("option_id", ids)
+        : Promise.resolve({ data: [] as { option_id: string; count: number }[] }),
+      admin.from("vote_paper_counts").select("option_id, count").eq("vote_id", vote.id),
+      admin
+        .from("vote_paper_submission")
+        .select("entered_by_user_id, entered_at")
+        .eq("vote_id", vote.id)
+        .maybeSingle(),
+      admin.from("vote_paper_approvals").select("resident_id").eq("vote_id", vote.id),
+    ]);
 
-  const { count: totalVoters } = await admin
-    .from("vote_participants")
-    .select("*", { count: "exact", head: true })
-    .eq("vote_id", vote.id);
+  const electById = new Map((tallies ?? []).map((t) => [t.option_id, t.count]));
+  const paperById = new Map((paperRows ?? []).map((t) => [t.option_id, t.count]));
 
-  let lines = opts.map((o) => ({ id: o.id, label: o.label, count: countById.get(o.id) ?? 0 }));
-  if (vote.format === "election") lines = lines.sort((a, b) => b.count - a.count);
+  const [{ count: committeeSize }, { count: paperVoters }, { count: totalVoters }] =
+    await Promise.all([
+      admin.from("vote_committee").select("*", { count: "exact", head: true }).eq("vote_id", vote.id),
+      admin
+        .from("vote_participants")
+        .select("*", { count: "exact", head: true })
+        .eq("vote_id", vote.id)
+        .eq("method", "paper"),
+      admin.from("vote_participants").select("*", { count: "exact", head: true }).eq("vote_id", vote.id),
+    ]);
 
-  return { totalVoters: totalVoters ?? 0, options: lines };
+  const approvedResidentIds = (approvals ?? []).map((a) => a.resident_id);
+  const size = committeeSize ?? 0;
+  const finalized = !!submission && size > 0 && approvedResidentIds.length >= size;
+  const required = (paperVoters ?? 0) > 0;
+
+  let enteredByName: string | null = null;
+  if (submission?.entered_by_user_id) {
+    const { data: u } = await admin
+      .from("users")
+      .select("first_name, last_name, resident:residents(first_name, last_name)")
+      .eq("id", submission.entered_by_user_id)
+      .maybeSingle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const uu = u as any;
+    enteredByName = uu?.resident
+      ? `${uu.resident.first_name} ${uu.resident.last_name}`
+      : uu?.first_name && uu?.last_name
+        ? `${uu.first_name} ${uu.last_name}`
+        : null;
+  }
+
+  let lines = opts.map((o) => {
+    const electronic = electById.get(o.id) ?? 0;
+    const paper = paperById.get(o.id) ?? 0;
+    return { id: o.id, label: o.label, electronic, paper, total: electronic + (finalized ? paper : 0) };
+  });
+  if (vote.format === "election") lines = lines.sort((a, b) => b.total - a.total);
+
+  const counts: Record<string, number> = {};
+  for (const [k, v] of paperById) counts[k] = v;
+
+  return {
+    ready: !required || finalized,
+    totalVoters: totalVoters ?? 0,
+    options: lines,
+    paper: {
+      paperVoters: paperVoters ?? 0,
+      required,
+      submissionExists: !!submission,
+      enteredByName,
+      enteredAt: submission?.entered_at ?? null,
+      counts,
+      approvedResidentIds,
+      committeeSize: size,
+      finalized,
+    },
+  };
 }
 
 /**
@@ -140,23 +201,23 @@ export async function getVoteRoster(
 ): Promise<{ voted: VoteRosterEntry[]; notVoted: VoteRosterEntry[] }> {
   const admin = createAdminClient();
   const [{ data: parts }, { data: residents }] = await Promise.all([
-    admin.from("vote_participants").select("resident_id, voted_by_user_id").eq("vote_id", voteId),
+    admin.from("vote_participants").select("resident_id, method").eq("vote_id", voteId),
     admin.from("residents").select("id, first_name, last_name").order("last_name"),
   ]);
 
-  const votedBy = new Map(
-    (parts ?? []).map((p) => [p.resident_id, p.voted_by_user_id as string | null])
+  const methodByResident = new Map(
+    (parts ?? []).map((p) => [p.resident_id, (p.method ?? "self") as VoteRosterEntry["method"]])
   );
   const voted: VoteRosterEntry[] = [];
   const notVoted: VoteRosterEntry[] = [];
 
   for (const r of residents ?? []) {
-    if (votedBy.has(r.id)) {
+    if (methodByResident.has(r.id)) {
       voted.push({
         resident_id: r.id,
         first_name: r.first_name,
         last_name: r.last_name,
-        by_self: !votedBy.get(r.id),
+        method: methodByResident.get(r.id),
       });
     } else {
       notVoted.push({ resident_id: r.id, first_name: r.first_name, last_name: r.last_name });

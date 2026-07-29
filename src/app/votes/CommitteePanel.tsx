@@ -2,24 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { castVoteOnBehalf, closeVote } from "./actions";
+import { castVoteOnBehalf, markPaperVote, closeVote } from "./actions";
 import type { VoteRosterEntry } from "@/lib/types";
 
 /**
- * ועדת קלפי management for a single vote: close the vote, enter a vote on behalf
- * of a resident who can't access the app, and track turnout (who has voted and
- * who hasn't). Turnout shows participation only — never how anyone voted.
+ * ועדת קלפי management for an open vote: close it, help a resident vote
+ * (electronically on their behalf — only when the admin enabled it — or by
+ * marking a paper ballot), and track turnout. Turnout shows participation only,
+ * never how anyone voted.
  */
 export default function CommitteePanel({
   voteId,
   canManage,
+  allowProxy,
   options,
   maxSelections,
   voted,
   notVoted,
 }: {
   voteId: string;
-  canManage: boolean; // vote is open — closing and on-behalf entry are allowed
+  canManage: boolean; // vote is open — closing and helping to vote are allowed
+  allowProxy: boolean;
   options: { id: string; label: string }[];
   maxSelections: number;
   voted: VoteRosterEntry[];
@@ -30,13 +33,12 @@ export default function CommitteePanel({
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // On-behalf entry
   const [showEntry, setShowEntry] = useState(false);
   const [residentId, setResidentId] = useState("");
+  const [residentName, setResidentName] = useState("");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
 
-  // Turnout lists (collapsed by default)
   const [showVoted, setShowVoted] = useState(false);
   const [showNotVoted, setShowNotVoted] = useState(false);
 
@@ -56,6 +58,7 @@ export default function CommitteePanel({
 
   function resetEntry() {
     setResidentId("");
+    setResidentName("");
     setQuery("");
     setPicked([]);
   }
@@ -73,6 +76,22 @@ export default function CommitteePanel({
     });
   }
 
+  async function withBusy(p: Promise<{ error: string } | { ok: true }>, ok: string) {
+    setError(null);
+    setMsg(null);
+    setBusy(true);
+    const res = await p;
+    setBusy(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setMsg(ok);
+    resetEntry();
+    setShowEntry(false);
+    router.refresh();
+  }
+
   async function close() {
     if (!confirm("לסגור את ההצבעה? לאחר הסגירה לא ניתן יהיה להצביע והתוצאות ייחשפו.")) return;
     setError(null);
@@ -84,30 +103,6 @@ export default function CommitteePanel({
       setError(res.error);
       return;
     }
-    router.refresh();
-  }
-
-  async function submitOnBehalf() {
-    if (!residentId) {
-      setError("יש לבחור תושב");
-      return;
-    }
-    if (picked.length === 0) {
-      setError("יש לבחור לפחות אפשרות אחת");
-      return;
-    }
-    setError(null);
-    setMsg(null);
-    setBusy(true);
-    const res = await castVoteOnBehalf(voteId, residentId, picked);
-    setBusy(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
-    }
-    setMsg("ההצבעה נקלטה ונרשמה עבור התושב.");
-    resetEntry();
-    setShowEntry(false);
     router.refresh();
   }
 
@@ -134,17 +129,17 @@ export default function CommitteePanel({
         </div>
       )}
 
-      {/* Enter a vote on behalf of a resident */}
+      {/* Help a resident vote: proxy (if enabled) and/or mark a paper ballot */}
       {canManage && (
         <div className="mt-5 border-t border-brand-100 pt-4">
           {!showEntry ? (
             <button type="button" onClick={() => setShowEntry(true)} className="btn-secondary">
-              הזנת הצבעה עבור תושב
+              רישום הצבעה עבור תושב
             </button>
           ) : (
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <div className="mb-1 flex items-center justify-between">
-                <h3 className="font-medium text-gray-900">הזנת הצבעה עבור תושב</h3>
+                <h3 className="font-medium text-gray-900">רישום הצבעה עבור תושב</h3>
                 <button
                   type="button"
                   onClick={() => {
@@ -169,6 +164,7 @@ export default function CommitteePanel({
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setResidentId("");
+                  setResidentName("");
                 }}
               />
               {query.trim() && !residentId && (
@@ -179,6 +175,7 @@ export default function CommitteePanel({
                         type="button"
                         onClick={() => {
                           setResidentId(r.resident_id);
+                          setResidentName(`${r.first_name} ${r.last_name}`);
                           setQuery(`${r.first_name} ${r.last_name}`);
                         }}
                         className="block w-full px-3 py-1.5 text-right text-sm hover:bg-brand-50"
@@ -197,45 +194,77 @@ export default function CommitteePanel({
                 </ul>
               )}
 
-              <div className="mt-4">
-                <label className="label">
-                  בחירה{multi ? ` (עד ${maxSelections})` : ""}
-                </label>
-                <ul className="space-y-2">
-                  {options.map((o) => {
-                    const on = picked.includes(o.id);
-                    const disabled = busy || (multi && !on && atCap);
-                    return (
-                      <li key={o.id}>
-                        <label
-                          className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 text-sm transition ${
-                            on ? "border-brand-400 bg-brand-50" : "border-gray-200 hover:bg-gray-50"
-                          } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
-                        >
-                          <input
-                            type={multi ? "checkbox" : "radio"}
-                            name="onbehalf-option"
-                            className="h-4 w-4 accent-brand-500"
-                            checked={on}
-                            disabled={disabled}
-                            onChange={() => toggleOption(o.id)}
-                          />
-                          <span className="font-medium text-gray-800">{o.label}</span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+              {residentId && (
+                <div className="mt-4 space-y-4">
+                  {/* Option A: electronic proxy vote (only if enabled) */}
+                  {allowProxy && (
+                    <div className="rounded-lg border border-gray-200 p-3">
+                      <div className="mb-2 text-sm font-medium text-gray-800">
+                        הזנת בחירה אלקטרונית{multi ? ` (עד ${maxSelections})` : ""}
+                      </div>
+                      <ul className="space-y-2">
+                        {options.map((o) => {
+                          const on = picked.includes(o.id);
+                          const disabled = busy || (multi && !on && atCap);
+                          return (
+                            <li key={o.id}>
+                              <label
+                                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 text-sm transition ${
+                                  on ? "border-brand-400 bg-brand-50" : "border-gray-200 hover:bg-gray-50"
+                                } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                              >
+                                <input
+                                  type={multi ? "checkbox" : "radio"}
+                                  name="onbehalf-option"
+                                  className="h-4 w-4 accent-brand-500"
+                                  checked={on}
+                                  disabled={disabled}
+                                  onChange={() => toggleOption(o.id)}
+                                />
+                                <span className="font-medium text-gray-800">{o.label}</span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          withBusy(
+                            castVoteOnBehalf(voteId, residentId, picked),
+                            "ההצבעה נקלטה ונרשמה עבור התושב."
+                          )
+                        }
+                        disabled={busy || picked.length === 0}
+                        className="btn-primary mt-3 disabled:opacity-50"
+                      >
+                        {busy ? "שולח…" : "רישום הבחירה"}
+                      </button>
+                    </div>
+                  )}
 
-              <button
-                type="button"
-                onClick={submitOnBehalf}
-                disabled={busy || !residentId || picked.length === 0}
-                className="btn-primary mt-4 disabled:opacity-50"
-              >
-                {busy ? "שולח…" : "רישום ההצבעה"}
-              </button>
+                  {/* Option B: mark a paper ballot (always available) */}
+                  <div className="rounded-lg border border-gray-200 p-3">
+                    <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה בנייר</div>
+                    <p className="mb-2 text-xs text-gray-500">
+                      התושב הצביע בפתק. סימון בלבד — הקולות ייספרו ידנית לאחר סגירת ההצבעה.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        withBusy(
+                          markPaperVote(voteId, residentId),
+                          `${residentName} סומן/ה כמי שהצביע/ה בנייר.`
+                        )
+                      }
+                      disabled={busy}
+                      className="btn-secondary disabled:opacity-50"
+                    >
+                      {busy ? "רושם…" : "סימון הצבעה בנייר"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -254,7 +283,7 @@ export default function CommitteePanel({
             open={showVoted}
             onToggle={() => setShowVoted((v) => !v)}
             entries={voted}
-            showSource
+            showMethod
           />
           <Roster
             title={`טרם הצביעו (${notVoted.length})`}
@@ -268,18 +297,23 @@ export default function CommitteePanel({
   );
 }
 
+const METHOD_BADGE: Record<string, string> = {
+  proxy: "נרשם ע״י ועדת קלפי",
+  paper: "הצביע/ה בנייר",
+};
+
 function Roster({
   title,
   open,
   onToggle,
   entries,
-  showSource = false,
+  showMethod = false,
 }: {
   title: string;
   open: boolean;
   onToggle: () => void;
   entries: VoteRosterEntry[];
-  showSource?: boolean;
+  showMethod?: boolean;
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white">
@@ -298,9 +332,9 @@ function Roster({
               <span>
                 {r.first_name} {r.last_name}
               </span>
-              {showSource && r.by_self === false && (
+              {showMethod && r.method && METHOD_BADGE[r.method] && (
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                  נרשם ע״י ועדת קלפי
+                  {METHOD_BADGE[r.method]}
                 </span>
               )}
             </li>

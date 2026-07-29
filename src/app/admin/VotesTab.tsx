@@ -105,6 +105,7 @@ export default function VotesTab({
                           startAt: input.startAt,
                           closureMode: input.closureMode,
                           closesAt: input.closesAt,
+                          allowProxy: input.allowProxy,
                           maxSelections: input.maxSelections,
                         })
                       )
@@ -201,6 +202,7 @@ interface FormInput {
   startAt: string; // ISO
   closureMode: "manual" | "scheduled";
   closesAt: string | null; // ISO
+  allowProxy: boolean;
   optionLabels: string[];
   candidateIds: string[];
   memberIds: string[];
@@ -230,6 +232,7 @@ function VoteForm({
     editVote?.closure_mode ?? "manual"
   );
   const [closesAt, setClosesAt] = useState(isoToLocalInput(editVote?.closes_at ?? null));
+  const [allowProxy, setAllowProxy] = useState(editVote?.allow_proxy_vote ?? true);
   const [optionLabels, setOptionLabels] = useState<string[]>(["", ""]);
   const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -244,6 +247,7 @@ function VoteForm({
       startAt: localInputToIso(startAt),
       closureMode,
       closesAt: closureMode === "scheduled" ? localInputToIso(closesAt) : null,
+      allowProxy,
       optionLabels,
       candidateIds,
       memberIds,
@@ -389,6 +393,23 @@ function VoteForm({
             1 = בחירה בודדת. יותר מ-1 מאפשר לבחור כמה אפשרויות.
           </p>
         </div>
+
+        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-white p-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-brand-500"
+            checked={allowProxy}
+            onChange={(e) => setAllowProxy(e.target.checked)}
+          />
+          <span className="text-sm">
+            <span className="font-medium text-gray-800">
+              לאפשר לועדת קלפי להזין הצבעה אלקטרונית עבור תושב אחר
+            </span>
+            <span className="mt-0.5 block text-xs text-gray-500">
+              עבור תושב שמתקשה לגשת למערכת. סימון הצבעה בנייר אפשרי בכל מקרה.
+            </span>
+          </span>
+        </label>
 
         {!isEdit && (
           <div>
