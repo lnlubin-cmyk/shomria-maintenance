@@ -266,3 +266,98 @@ export function formatDateTime(iso: string | null): string {
     minute: "2-digit",
   });
 }
+
+// =====================================================================
+// Votes / elections (הצבעות)
+// =====================================================================
+export type VoteFormat = "options" | "election";
+export type VoteClosureMode = "manual" | "scheduled";
+export type VoteState = "upcoming" | "open" | "closed";
+
+export const VOTE_FORMAT_LABELS: Record<VoteFormat, string> = {
+  options: "אפשרויות מוגדרות מראש",
+  election: "בחירות (בחירת מועמדים)",
+};
+
+export const VOTE_STATE_LABELS: Record<VoteState, string> = {
+  upcoming: "טרם החלה",
+  open: "הצבעה פעילה",
+  closed: "ההצבעה הסתיימה",
+};
+
+export const VOTE_STATE_STYLES: Record<VoteState, string> = {
+  upcoming: "bg-blue-100 text-blue-800",
+  open: "bg-emerald-100 text-emerald-800",
+  closed: "bg-gray-200 text-gray-700",
+};
+
+export interface Vote {
+  id: string;
+  title: string;
+  description: string | null;
+  subject: string;
+  format: VoteFormat;
+  max_selections: number;
+  start_at: string;
+  closure_mode: VoteClosureMode;
+  closes_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+}
+
+export interface VoteOption {
+  id: string;
+  label: string;
+  candidate_resident_id: string | null;
+  sort_order: number;
+}
+
+export interface VoteCommitteeMember {
+  resident_id: string;
+  first_name: string;
+  last_name: string;
+}
+
+/** One option's result line — only ever assembled after the vote is closed. */
+export interface VoteOptionResult {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface VoteResults {
+  totalVoters: number;
+  options: VoteOptionResult[];
+}
+
+/** A resident row in the committee's turnout lists (voted / not-yet-voted). */
+export interface VoteRosterEntry {
+  resident_id: string;
+  first_name: string;
+  last_name: string;
+  by_self?: boolean; // in the "voted" list: true = voted themselves, false = entered on their behalf
+}
+
+/**
+ * The state of a vote at a point in time. `closed_at` (a manual/early close)
+ * wins; otherwise a scheduled vote closes automatically once its time passes.
+ */
+export function voteState(
+  v: Pick<Vote, "start_at" | "closes_at" | "closed_at" | "closure_mode">,
+  now: Date = new Date()
+): VoteState {
+  const t = now.getTime();
+  if (v.closed_at) return "closed";
+  if (t < new Date(v.start_at).getTime()) return "upcoming";
+  if (v.closure_mode === "scheduled" && v.closes_at && t >= new Date(v.closes_at).getTime()) {
+    return "closed";
+  }
+  return "open";
+}
+
+export function isVoteOpen(
+  v: Pick<Vote, "start_at" | "closes_at" | "closed_at" | "closure_mode">,
+  now: Date = new Date()
+): boolean {
+  return voteState(v, now) === "open";
+}

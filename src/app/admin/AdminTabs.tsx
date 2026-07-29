@@ -11,8 +11,10 @@ import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
 import TorahLessonsTab from "./TorahLessonsTab";
+import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
 import type { TorahLesson } from "@/lib/types";
+import type { AdminVote } from "@/lib/votes";
 
 type Tab =
   | "users"
@@ -23,7 +25,8 @@ type Tab =
   | "media"
   | "halachic"
   | "prayers"
-  | "torah";
+  | "torah"
+  | "votes";
 
 export interface AdminUserRow {
   id: string;
@@ -47,6 +50,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "halachic", label: "זמנים הלכתיים" },
   { key: "prayers", label: "זמני תפילות" },
   { key: "torah", label: "שיעורי תורה" },
+  { key: "votes", label: "הצבעות" },
 ];
 
 export default function AdminTabs({
@@ -59,6 +63,7 @@ export default function AdminTabs({
   halachicYears,
   schedules,
   lessons,
+  votes,
   currentUserId,
 }: {
   residents: Resident[];
@@ -70,6 +75,7 @@ export default function AdminTabs({
   halachicYears: { year: number; days: number }[];
   schedules: PrayerSchedule[];
   lessons: TorahLesson[];
+  votes: AdminVote[];
   currentUserId: string;
 }) {
   const [tab, setTab] = useState<Tab>("users");
@@ -105,6 +111,7 @@ export default function AdminTabs({
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
       {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}
       {tab === "torah" && <TorahLessonsTab lessons={lessons} />}
+      {tab === "votes" && <VotesTab votes={votes} residents={residents} />}
     </div>
   );
 }

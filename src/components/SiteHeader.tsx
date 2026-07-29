@@ -39,10 +39,12 @@ export default function SiteHeader({
   session,
   community = [],
   prayerSchedules = [],
+  activeVotes = [],
 }: {
   session: Session | null;
   community?: CommunityMenuItem[];
   prayerSchedules?: { id: string; title: string }[];
+  activeVotes?: { id: string; title: string }[];
 }) {
   const staff = session ? isStaff(session.user.role) : false;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -97,6 +99,23 @@ export default function SiteHeader({
       items: [
         { label: "פתיחת קריאה לתקלה", href: "/faults/new" },
         { label: staff ? "ניהול תקלות" : "מעקב סטטוס קריאה", href: "/faults" },
+      ],
+    },
+    // "הצבעות" — the open vote(s) appear at the top when active; the history &
+    // results view is always available.
+    {
+      key: "votes",
+      label: "הצבעות",
+      items: [
+        ...(activeVotes.length > 0
+          ? [
+              {
+                label: "הצבעה פעילה",
+                children: activeVotes.map((v) => ({ label: v.title, href: `/votes/${v.id}` })),
+              } as MenuItem,
+            ]
+          : []),
+        { label: "הצבעות קודמות ותוצאות", href: "/votes" },
       ],
     },
   ];
