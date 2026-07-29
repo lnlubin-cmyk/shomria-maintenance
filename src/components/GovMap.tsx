@@ -97,6 +97,7 @@ export default function GovMap({
   const extentRef = useRef(onExtent);
   extentRef.current = onExtent;
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,6 +131,7 @@ export default function GovMap({
             } catch {
               /* extent events optional */
             }
+            if (!cancelled) setReady(true);
             readyRef.current?.();
           },
         });
@@ -185,11 +187,18 @@ export default function GovMap({
           {error}
         </div>
       )}
-      <div
-        id="govmap"
-        className="w-full overflow-hidden rounded-xl border border-gray-200"
-        style={{ height }}
-      />
+      <div className="relative w-full overflow-hidden rounded-xl border border-gray-200" style={{ height }}>
+        <div id="govmap" className="h-full w-full" />
+        {!ready && !error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 text-gray-500">
+            <svg className="h-8 w-8 animate-spin text-brand-500" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z" />
+            </svg>
+            <span className="text-sm">טוען מפה…</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
