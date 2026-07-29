@@ -140,7 +140,28 @@ export interface Fault {
   assigned_to_user_id: string | null;
   treatment_description: string | null;
   treatment_type: TreatmentType | null;
+  hours_spent: number | null; // staff only
+  total_cost: number; // staff only — sum of cost items
   closed_at: string | null;
+  created_at: string;
+}
+
+/** A message/SMS sent to the resident about a fault. */
+export interface FaultMessage {
+  id: string;
+  body: string;
+  to_phone: string | null;
+  sms_ok: boolean | null;
+  is_automatic: boolean;
+  created_at: string;
+  sender: NamedUser | null; // null for the automatic system message
+}
+
+/** A cost line on a fault (staff only). */
+export interface FaultCostItem {
+  id: string;
+  description: string;
+  amount: number;
   created_at: string;
 }
 

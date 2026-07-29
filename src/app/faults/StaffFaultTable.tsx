@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   STATUS_LABELS,
   STATUS_ORDER,
@@ -197,7 +198,7 @@ export default function StaffFaultTable({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[1100px] text-right text-sm">
+        <table className="w-full min-w-[1300px] text-right text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="w-10 px-3 py-3">
@@ -218,6 +219,8 @@ export default function StaffFaultTable({
               <th className="px-3 py-3">אחריות</th>
               <th className="px-3 py-3">תיאור הטיפול</th>
               <th className="px-3 py-3">סוג הטיפול</th>
+              <th className="px-3 py-3">עלות</th>
+              <th className="px-3 py-3">שעות</th>
               <th className="px-3 py-3">
                 <button
                   type="button"
@@ -230,6 +233,7 @@ export default function StaffFaultTable({
                 </button>
               </th>
               <th className="px-3 py-3">נסגרה</th>
+              <th className="px-3 py-3">פעולות</th>
             </tr>
             <tr className="border-t border-gray-200">
               <th />
@@ -311,6 +315,8 @@ export default function StaffFaultTable({
                   ))}
                 </select>
               </th>
+              <th />
+              <th />
               <th className="px-2 pb-2">
                 <FilterInput
                   value={filters.created_at}
@@ -318,13 +324,14 @@ export default function StaffFaultTable({
                 />
               </th>
               <th />
+              <th />
             </tr>
           </thead>
 
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={15} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תקלות התואמות את הסינון.
                 </td>
               </tr>
@@ -375,8 +382,24 @@ export default function StaffFaultTable({
                 <td className="px-3 py-3">
                   {f.treatment_type ? TREATMENT_TYPE_LABELS[f.treatment_type] : "—"}
                 </td>
+                <td className="whitespace-nowrap px-3 py-3 tabular-nums" dir="ltr">
+                  {Number(f.total_cost) > 0 ? `${Number(f.total_cost).toLocaleString("he-IL")} ₪` : "—"}
+                </td>
+                <td className="px-3 py-3 tabular-nums" dir="ltr">
+                  {f.hours_spent != null ? f.hours_spent : "—"}
+                </td>
                 <td className="whitespace-nowrap px-3 py-3">{formatDate(f.created_at)}</td>
                 <td className="whitespace-nowrap px-3 py-3">{formatDate(f.closed_at)}</td>
+                <td className="whitespace-nowrap px-3 py-3">
+                  <div className="flex gap-3">
+                    <Link href={`/faults/${f.fault_number}`} className="text-brand-600 hover:underline">
+                      עדכון
+                    </Link>
+                    <Link href={`/faults/${f.fault_number}?view=1`} className="text-gray-600 hover:underline">
+                      צפייה
+                    </Link>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient, getSession } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getSession } from "@/lib/supabase/server";
+import { sendFaultSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
 import {
   STATUS_ORDER,
   TREATMENT_TYPE_ORDER,
@@ -30,14 +31,25 @@ export async function createFault(formData: FormData): Promise<ActionResult> {
   if (!faultDescription) return { error: "יש למלא תיאור תקלה" };
 
   const supabase = createClient();
-  const { error } = await supabase.from("faults").insert({
-    caller_resident_id: callerResidentId,
-    created_by_user_id: session.user.id,
-    building_plot_number: buildingPlotNumber,
-    fault_description: faultDescription,
-  });
+  const { data: created, error } = await supabase
+    .from("faults")
+    .insert({
+      caller_resident_id: callerResidentId,
+      created_by_user_id: session.user.id,
+      building_plot_number: buildingPlotNumber,
+      fault_description: faultDescription,
+    })
+    .select("fault_number")
+    .single();
 
-  if (error) return { error: "שמירת הקריאה נכשלה. נסה שוב." };
+  if (error || !created) return { error: "שמירת הקריאה נכשלה. נסה שוב." };
+
+  // Automatic confirmation SMS to the resident (best-effort; always logged).
+  try {
+    await sendFaultSms(created.fault_number, FAULT_RECEIVED_MESSAGE, { automatic: true });
+  } catch {
+    /* SMS failure must not fail the call itself */
+  }
 
   revalidatePath("/faults");
   redirect("/faults?created=1");
@@ -90,6 +102,18 @@ export async function updateFaults(formData: FormData): Promise<ActionResult> {
     patch.treatment_description = String(formData.get("treatment_description") ?? "").trim() || null;
   }
 
+  // Hours the yard team spent (staff only). Empty clears it.
+  if (formData.has("hours_spent")) {
+    const raw = String(formData.get("hours_spent") ?? "").trim();
+    if (raw === "") {
+      patch.hours_spent = null;
+    } else {
+      const h = Number(raw);
+      if (!Number.isFinite(h) || h < 0) return { error: "מספר שעות לא תקין" };
+      patch.hours_spent = h;
+    }
+  }
+
   const supabase = createClient();
 
   // אחריות. "__none__" clears the assignment; absent means leave unchanged.
@@ -139,6 +163,76 @@ export async function deleteFaults(formData: FormData): Promise<ActionResult> {
 
   if (error) return { error: "מחיקה נכשלה. נסה שוב." };
 
+  revalidatePath("/faults");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------
+// Messages (SMS to the resident) — staff only
+// ---------------------------------------------------------------------
+
+/** Send an editable SMS to the caller and log it. Always logged; if the SMS
+ *  provider fails, the message is still saved with a "not delivered" status. */
+export async function sendFaultMessage(faultNumber: number, body: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה לשלוח הודעות" };
+
+  const text = String(body ?? "").trim();
+  if (!text) return { error: "יש להזין תוכן הודעה" };
+  if (!Number.isInteger(faultNumber)) return { error: "קריאה חסרה" };
+
+  await sendFaultSms(faultNumber, text, { senderUserId: session.user.id });
+
+  revalidatePath(`/faults/${faultNumber}`);
+  revalidatePath("/faults");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------
+// Cost items — staff only
+// ---------------------------------------------------------------------
+
+export async function addCostItem(
+  faultNumber: number,
+  description: string,
+  amount: string
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+
+  const desc = String(description ?? "").trim();
+  if (!desc) return { error: "יש להזין תיאור" };
+  const amt = Number(String(amount ?? "").trim());
+  if (!Number.isFinite(amt) || amt < 0) return { error: "סכום לא תקין" };
+  if (!Number.isInteger(faultNumber)) return { error: "קריאה חסרה" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("fault_cost_items").insert({
+    fault_number: faultNumber,
+    description: desc,
+    amount: amt,
+    created_by_user_id: session.user.id,
+  });
+  if (error) return { error: "הוספת פריט העלות נכשלה" };
+
+  revalidatePath(`/faults/${faultNumber}`);
+  revalidatePath("/faults");
+  return { ok: true };
+}
+
+export async function deleteCostItem(id: string, faultNumber: number): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+  if (!id) return { error: "פריט חסר" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("fault_cost_items").delete().eq("id", id);
+  if (error) return { error: "מחיקת פריט העלות נכשלה" };
+
+  revalidatePath(`/faults/${faultNumber}`);
   revalidatePath("/faults");
   return { ok: true };
 }

@@ -146,6 +146,15 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
               </div>
             )}
           </dl>
+
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <Link
+              href={`/faults/${f.fault_number}?view=1`}
+              className="text-sm font-medium text-brand-600 hover:underline"
+            >
+              צפייה בהודעות ובפרטי הקריאה ←
+            </Link>
+          </div>
         </article>
       ))}
     </div>

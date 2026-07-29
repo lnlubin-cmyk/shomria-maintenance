@@ -17,6 +17,8 @@ const SELECT = `
   assigned_to_user_id,
   treatment_description,
   treatment_type,
+  hours_spent,
+  total_cost,
   closed_at,
   created_at,
   caller:residents!faults_caller_resident_id_fkey(first_name, last_name),
