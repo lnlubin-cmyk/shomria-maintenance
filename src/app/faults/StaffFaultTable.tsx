@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -56,6 +56,9 @@ export default function StaffFaultTable({
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Show a manageable number of calls; adjustable, default 5.
+  const [pageSize, setPageSize] = useState<number | "all">(5);
+  const [page, setPage] = useState(0);
 
   // Spec: "המשתמש יוכל לסנן לפי כל אחד מהשדות" — every column filters.
   const rows = useMemo(() => {
@@ -83,7 +86,16 @@ export default function StaffFaultTable({
     });
   }, [faults, filters, sortDir]);
 
-  const allVisibleSelected = rows.length > 0 && rows.every((f) => selected.has(f.fault_number));
+  // Reset to the first page when the filtered set or page size changes.
+  useEffect(() => setPage(0), [filters, sortDir, pageSize]);
+
+  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pagedRows =
+    pageSize === "all" ? rows : rows.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
+
+  const allVisibleSelected =
+    pagedRows.length > 0 && pagedRows.every((f) => selected.has(f.fault_number));
 
   function toggleRow(n: number) {
     setSelected((prev) => {
@@ -97,12 +109,28 @@ export default function StaffFaultTable({
     setSelected((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) {
-        rows.forEach((f) => next.delete(f.fault_number));
+        pagedRows.forEach((f) => next.delete(f.fault_number));
       } else {
-        rows.forEach((f) => next.add(f.fault_number));
+        pagedRows.forEach((f) => next.add(f.fault_number));
       }
       return next;
     });
+  }
+
+  // Selection actions. One call → the single-call page; several → multi-view /
+  // the bulk-edit dialog.
+  function handleView() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (ids.length === 1) router.push(`/faults/${ids[0]}?view=1`);
+    else router.push(`/faults/view?ids=${ids.join(",")}`);
+  }
+
+  function handleUpdate() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (ids.length === 1) router.push(`/faults/${ids[0]}`);
+    else setEditing(true);
   }
 
   async function handleSave(patch: {
@@ -176,17 +204,24 @@ export default function StaffFaultTable({
           {selected.size > 0 && ` · ${selected.size} נבחרו`}
         </span>
 
-        {/* Spec: the edit button appears once at least one row is selected. */}
+        {/* View: one call opens its page; several show one after another. */}
         {selected.size > 0 && (
-          <button className="btn-primary" onClick={() => setEditing(true)} disabled={busy}>
-            עריכה
+          <button className="btn-secondary" onClick={handleView} disabled={busy}>
+            צפייה
           </button>
         )}
 
-        {/* Spec: delete is מנהל תחזוקה only. */}
+        {/* Update: one call opens its page; several use the bulk-edit dialog. */}
+        {selected.size > 0 && (
+          <button className="btn-primary" onClick={handleUpdate} disabled={busy}>
+            {selected.size === 1 ? "עדכון תקלה" : "עדכון תקלות"}
+          </button>
+        )}
+
+        {/* Delete is מנהל תחזוקה only. */}
         {selected.size > 0 && canDelete && (
           <button className="btn-danger" onClick={handleDelete} disabled={busy}>
-            מחיקת תקלות
+            {selected.size === 1 ? "מחיקת תקלה" : "מחיקת תקלות"}
           </button>
         )}
 
@@ -337,7 +372,7 @@ export default function StaffFaultTable({
               </tr>
             )}
 
-            {rows.map((f) => (
+            {pagedRows.map((f) => (
               <tr
                 key={f.fault_number}
                 className={selected.has(f.fault_number) ? "bg-brand-50" : "hover:bg-gray-50"}
@@ -404,6 +439,48 @@ export default function StaffFaultTable({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          הצג
+          <select
+            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            value={String(pageSize)}
+            onChange={(e) => setPageSize(e.target.value === "all" ? "all" : Number(e.target.value))}
+          >
+            {[5, 10, 20, 50].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+            <option value="all">הכל</option>
+          </select>
+          קריאות בעמוד
+        </label>
+
+        {pageSize !== "all" && totalPages > 1 && (
+          <div className="flex items-center gap-3 text-sm">
+            <button
+              className="btn-secondary"
+              disabled={currentPage === 0}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              הקודם
+            </button>
+            <span className="text-gray-600">
+              עמוד {currentPage + 1} מתוך {totalPages}
+            </span>
+            <button
+              className="btn-secondary"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              הבא
+            </button>
+          </div>
+        )}
       </div>
 
       {editing && (

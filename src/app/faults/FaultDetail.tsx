@@ -53,6 +53,7 @@ export default function FaultDetail({
   workers,
   staff,
   mode,
+  embedded = false,
 }: {
   fault: DetailFault;
   messages: FaultMessage[];
@@ -60,6 +61,7 @@ export default function FaultDetail({
   workers: Worker[];
   staff: boolean;
   mode: "edit" | "view";
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const editable = staff && mode === "edit";
@@ -122,19 +124,21 @@ export default function FaultDetail({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <Link href="/faults" className="text-sm text-brand-600 hover:underline">
-          ← חזרה לרשימת הקריאות
-        </Link>
-        {staff && (
-          <Link
-            href={mode === "edit" ? `/faults/${fault.fault_number}?view=1` : `/faults/${fault.fault_number}`}
-            className="text-sm text-gray-500 hover:underline"
-          >
-            {mode === "edit" ? "מצב צפייה" : "מצב עריכה"}
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/faults" className="text-sm text-brand-600 hover:underline">
+            ← חזרה לרשימת הקריאות
           </Link>
-        )}
-      </div>
+          {staff && (
+            <Link
+              href={mode === "edit" ? `/faults/${fault.fault_number}?view=1` : `/faults/${fault.fault_number}`}
+              className="text-sm text-gray-500 hover:underline"
+            >
+              {mode === "edit" ? "מצב צפייה" : "מצב עריכה"}
+            </Link>
+          )}
+        </div>
+      )}
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 

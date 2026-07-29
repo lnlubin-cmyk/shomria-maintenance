@@ -45,10 +45,23 @@ export async function createFault(formData: FormData): Promise<ActionResult> {
   if (error || !created) return { error: "שמירת הקריאה נכשלה. נסה שוב." };
 
   // Automatic confirmation SMS to the resident (best-effort; always logged).
-  try {
-    await sendFaultSms(created.fault_number, FAULT_RECEIVED_MESSAGE, { automatic: true });
-  } catch {
-    /* SMS failure must not fail the call itself */
+  // Suppressed when the caller is maintenance staff (איש/מנהל תחזוקה) — admins
+  // still receive it.
+  const admin = createAdminClient();
+  const { data: callerUser } = await admin
+    .from("users")
+    .select("role")
+    .eq("resident_id", callerResidentId)
+    .maybeSingle();
+  const callerIsMaintenance =
+    callerUser?.role === "maintenance" || callerUser?.role === "maintenance_manager";
+
+  if (!callerIsMaintenance) {
+    try {
+      await sendFaultSms(created.fault_number, FAULT_RECEIVED_MESSAGE, { automatic: true });
+    } catch {
+      /* SMS failure must not fail the call itself */
+    }
   }
 
   revalidatePath("/faults");
