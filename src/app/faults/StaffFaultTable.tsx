@@ -30,6 +30,7 @@ const EMPTY_FILTERS = {
   fault_number: "",
   caller: "",
   building: "",
+  building_plot: "",
   description: "",
   status: "",
   priority: "",
@@ -70,6 +71,7 @@ export default function StaffFaultTable({
         has(String(f.fault_number), filters.fault_number) &&
         has(fullName(f.caller), filters.caller) &&
         has(f.building ? buildingLabel(f.building) : "", filters.building) &&
+        has(f.building_plot_number, filters.building_plot) &&
         has(f.fault_description, filters.description) &&
         (!filters.status || f.status === filters.status) &&
         (!filters.priority || f.priority === filters.priority) &&
@@ -233,7 +235,7 @@ export default function StaffFaultTable({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[1300px] text-right text-sm">
+        <table className="w-full min-w-[1400px] text-right text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="w-10 px-3 py-3">
@@ -248,6 +250,7 @@ export default function StaffFaultTable({
               <th className="px-3 py-3">מס׳</th>
               <th className="px-3 py-3">שם הפונה</th>
               <th className="px-3 py-3">שם המבנה</th>
+              <th className="px-3 py-3">מגרש</th>
               <th className="px-3 py-3">תיאור התקלה</th>
               <th className="px-3 py-3">סטטוס</th>
               <th className="px-3 py-3">עדיפות</th>
@@ -288,6 +291,12 @@ export default function StaffFaultTable({
                 <FilterInput
                   value={filters.building}
                   onChange={(v) => setFilters({ ...filters, building: v })}
+                />
+              </th>
+              <th className="px-2 pb-2">
+                <FilterInput
+                  value={filters.building_plot}
+                  onChange={(v) => setFilters({ ...filters, building_plot: v })}
                 />
               </th>
               <th className="px-2 pb-2">
@@ -366,7 +375,7 @@ export default function StaffFaultTable({
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={15} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={16} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תקלות התואמות את הסינון.
                 </td>
               </tr>
@@ -389,6 +398,9 @@ export default function StaffFaultTable({
                 <td className="px-3 py-3 font-medium">{f.fault_number}</td>
                 <td className="px-3 py-3">{fullName(f.caller)}</td>
                 <td className="px-3 py-3">{buildingLabel(f.building)}</td>
+                <td className="px-3 py-3 tabular-nums" dir="ltr">
+                  {f.building_plot_number}
+                </td>
                 <td className="max-w-56 px-3 py-3">
                   <div className="truncate" title={f.fault_description}>
                     {f.fault_description}

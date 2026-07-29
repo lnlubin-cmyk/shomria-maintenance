@@ -38,7 +38,7 @@ export default async function AdminPage() {
       supabase
         .from("buildings")
         .select(
-          "plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4, layer_id, latitude, longitude, itm_x, itm_y, layer:building_layers(name, prefix)"
+          "plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4, water_heater_type, layer_id, latitude, longitude, itm_x, itm_y, layer:building_layers(name, prefix)"
         )
         .order("plot_number"),
       supabase

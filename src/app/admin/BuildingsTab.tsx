@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildingLabel, type Building, type BuildingLayer, type Resident } from "@/lib/types";
-import { upsertBuilding, deleteBuilding } from "./actions";
+import { upsertBuilding } from "./actions";
 import ImportBuildings from "./ImportBuildings";
 import ResidentPicker from "./ResidentPicker";
 
@@ -178,6 +178,18 @@ export default function BuildingsTab({
                 defaultValue={editing?.house_number ?? ""}
               />
             </div>
+            <div>
+              <label className="label" htmlFor="water_heater_type">
+                סוג הדוד
+              </label>
+              <input
+                id="water_heater_type"
+                name="water_heater_type"
+                className="field"
+                placeholder="לדוגמה: דוד שמש"
+                defaultValue={editing?.water_heater_type ?? ""}
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-4">
@@ -221,6 +233,7 @@ export default function BuildingsTab({
               <th className="px-3 py-3">שם המבנה</th>
               <th className="px-3 py-3">שכבה</th>
               <th className="px-3 py-3">כתובת</th>
+              <th className="px-3 py-3">סוג הדוד</th>
               <th className="px-3 py-3">תושבים</th>
               <th className="px-3 py-3">פעולות</th>
             </tr>
@@ -228,7 +241,7 @@ export default function BuildingsTab({
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו מבנים.
                 </td>
               </tr>
@@ -248,33 +261,19 @@ export default function BuildingsTab({
                   <td className="px-3 py-3">
                     {b.street_name ? `${b.street_name} ${b.house_number ?? ""}`.trim() : "—"}
                   </td>
+                  <td className="px-3 py-3 text-gray-600">{b.water_heater_type || "—"}</td>
                   <td className="px-3 py-3">{occupants.length ? occupants.join(", ") : "—"}</td>
                   <td className="px-3 py-3">
-                    <div className="flex gap-3">
-                      <button
-                        className="text-sm text-brand-600 hover:underline"
-                        onClick={() => {
-                          setEditing(b);
-                          setAdding(false);
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
-                      >
-                        עריכה
-                      </button>
-                      <form
-                        action={async (fd) => {
-                          await run(deleteBuilding, fd);
-                        }}
-                        onSubmit={(e) => {
-                          if (!confirm(`למחוק את המבנה "${b.building_name}"?`)) e.preventDefault();
-                        }}
-                      >
-                        <input type="hidden" name="plot_number" value={b.plot_number} />
-                        <button type="submit" className="text-sm text-red-600 hover:underline">
-                          מחיקה
-                        </button>
-                      </form>
-                    </div>
+                    <button
+                      className="text-sm text-brand-600 hover:underline"
+                      onClick={() => {
+                        setEditing(b);
+                        setAdding(false);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      עריכה
+                    </button>
                   </td>
                 </tr>
               );

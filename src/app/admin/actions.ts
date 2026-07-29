@@ -204,6 +204,7 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
     resident_2: optional("resident_2"),
     resident_3: optional("resident_3"),
     resident_4: optional("resident_4"),
+    water_heater_type: optional("water_heater_type"),
   };
 
   const admin = createAdminClient();
@@ -224,27 +225,9 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
   return { ok: true };
 }
 
-export async function deleteBuilding(formData: FormData): Promise<ActionResult> {
-  try {
-    await requireAdmin();
-  } catch (e) {
-    return { error: (e as Error).message };
-  }
-
-  const plotNumber = String(formData.get("plot_number") ?? "").trim();
-  if (!plotNumber) return { error: "מספר מגרש חסר" };
-
-  const admin = createAdminClient();
-  const { error } = await admin.from("buildings").delete().eq("plot_number", plotNumber);
-
-  if (error) {
-    if (error.code === "23503") return { error: "לא ניתן למחוק מבנה שיש לו קריאות במערכת" };
-    return { error: "מחיקת המבנה נכשלה" };
-  }
-
-  revalidatePath("/admin");
-  return { ok: true };
-}
+// Deleting a house is intentionally NOT exposed in the app — it is done
+// directly in the database by an operator (a house rarely goes away, and its
+// removal can cascade into faults/map data). See the runbook.
 
 // ---------------------------------------------------------------------------
 // משתמשים

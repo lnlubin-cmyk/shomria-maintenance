@@ -108,6 +108,7 @@ export interface Building {
   resident_2: string | null;
   resident_3: string | null;
   resident_4: string | null;
+  water_heater_type: string | null; // סוג הדוד — free text (e.g. דוד שמש)
   layer_id: number | null;
   layer?: Pick<BuildingLayer, "name" | "prefix"> | null;
   latitude: number | null;
