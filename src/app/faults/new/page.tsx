@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getSession } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import NewFaultForm from "./NewFaultForm";
-import type { Building } from "@/lib/types";
+import { isStaff, type Building } from "@/lib/types";
 
 export default async function NewFaultPage() {
   const session = await getSession();
@@ -18,6 +18,17 @@ export default async function NewFaultPage() {
     .order("building_name");
 
   const list = (buildings ?? []) as unknown as Building[];
+
+  // Staff opening a call may fill in the handling fields immediately, so they
+  // need the assignable-worker list for the אחריות dropdown.
+  const staff = isStaff(session.user.role);
+  const { data: workers } = staff
+    ? await supabase
+        .from("users")
+        .select("id, role, first_name, last_name, resident:residents(first_name, last_name)")
+        .in("role", ["maintenance", "maintenance_manager"])
+        .eq("is_active", true)
+    : { data: [] };
 
   // Spec 2b: default to the building where this user is registered as a resident.
   // External (non-resident) staff have no home building — they pick one.
@@ -43,6 +54,9 @@ export default async function NewFaultPage() {
           defaultBuildingPlot={home?.plot_number ?? null}
           currentResidentId={session.residentId}
           currentResidentName={session.residentId ? session.displayName : ""}
+          staff={staff}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          workers={(workers ?? []) as any[]}
         />
       </main>
     </div>

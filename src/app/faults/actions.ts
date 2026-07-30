@@ -46,6 +46,51 @@ export async function createFault(formData: FormData): Promise<ActionResult> {
 
   if (error || !created) return { error: "שמירת הקריאה נכשלה. נסה שוב." };
 
+  // When a staff member opens the call, they may fill in the handling fields
+  // right away (including marking it תקלה תוקנה). The insert is forced to the
+  // initial state by a DB trigger, so apply those fields via the normal staff
+  // update path — which the column guard permits for staff, and which keeps the
+  // resident protections on insert intact.
+  if (isStaff(session.user.role)) {
+    const patch: Record<string, unknown> = {};
+
+    const status = String(formData.get("status") ?? "");
+    if (status && STATUS_ORDER.includes(status as FaultStatus)) patch.status = status;
+
+    const priority = String(formData.get("priority") ?? "");
+    if (priority && PRIORITY_ORDER.includes(priority as FaultPriority)) patch.priority = priority;
+
+    const treatmentType = String(formData.get("treatment_type") ?? "");
+    if (treatmentType && TREATMENT_TYPE_ORDER.includes(treatmentType as TreatmentType)) {
+      patch.treatment_type = treatmentType;
+    }
+
+    const treatment = String(formData.get("treatment_description") ?? "").trim();
+    if (treatment) patch.treatment_description = treatment;
+
+    const hoursRaw = String(formData.get("hours_spent") ?? "").trim();
+    if (hoursRaw !== "") {
+      const h = Number(hoursRaw);
+      if (Number.isFinite(h) && h >= 0) patch.hours_spent = h;
+    }
+
+    const assignee = String(formData.get("assigned_to_user_id") ?? "");
+    if (assignee && assignee !== "__none__") {
+      const { data: worker } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", assignee)
+        .eq("is_active", true)
+        .in("role", ["maintenance", "maintenance_manager"])
+        .maybeSingle();
+      if (worker) patch.assigned_to_user_id = assignee;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await supabase.from("faults").update(patch).eq("fault_number", created.fault_number);
+    }
+  }
+
   // Automatic confirmation SMS to the resident (best-effort; always logged).
   // Suppressed when the caller is maintenance staff (איש/מנהל תחזוקה) — admins
   // still receive it.
