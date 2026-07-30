@@ -6,24 +6,33 @@ import PhoneDirectory, { type DirectoryEntry } from "./PhoneDirectory";
 export const metadata = { title: "חפש מספר טלפון — קהילת עצמונה-שומריה" };
 
 /**
- * Resident phone directory. Only residents who consented to share their phone
- * (share_phone = true) are listed. RLS hides other residents from a normal user,
- * so the consenting set is computed with the service role and only name + phone
- * (no id/email) is sent to the client.
+ * Phone directory. Lists residents who consented to share their phone
+ * (share_phone = true), plus non-resident user accounts (contractors / office
+ * holders), whose phone is shown like a resident's. RLS hides these rows from a
+ * normal user, so the set is computed with the service role and only name +
+ * phone (no id/email) is sent to the client.
  */
 export default async function PhoneDirectoryPage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/phone-directory");
 
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("residents")
-    .select("first_name, last_name, phone")
-    .eq("share_phone", true)
-    .order("last_name")
-    .order("first_name");
+  const [{ data: residentRows }, { data: userRows }] = await Promise.all([
+    admin.from("residents").select("first_name, last_name, phone").eq("share_phone", true),
+    admin
+      .from("users")
+      .select("first_name, last_name, phone")
+      .is("resident_id", null)
+      .not("phone", "is", null),
+  ]);
 
-  const residents = (data ?? []) as DirectoryEntry[];
+  const residents = [...(residentRows ?? []), ...(userRows ?? [])]
+    .filter((e) => e.first_name && e.last_name && e.phone)
+    .sort(
+      (a, b) =>
+        (a.last_name ?? "").localeCompare(b.last_name ?? "", "he") ||
+        (a.first_name ?? "").localeCompare(b.first_name ?? "", "he")
+    ) as DirectoryEntry[];
 
   return (
     <div className="min-h-screen bg-gray-50">

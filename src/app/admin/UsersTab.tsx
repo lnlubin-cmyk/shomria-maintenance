@@ -8,8 +8,6 @@ import { createUser, updateUserRole, deleteUser } from "./actions";
 import type { AdminUserRow } from "./AdminTabs";
 
 const ROLES = Object.keys(ROLE_LABELS) as UserRole[];
-// A non-resident account can only hold these roles.
-const EXTERNAL_ROLES: UserRole[] = ["maintenance", "maintenance_manager"];
 
 type NewUserKind = "resident" | "external";
 
@@ -98,7 +96,7 @@ export default function UsersTab({
                   : "border-gray-300 text-gray-600"
               }`}
             >
-              עובד תחזוקה חיצוני
+              משתמש שאינו תושב
             </button>
           </div>
 
@@ -147,8 +145,8 @@ export default function UsersTab({
           ) : (
             <>
               <p className="text-sm text-gray-600">
-                עובד תחזוקה שאינו תושב הישוב (למשל קבלן חיצוני). הכניסה תתבצע עם האימייל שתזין וקוד
-                אימות.
+                משתמש שאינו תושב הישוב (למשל קבלן חיצוני או בעל תפקיד). הכניסה תתבצע עם האימייל שתזין
+                וקוד אימות. משתמש שאינו תושב אינו יכול להצביע, אך מספר הטלפון שלו יוצג בספר הטלפונים.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -185,8 +183,8 @@ export default function UsersTab({
                   <label className="label" htmlFor="ext_role">
                     סוג משתמש *
                   </label>
-                  <select id="ext_role" name="role" className="field" defaultValue="maintenance" required>
-                    {EXTERNAL_ROLES.map((r) => (
+                  <select id="ext_role" name="role" className="field" defaultValue="resident" required>
+                    {ROLES.map((r) => (
                       <option key={r} value={r}>
                         {ROLE_LABELS[r]}
                       </option>
@@ -207,7 +205,7 @@ export default function UsersTab({
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="px-3 py-3">שם</th>
-              <th className="px-3 py-3">סוג</th>
+              <th className="px-3 py-3">מגורים</th>
               <th className="px-3 py-3">תעודת זהות</th>
               <th className="px-3 py-3">טלפון</th>
               <th className="px-3 py-3">אימייל</th>
@@ -231,8 +229,14 @@ export default function UsersTab({
                     <span className="mr-2 text-xs text-gray-500">(אתה)</span>
                   )}
                 </td>
-                <td className="px-3 py-3 text-xs text-gray-500">
-                  {u.resident_id ? "תושב" : "חיצוני"}
+                <td className="px-3 py-3">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      u.resident_id ? "bg-brand-50 text-brand-700" : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {u.resident_id ? "תושב" : "לא תושב"}
+                  </span>
                 </td>
                 <td className="px-3 py-3" dir="ltr">
                   {u.resident_id ?? "—"}

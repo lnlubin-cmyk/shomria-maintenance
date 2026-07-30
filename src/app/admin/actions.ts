@@ -233,17 +233,14 @@ export async function upsertBuilding(formData: FormData): Promise<ActionResult> 
 // משתמשים
 // ---------------------------------------------------------------------------
 
-// Roles allowed for a non-resident (external) account.
-const EXTERNAL_ROLES: UserRole[] = ["maintenance", "maintenance_manager"];
-
 /**
  * Creates an account. Two kinds:
  *  - "resident": linked to an existing resident. The auth account is always
  *    keyed on a synthetic phone-based email so login-by-phone works for every
  *    resident (matches the SMS registration flow); the real email, if any, is
  *    kept only as contact info.
- *  - "external": a non-resident maintenance worker/manager with their own name
- *    and email (e.g. an outside contractor).
+ *  - "external": a non-resident user with their own name and email (e.g. an
+ *    outside contractor or an off-kibbutz office holder). May hold any role.
  * No password is set here — the owner signs in with the code flow.
  */
 export async function createUser(formData: FormData): Promise<ActionResult> {
@@ -270,10 +267,6 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   let lastName: string | null = null;
 
   if (kind === "external") {
-    if (!EXTERNAL_ROLES.includes(role as UserRole)) {
-      return { error: "משתמש שאינו תושב יכול להיות איש תחזוקה או מנהל תחזוקה בלבד" };
-    }
-
     firstName = String(formData.get("first_name") ?? "").trim();
     lastName = String(formData.get("last_name") ?? "").trim();
     const emailNorm = normalizeEmail(String(formData.get("email") ?? ""));
@@ -372,17 +365,6 @@ export async function updateUserRole(formData: FormData): Promise<ActionResult> 
   if (!VALID_ROLES.includes(role as UserRole)) return { error: "סוג משתמש לא חוקי" };
 
   const admin = createAdminClient();
-
-  // An external (non-resident) user can only hold a maintenance role — the DB
-  // check constraint enforces this, but catch it here for a clear message.
-  const { data: target } = await admin
-    .from("users")
-    .select("resident_id")
-    .eq("id", userId)
-    .maybeSingle();
-  if (target && !target.resident_id && !EXTERNAL_ROLES.includes(role as UserRole)) {
-    return { error: "משתמש שאינו תושב יכול להיות איש תחזוקה או מנהל תחזוקה בלבד" };
-  }
 
   // Guard against the last admin demoting themselves and locking everyone out.
   if (userId === session.user.id && role !== "admin") {
