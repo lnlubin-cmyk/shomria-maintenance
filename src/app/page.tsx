@@ -108,43 +108,50 @@ export default async function HomePage() {
       <AppHeader session={session} />
 
       <main>
-        {/* Hero band */}
+        {/* Hero band — full-width media with the heading laid over a dark scrim. */}
         <section className="bg-gradient-to-b from-brand-50 via-white to-gray-50">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2">
-            <div>
-              <Logo className="mb-6 h-24 w-auto" />
-              <h1 className="text-4xl font-bold leading-tight text-gray-900">מידע ושירות לתושב</h1>
-              <p className="mt-4 text-lg text-gray-600">
-                מידע שימושי לחברי הישוב ופנייה לצוות החצר — במקום אחד.
-              </p>
-
-              {!session && (
-                <div className="mt-8">
-                  <Link href="/login" className="btn-primary">
-                    כניסה / רישום
-                  </Link>
-                  <p className="mt-3 text-sm text-gray-500">
-                    השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
-                  </p>
+          <div className="mx-auto max-w-6xl px-4 py-10">
+            <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-soft">
+              {/* Admin-managed media carousel, or a static image if none. */}
+              {media.length > 0 ? (
+                <HeroCarousel items={media} bare heightClass="h-[360px] sm:h-[460px] lg:h-[540px]" />
+              ) : (
+                <div className="relative h-[360px] w-full sm:h-[460px] lg:h-[540px]">
+                  <Image
+                    src="/hero.svg"
+                    alt="איור של מבני הקיבוץ"
+                    fill
+                    priority
+                    className="object-cover"
+                  />
                 </div>
               )}
-            </div>
 
-            {/* Hero: admin-managed media carousel, or a static image if none. */}
-            {media.length > 0 ? (
-              <HeroCarousel items={media} />
-            ) : (
-              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft">
-                <Image
-                  src="/hero.svg"
-                  alt="איור של מבני הקיבוץ"
-                  width={800}
-                  height={450}
-                  priority
-                  className="h-auto w-full"
-                />
+              {/* Legibility scrim (darkest at the bottom, where the text sits). */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+              {/* Heading overlay. pointer-events-none lets the carousel controls
+                  underneath stay clickable; the CTA re-enables its own clicks. */}
+              <div className="pointer-events-none absolute inset-0 flex flex-col justify-end p-6 pb-14 sm:p-10 sm:pb-16">
+                <h1 className="max-w-2xl text-4xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-5xl">
+                  מידע ושירות לתושב
+                </h1>
+                <p className="mt-3 max-w-xl text-lg text-white/90 [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
+                  מידע שימושי לחברי הישוב ופנייה לצוות החצר — במקום אחד.
+                </p>
+
+                {!session && (
+                  <div className="pointer-events-auto mt-6">
+                    <Link href="/login" className="btn-primary">
+                      כניסה / רישום
+                    </Link>
+                    <p className="mt-2 text-sm text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
+                      השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </section>
 

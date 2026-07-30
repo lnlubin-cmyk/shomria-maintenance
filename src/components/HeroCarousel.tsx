@@ -55,7 +55,17 @@ function ytEmbedUrl(id: string, opts: { loop: boolean; jsapi: boolean }): string
  * end (via the IFrame API). Videos autoplay muted (browser policy). Arrows +
  * dots let the visitor navigate. Renders nothing if there's no media.
  */
-export default function HeroCarousel({ items }: { items: HomeMediaItem[] }) {
+export default function HeroCarousel({
+  items,
+  heightClass = "aspect-video",
+  bare = false,
+}: {
+  items: HomeMediaItem[];
+  /** Height of the media band. Defaults to a 16:9 box; pass fixed heights for a wide hero. */
+  heightClass?: string;
+  /** When true, drop the card chrome (border/rounding/shadow) so a parent can frame it. */
+  bare?: boolean;
+}) {
   const count = items.length;
   const [index, setIndex] = useState(0);
   const ytIframeRef = useRef<HTMLIFrameElement>(null);
@@ -104,7 +114,11 @@ export default function HeroCarousel({ items }: { items: HomeMediaItem[] }) {
   if (count === 0 || !cur) return null;
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-soft">
+    <div
+      className={`relative ${heightClass} w-full overflow-hidden bg-black ${
+        bare ? "" : "rounded-2xl border border-gray-200 shadow-soft"
+      }`}
+    >
       {cur.kind === "youtube" ? (
         <iframe
           key={cur.id}
