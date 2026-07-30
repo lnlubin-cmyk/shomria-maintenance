@@ -22,6 +22,7 @@ import {
   type TreatmentType,
   type FaultMessage,
   type FaultCostItem,
+  type BuildingFact,
   type NamedUser,
 } from "@/lib/types";
 import {
@@ -30,11 +31,14 @@ import {
   resendFaultMessage,
   addCostItem,
   deleteCostItem,
+  addBuildingFact,
+  deleteBuildingFact,
 } from "./actions";
 import type { Worker } from "./EditFaultsDialog";
 
 interface DetailFault {
   fault_number: number;
+  building_plot_number: string;
   fault_description: string;
   status: FaultStatus;
   priority: FaultPriority;
@@ -56,6 +60,7 @@ export default function FaultDetail({
   fault,
   messages,
   costItems,
+  facts = [],
   workers,
   staff,
   mode,
@@ -64,6 +69,7 @@ export default function FaultDetail({
   fault: DetailFault;
   messages: FaultMessage[];
   costItems: FaultCostItem[];
+  facts?: BuildingFact[];
   workers: Worker[];
   staff: boolean;
   mode: "edit" | "view";
@@ -90,6 +96,10 @@ export default function FaultDetail({
   // cost
   const [costDesc, setCostDesc] = useState("");
   const [costAmount, setCostAmount] = useState("");
+
+  // house info (building facts)
+  const [factKey, setFactKey] = useState("");
+  const [factValue, setFactValue] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function run(p: Promise<any>): Promise<boolean> {
@@ -125,6 +135,13 @@ export default function FaultDetail({
     if (await run(addCostItem(fault.fault_number, costDesc, costAmount))) {
       setCostDesc("");
       setCostAmount("");
+    }
+  }
+
+  async function addFact() {
+    if (await run(addBuildingFact(fault.building_plot_number, factKey, factValue))) {
+      setFactKey("");
+      setFactValue("");
     }
   }
 
@@ -232,6 +249,67 @@ export default function FaultDetail({
                 <dd className="mt-0.5 whitespace-pre-line text-gray-800">{fault.treatment_description || "—"}</dd>
               </div>
             </dl>
+          )}
+        </div>
+      )}
+
+      {/* House info (building facts) — staff only */}
+      {staff && (
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">מידע שימושי על הבית</h2>
+            <span className="text-xs text-gray-500" dir="ltr">
+              {buildingLabel(fault.building)} · {fault.building_plot_number}
+            </span>
+          </div>
+
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
+            {facts.length === 0 && (
+              <li className="px-3 py-2.5 text-sm text-gray-500">לא נשמר מידע על הבית.</li>
+            )}
+            {facts.map((f) => (
+              <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium text-gray-800">{f.key}:</span>
+                  <span className="text-gray-700">{f.value || "—"}</span>
+                </span>
+                {editable && (
+                  <button
+                    className="shrink-0 text-red-600 hover:underline"
+                    disabled={busy}
+                    onClick={() => run(deleteBuildingFact(f.id, fault.building_plot_number))}
+                  >
+                    הסר
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {editable && (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1">
+                <label className="label">שדה</label>
+                <input
+                  className="field"
+                  placeholder="לדוגמה: קוטר צינור"
+                  value={factKey}
+                  onChange={(e) => setFactKey(e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="label">ערך</label>
+                <input
+                  className="field"
+                  placeholder="לדוגמה: 18"
+                  value={factValue}
+                  onChange={(e) => setFactValue(e.target.value)}
+                />
+              </div>
+              <button className="btn-secondary" disabled={busy || !factKey.trim()} onClick={addFact}>
+                הוספה
+              </button>
+            </div>
           )}
         </div>
       )}

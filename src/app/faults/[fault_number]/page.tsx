@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import { isStaff } from "@/lib/types";
+import { getBuildingFacts } from "@/lib/building-facts";
 import FaultDetail from "../FaultDetail";
 
 const FAULT_SELECT = `
@@ -70,6 +71,8 @@ export default async function FaultDetailPage({
       ).data ?? []
     : [];
 
+  const facts = staff ? await getBuildingFacts(fault.building_plot_number) : [];
+
   const mode: "edit" | "view" = staff && searchParams.view !== "1" ? "edit" : "view";
 
   return (
@@ -83,6 +86,7 @@ export default async function FaultDetailPage({
           messages={(messages ?? []) as any}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           costItems={costItems as any}
+          facts={facts}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           workers={workers as any}
           staff={staff}

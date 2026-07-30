@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient, getSession } from "@/lib/supabase/server";
 import { sendFaultSms, resendFaultSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
+import { getBuildingFacts } from "@/lib/building-facts";
+import type { BuildingFact } from "@/lib/types";
 import {
   STATUS_ORDER,
   TREATMENT_TYPE_ORDER,
@@ -266,4 +268,69 @@ export async function deleteCostItem(id: string, faultNumber: number): Promise<A
   revalidatePath(`/faults/${faultNumber}`);
   revalidatePath("/faults");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------
+// Building facts — useful [key, value] info staff keep per house (staff only)
+// ---------------------------------------------------------------------
+
+/** Add a [key, value] note to a house (identified by its plot number / ID). */
+export async function addBuildingFact(
+  plotNumber: string,
+  key: string,
+  value: string
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+
+  const plot = String(plotNumber ?? "").trim();
+  const k = String(key ?? "").trim();
+  const v = String(value ?? "").trim();
+  if (!plot) return { error: "יש לבחור בית" };
+  if (!k) return { error: "יש להזין שם שדה (מפתח)" };
+
+  const admin = createAdminClient();
+  // Guard against a bad house ID so the info isn't stored against nothing.
+  const { data: building } = await admin
+    .from("buildings")
+    .select("plot_number")
+    .eq("plot_number", plot)
+    .maybeSingle();
+  if (!building) return { error: "מספר הבית אינו קיים" };
+
+  const { error } = await admin.from("building_facts").insert({
+    plot_number: plot,
+    key: k,
+    value: v,
+    created_by_user_id: session.user.id,
+  });
+  if (error) return { error: "שמירת המידע נכשלה" };
+
+  revalidatePath("/faults");
+  return { ok: true };
+}
+
+export async function deleteBuildingFact(id: string, plotNumber: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+  if (!id) return { error: "פריט חסר" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("building_facts").delete().eq("id", id);
+  if (error) return { error: "מחיקת המידע נכשלה" };
+
+  revalidatePath("/faults");
+  return { ok: true };
+}
+
+/** Fetch a house's facts (for the add-info dialog). Staff only. */
+export async function fetchBuildingFacts(
+  plotNumber: string
+): Promise<{ facts: BuildingFact[] } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+  return { facts: await getBuildingFacts(plotNumber) };
 }

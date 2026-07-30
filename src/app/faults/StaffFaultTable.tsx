@@ -23,6 +23,7 @@ import {
 } from "@/lib/types";
 import { updateFaults, deleteFaults } from "./actions";
 import EditFaultsDialog, { type Worker } from "./EditFaultsDialog";
+import HouseInfoDialog, { type HouseOption } from "./HouseInfoDialog";
 
 type SortDir = "desc" | "asc";
 
@@ -44,10 +45,12 @@ export default function StaffFaultTable({
   faults,
   canDelete,
   workers,
+  buildings,
 }: {
   faults: FaultRow[];
   canDelete: boolean;
   workers: Worker[];
+  buildings: HouseOption[];
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -55,6 +58,7 @@ export default function StaffFaultTable({
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState(false);
+  const [houseInfoOpen, setHouseInfoOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Show a manageable number of calls; adjustable, default 5.
@@ -232,6 +236,10 @@ export default function StaffFaultTable({
             ניקוי סינון
           </button>
         )}
+
+        <button className="btn-secondary ms-auto" onClick={() => setHouseInfoOpen(true)}>
+          הוסף מידע שימושי על בית
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -504,6 +512,10 @@ export default function StaffFaultTable({
           onCancel={() => setEditing(false)}
           onSave={handleSave}
         />
+      )}
+
+      {houseInfoOpen && (
+        <HouseInfoDialog buildings={buildings} onClose={() => setHouseInfoOpen(false)} />
       )}
     </div>
   );

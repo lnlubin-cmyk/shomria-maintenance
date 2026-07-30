@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import { isStaff } from "@/lib/types";
+import { getBuildingFacts } from "@/lib/building-facts";
 import FaultDetail from "../FaultDetail";
 
 const FAULT_SELECT = `
@@ -55,7 +56,9 @@ export default async function FaultsMultiViewPage({
       .eq("fault_number", n)
       .order("created_at");
 
-    details.push({ fault, messages: messages ?? [], costItems: costItems ?? [] });
+    const facts = await getBuildingFacts(fault.building_plot_number);
+
+    details.push({ fault, messages: messages ?? [], costItems: costItems ?? [], facts });
   }
 
   return (
@@ -81,6 +84,7 @@ export default async function FaultsMultiViewPage({
                 messages={d.messages as any}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 costItems={d.costItems as any}
+                facts={d.facts}
                 workers={[]}
                 staff
                 mode="view"

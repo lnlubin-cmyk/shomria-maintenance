@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getSession } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
-import { isStaff, canDeleteFaults, type FaultRow } from "@/lib/types";
+import { isStaff, canDeleteFaults, buildingLabel, type FaultRow } from "@/lib/types";
 import ResidentFaultList from "./ResidentFaultList";
 import StaffFaultTable from "./StaffFaultTable";
 
@@ -55,6 +55,19 @@ export default async function FaultsPage({
         .eq("is_active", true)
     : { data: [] };
 
+  // Staff can attach useful [key,value] info to a house; the picker lists houses.
+  const { data: buildingRows } = staff
+    ? await supabase
+        .from("buildings")
+        .select("plot_number, building_name, layer:building_layers(prefix)")
+        .order("building_name")
+    : { data: [] };
+  const buildings = (buildingRows ?? []).map((b) => ({
+    plot_number: b.plot_number,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    label: buildingLabel(b as any),
+  }));
+
   return (
     <div className="min-h-screen">
       <AppHeader session={session} />
@@ -91,6 +104,7 @@ export default async function FaultsPage({
             faults={faults}
             canDelete={canDeleteFaults(session.user.role)}
             workers={(workers ?? []) as any[]}
+            buildings={buildings}
           />
         ) : (
           <ResidentFaultList faults={faults} />

@@ -166,6 +166,14 @@ export interface FaultCostItem {
   created_at: string;
 }
 
+/** A [key, value] note staff keep about a house (staff only). */
+export interface BuildingFact {
+  id: string;
+  key: string;
+  value: string;
+  created_at: string;
+}
+
 /** A fault joined with the names needed to display it. */
 export interface FaultRow extends Fault {
   caller: Pick<Resident, "first_name" | "last_name"> | null;
