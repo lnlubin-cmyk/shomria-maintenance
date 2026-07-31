@@ -12,9 +12,11 @@ import {
   formatDate,
   fullName,
   buildingLabel,
+  canRateFault,
   type FaultRow,
   type FaultStatus,
 } from "@/lib/types";
+import FeedbackStars from "./FeedbackStars";
 
 /**
  * Visual status tracker — the four stages of a call, with the current one
@@ -146,6 +148,12 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
               </div>
             )}
           </dl>
+
+          {canRateFault(f.status) && (
+            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+              <FeedbackStars faultNumber={f.fault_number} rating={f.feedback_rating} />
+            </div>
+          )}
 
           <div className="mt-4 border-t border-gray-100 pt-3">
             <Link

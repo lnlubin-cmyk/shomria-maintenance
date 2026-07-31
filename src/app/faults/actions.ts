@@ -379,3 +379,52 @@ export async function fetchBuildingFacts(
   if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
   return { facts: await getBuildingFacts(plotNumber) };
 }
+
+// ---------------------------------------------------------------------
+// Resident feedback — a 1-5 rating of how the call was handled
+// ---------------------------------------------------------------------
+
+/**
+ * The caller rates the handling of their call (1-5), once the fix is done. The
+ * rating is only ever readable by מנהל תחזוקה/admin (enforced by RLS); the write
+ * runs with the service role after verifying the caller and the call status.
+ */
+export async function submitFeedback(
+  faultNumber: number,
+  rating: number
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+
+  const r = Math.trunc(Number(rating));
+  if (!Number.isInteger(r) || r < 1 || r > 5) return { error: "יש לבחור דירוג בין 1 ל-5" };
+  if (!Number.isInteger(faultNumber)) return { error: "קריאה חסרה" };
+
+  const admin = createAdminClient();
+  const { data: fault } = await admin
+    .from("faults")
+    .select("caller_resident_id, created_by_user_id, status")
+    .eq("fault_number", faultNumber)
+    .maybeSingle();
+  if (!fault) return { error: "הקריאה לא נמצאה" };
+
+  const isCaller =
+    fault.caller_resident_id === session.residentId ||
+    fault.created_by_user_id === session.user.id;
+  if (!isCaller) return { error: "ניתן לדרג רק קריאה שנפתחה עבורך" };
+  if (fault.status !== "fixed" && fault.status !== "closed") {
+    return { error: "ניתן לדרג את הטיפול לאחר סיום הטיפול בקריאה" };
+  }
+
+  const { error } = await admin
+    .from("fault_feedback")
+    .upsert(
+      { fault_number: faultNumber, rating: r, created_by_user_id: session.user.id, updated_at: new Date().toISOString() },
+      { onConflict: "fault_number" }
+    );
+  if (error) return { error: "שמירת הדירוג נכשלה" };
+
+  revalidatePath("/faults");
+  revalidatePath(`/faults/${faultNumber}`);
+  return { ok: true };
+}

@@ -65,6 +65,8 @@ export default function FaultDetail({
   staff,
   mode,
   embedded = false,
+  feedbackRating = null,
+  canSeeFeedback = false,
 }: {
   fault: DetailFault;
   messages: FaultMessage[];
@@ -74,6 +76,8 @@ export default function FaultDetail({
   staff: boolean;
   mode: "edit" | "view";
   embedded?: boolean;
+  feedbackRating?: number | null;
+  canSeeFeedback?: boolean;
 }) {
   const router = useRouter();
   const editable = staff && mode === "edit";
@@ -190,6 +194,17 @@ export default function FaultDetail({
           <dt className="text-sm text-gray-500">תיאור התקלה</dt>
           <dd className="mt-0.5 whitespace-pre-line text-sm text-gray-800">{fault.fault_description}</dd>
         </div>
+
+        {canSeeFeedback && feedbackRating != null && (
+          <div className="flex items-center gap-2 border-t border-gray-100 pt-3 text-sm">
+            <span className="text-gray-500">דירוג התושב לטיפול:</span>
+            <span dir="ltr">
+              <span className="text-amber-400">{"★".repeat(feedbackRating)}</span>
+              <span className="text-gray-300">{"★".repeat(5 - feedbackRating)}</span>
+            </span>
+            <span className="text-gray-600">({feedbackRating}/5)</span>
+          </div>
+        )}
       </div>
 
       {/* Staff edit / read-only treatment */}

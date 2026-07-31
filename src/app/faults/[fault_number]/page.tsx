@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
-import { isStaff } from "@/lib/types";
+import { isStaff, canSeeFeedback } from "@/lib/types";
 import { getBuildingFacts } from "@/lib/building-facts";
 import FaultDetail from "../FaultDetail";
 
@@ -73,6 +73,14 @@ export default async function FaultDetailPage({
 
   const facts = staff ? await getBuildingFacts(fault.building_plot_number) : [];
 
+  // Resident feedback is visible only to מנהל תחזוקה / admin.
+  const showFeedback = canSeeFeedback(session.user.role);
+  const feedbackRating = showFeedback
+    ? ((
+        await admin.from("fault_feedback").select("rating").eq("fault_number", n).maybeSingle()
+      ).data?.rating ?? null)
+    : null;
+
   const mode: "edit" | "view" = staff && searchParams.view !== "1" ? "edit" : "view";
 
   return (
@@ -91,6 +99,8 @@ export default async function FaultDetailPage({
           workers={workers as any}
           staff={staff}
           mode={mode}
+          feedbackRating={feedbackRating}
+          canSeeFeedback={showFeedback}
         />
       </main>
     </div>

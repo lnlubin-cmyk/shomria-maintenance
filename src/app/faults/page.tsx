@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getSession } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
-import { isStaff, canDeleteFaults, buildingLabel, type FaultRow } from "@/lib/types";
+import { isStaff, canDeleteFaults, canSeeFeedback, buildingLabel, type FaultRow } from "@/lib/types";
 import ResidentFaultList from "./ResidentFaultList";
 import StaffFaultTable from "./StaffFaultTable";
 
@@ -44,7 +44,21 @@ export default async function FaultsPage({
     .select(SELECT)
     .order("created_at", { ascending: false });
 
-  const faults = (data ?? []) as unknown as FaultRow[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawFaults = (data ?? []) as any[];
+
+  // Resident feedback ratings. RLS decides visibility: a resident sees their own,
+  // מנהל תחזוקה/admin see all, a plain איש תחזוקה sees none.
+  const faultNumbers = rawFaults.map((f) => f.fault_number);
+  const { data: feedback } = faultNumbers.length
+    ? await supabase.from("fault_feedback").select("fault_number, rating").in("fault_number", faultNumbers)
+    : { data: [] };
+  const ratingByFault = new Map((feedback ?? []).map((r) => [r.fault_number, r.rating as number]));
+
+  const faults = rawFaults.map((f) => ({
+    ...f,
+    feedback_rating: ratingByFault.get(f.fault_number) ?? null,
+  })) as FaultRow[];
 
   // Staff need the assignable-worker list for the אחריות dropdown.
   const { data: workers } = staff
@@ -103,6 +117,7 @@ export default async function FaultsPage({
           <StaffFaultTable
             faults={faults}
             canDelete={canDeleteFaults(session.user.role)}
+            canSeeFeedback={canSeeFeedback(session.user.role)}
             workers={(workers ?? []) as any[]}
             buildings={buildings}
           />

@@ -180,6 +180,10 @@ export interface FaultRow extends Fault {
   building: { building_name: string; layer: { prefix: string } | null } | null;
   // Assignee may be a non-resident staff member, so carry both name sources.
   assignee: NamedUser | null;
+  // Resident's 1-5 rating of the handling. For staff it's populated only for
+  // מנהל תחזוקה/admin (hidden from a plain איש תחזוקה); for a resident it's their
+  // own rating. Null when not rated or not visible to the viewer.
+  feedback_rating: number | null;
 }
 
 /** A "קהילה" item: an admin-managed menu entry with an attached PDF. */
@@ -250,6 +254,16 @@ export function isStaff(role: UserRole): boolean {
 
 export function canDeleteFaults(role: UserRole): boolean {
   return role === "maintenance_manager" || role === "admin";
+}
+
+/** Only מנהל תחזוקה / אדמין may see residents' handling feedback. */
+export function canSeeFeedback(role: UserRole): boolean {
+  return role === "maintenance_manager" || role === "admin";
+}
+
+/** True once a call's fix is done, so the resident may rate the handling. */
+export function canRateFault(status: FaultStatus): boolean {
+  return status === "fixed" || status === "closed";
 }
 
 export function fullName(r: { first_name: string; last_name: string } | null | undefined): string {

@@ -44,11 +44,13 @@ const EMPTY_FILTERS = {
 export default function StaffFaultTable({
   faults,
   canDelete,
+  canSeeFeedback,
   workers,
   buildings,
 }: {
   faults: FaultRow[];
   canDelete: boolean;
+  canSeeFeedback: boolean;
   workers: Worker[];
   buildings: HouseOption[];
 }) {
@@ -279,6 +281,7 @@ export default function StaffFaultTable({
                 </button>
               </th>
               <th className="px-3 py-3">נסגרה</th>
+              {canSeeFeedback && <th className="px-3 py-3">דירוג</th>}
               <th className="px-3 py-3">פעולות</th>
             </tr>
             <tr className="border-t border-gray-200">
@@ -376,6 +379,7 @@ export default function StaffFaultTable({
                 />
               </th>
               <th />
+              {canSeeFeedback && <th />}
               <th />
             </tr>
           </thead>
@@ -383,7 +387,7 @@ export default function StaffFaultTable({
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={16} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={canSeeFeedback ? 17 : 16} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תקלות התואמות את הסינון.
                 </td>
               </tr>
@@ -445,6 +449,17 @@ export default function StaffFaultTable({
                 </td>
                 <td className="whitespace-nowrap px-3 py-3">{formatDate(f.created_at)}</td>
                 <td className="whitespace-nowrap px-3 py-3">{formatDate(f.closed_at)}</td>
+                {canSeeFeedback && (
+                  <td className="whitespace-nowrap px-3 py-3" dir="ltr">
+                    {f.feedback_rating != null ? (
+                      <span className="tabular-nums">
+                        <span className="text-amber-400">★</span> {f.feedback_rating}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="whitespace-nowrap px-3 py-3">
                   <div className="flex gap-3">
                     <Link href={`/faults/${f.fault_number}`} className="text-brand-600 hover:underline">
