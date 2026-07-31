@@ -2,7 +2,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getSession } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
-import { isStaff, canDeleteFaults, canSeeFeedback, buildingLabel, type FaultRow } from "@/lib/types";
+import {
+  isStaff,
+  canDeleteFaults,
+  canSeeFeedback,
+  canExportFaults,
+  buildingLabel,
+  type FaultRow,
+} from "@/lib/types";
 import ResidentFaultList from "./ResidentFaultList";
 import StaffFaultTable from "./StaffFaultTable";
 
@@ -118,6 +125,7 @@ export default async function FaultsPage({
             faults={faults}
             canDelete={canDeleteFaults(session.user.role)}
             canSeeFeedback={canSeeFeedback(session.user.role)}
+            canExport={canExportFaults(session.user.role)}
             workers={(workers ?? []) as any[]}
             buildings={buildings}
           />

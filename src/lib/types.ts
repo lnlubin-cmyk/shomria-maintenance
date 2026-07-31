@@ -261,6 +261,11 @@ export function canSeeFeedback(role: UserRole): boolean {
   return role === "maintenance_manager" || role === "admin";
 }
 
+/** Only מנהל תחזוקה / אדמין may export the calls grid to Excel. */
+export function canExportFaults(role: UserRole): boolean {
+  return role === "maintenance_manager" || role === "admin";
+}
+
 /** True once a call's fix is done, so the resident may rate the handling. */
 export function canRateFault(status: FaultStatus): boolean {
   return status === "fixed" || status === "closed";

@@ -45,12 +45,14 @@ export default function StaffFaultTable({
   faults,
   canDelete,
   canSeeFeedback,
+  canExport,
   workers,
   buildings,
 }: {
   faults: FaultRow[];
   canDelete: boolean;
   canSeeFeedback: boolean;
+  canExport: boolean;
   workers: Worker[];
   buildings: HouseOption[];
 }) {
@@ -196,6 +198,41 @@ export default function StaffFaultTable({
     router.refresh();
   }
 
+  // Export the currently filtered + sorted rows (the whole view, not just the
+  // visible page) to a real .xlsx. xlsx is loaded on demand so it doesn't weigh
+  // down the page for everyone.
+  async function exportExcel() {
+    if (rows.length === 0) return;
+    const XLSX = await import("xlsx");
+    const data = rows.map((f) => ({
+      "מס׳": f.fault_number,
+      "שם הפונה": fullName(f.caller),
+      "שם המבנה": buildingLabel(f.building),
+      מגרש: f.building_plot_number,
+      "תיאור התקלה": f.fault_description,
+      סטטוס: STATUS_LABELS[f.status],
+      עדיפות: PRIORITY_LABELS[f.priority],
+      אחריות: staffName(f.assignee),
+      "תיאור הטיפול": f.treatment_description ?? "",
+      "סוג הטיפול": f.treatment_type ? TREATMENT_TYPE_LABELS[f.treatment_type] : "",
+      "עלות (₪)": Number(f.total_cost) || 0,
+      שעות: f.hours_spent ?? "",
+      נפתחה: formatDate(f.created_at),
+      נסגרה: f.closed_at ? formatDate(f.closed_at) : "",
+      "דירוג התושב": f.feedback_rating ?? "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    // Show the sheet right-to-left in Excel (not in the 0.18 typings).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ws as any)["!views"] = [{ RTL: true }];
+    ws["!cols"] = [6, 18, 22, 8, 40, 16, 10, 16, 32, 12, 11, 8, 12, 12, 11].map((wch) => ({ wch }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "תקלות");
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `תקלות-${date}.xlsx`);
+  }
+
   const filtersActive = Object.values(filters).some(Boolean);
 
   return (
@@ -239,9 +276,16 @@ export default function StaffFaultTable({
           </button>
         )}
 
-        <button className="btn-secondary ms-auto" onClick={() => setHouseInfoOpen(true)}>
-          הוסף מידע שימושי על בית
-        </button>
+        <div className="ms-auto flex flex-wrap gap-2">
+          {canExport && (
+            <button className="btn-secondary" onClick={exportExcel} disabled={rows.length === 0}>
+              ייצוא לאקסל
+            </button>
+          )}
+          <button className="btn-secondary" onClick={() => setHouseInfoOpen(true)}>
+            הוסף מידע שימושי על בית
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
