@@ -132,16 +132,13 @@ export default async function HomePage() {
 
               {/* Heading overlay. pointer-events-none lets the carousel controls
                   underneath stay clickable; the CTA re-enables its own clicks. */}
-              <div className="pointer-events-none absolute inset-0 flex flex-col justify-end p-6 pb-14 sm:p-10 sm:pb-16">
-                <h1 className="max-w-2xl text-4xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-5xl">
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-start justify-end p-6 sm:p-8">
+                <h1 className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl">
                   מידע ושירות לתושב
                 </h1>
-                <p className="mt-3 max-w-xl text-lg text-white/90 [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
-                  מידע שימושי לחברי הישוב ופנייה לצוות החצר — במקום אחד.
-                </p>
 
                 {!session && (
-                  <div className="pointer-events-auto mt-6">
+                  <div className="pointer-events-auto mt-4">
                     <Link href="/login" className="btn-primary">
                       כניסה / רישום
                     </Link>
