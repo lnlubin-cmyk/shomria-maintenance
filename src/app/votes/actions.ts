@@ -149,6 +149,106 @@ export async function approvePaperCounts(voteId: string): Promise<ActionResult> 
   return { ok: true };
 }
 
+// ---------------------------------------------------------------------
+// Membership votes (הצבעה לחברות) — accept/decline per candidate
+// ---------------------------------------------------------------------
+
+function cleanDecisions(
+  decisions: { optionId: string; accept: boolean }[]
+): { ids: string[]; accept: boolean[] } {
+  const rows = (decisions ?? []).filter((d) => d && d.optionId);
+  return { ids: rows.map((d) => String(d.optionId)), accept: rows.map((d) => !!d.accept) };
+}
+
+/** Cast the signed-in resident's membership ballot (accept/decline each name). */
+export async function castMembershipVote(
+  voteId: string,
+  decisions: { optionId: string; accept: boolean }[]
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!session.residentId) return { error: "רק תושב רשום רשאי להצביע" };
+
+  const { ids, accept } = cleanDecisions(decisions);
+  if (ids.length === 0) return { error: "יש להצביע עבור כל המועמדים" };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("cast_membership_vote", {
+    p_vote_id: voteId,
+    p_option_ids: ids,
+    p_accept: accept,
+    p_on_behalf_resident_id: null,
+  });
+  if (error) return { error: error.message || "ההצבעה נכשלה. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
+/** A committee member enters a membership ballot on behalf of a resident. */
+export async function castMembershipVoteOnBehalf(
+  voteId: string,
+  residentId: string,
+  decisions: { optionId: string; accept: boolean }[]
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+
+  const allowed = session.user.role === "admin" || (await isCommitteeMember(voteId, session.residentId));
+  if (!allowed) return { error: "רק חבר ועדת קלפי רשאי להזין הצבעה עבור תושב אחר" };
+
+  const rid = String(residentId ?? "").trim();
+  if (!rid) return { error: "יש לבחור תושב" };
+  const { ids, accept } = cleanDecisions(decisions);
+  if (ids.length === 0) return { error: "יש להצביע עבור כל המועמדים" };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("cast_membership_vote", {
+    p_vote_id: voteId,
+    p_option_ids: ids,
+    p_accept: accept,
+    p_on_behalf_resident_id: rid,
+  });
+  if (error) return { error: error.message || "ההצבעה נכשלה. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
+/** Enter (or re-enter) the manual paper count for a membership vote. */
+export async function submitMembershipPaperCounts(
+  voteId: string,
+  rows: { optionId: string; accept: number; decline: number }[]
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+
+  const allowed = session.user.role === "admin" || (await isCommitteeMember(voteId, session.residentId));
+  if (!allowed) return { error: "רק חבר ועדת קלפי רשאי להזין ספירת קולות" };
+
+  const clean = (rows ?? []).filter((r) => r && r.optionId);
+  if (clean.length === 0) return { error: "לא הוזנו קולות" };
+  for (const r of clean) {
+    if (!Number.isInteger(Number(r.accept)) || Number(r.accept) < 0) return { error: "מספר קולות לא תקין" };
+    if (!Number.isInteger(Number(r.decline)) || Number(r.decline) < 0) return { error: "מספר קולות לא תקין" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("submit_membership_paper_counts", {
+    p_vote_id: voteId,
+    p_option_ids: clean.map((r) => r.optionId),
+    p_accept: clean.map((r) => Math.trunc(Number(r.accept))),
+    p_decline: clean.map((r) => Math.trunc(Number(r.decline))),
+  });
+  if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
+
+  revalidatePath(`/votes/${voteId}`);
+  revalidatePath("/votes");
+  return { ok: true };
+}
+
 /** Close a vote early. Any committee member (or admin) may do this. */
 export async function closeVote(voteId: string): Promise<ActionResult> {
   const session = await getSession();

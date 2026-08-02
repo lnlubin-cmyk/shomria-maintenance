@@ -12,6 +12,7 @@ import {
   VOTE_STATE_STYLES,
   VOTE_FORMAT_LABELS,
   type Resident,
+  type VoteFormat,
 } from "@/lib/types";
 
 function isoToLocalInput(iso: string | null): string {
@@ -197,7 +198,7 @@ interface FormInput {
   title: string;
   description: string;
   subject: string;
-  format: "options" | "election";
+  format: VoteFormat;
   maxSelections: number;
   startAt: string; // ISO
   closureMode: "manual" | "scheduled";
@@ -225,7 +226,7 @@ function VoteForm({
   const [title, setTitle] = useState(editVote?.title ?? "");
   const [description, setDescription] = useState(editVote?.description ?? "");
   const [subject, setSubject] = useState(editVote?.subject ?? "");
-  const [format, setFormat] = useState<"options" | "election">(editVote?.format ?? "options");
+  const [format, setFormat] = useState<VoteFormat>(editVote?.format ?? "options");
   const [maxSelections, setMaxSelections] = useState(editVote?.max_selections ?? 1);
   const [startAt, setStartAt] = useState(isoToLocalInput(editVote?.start_at ?? null));
   const [closureMode, setClosureMode] = useState<"manual" | "scheduled">(
@@ -320,22 +321,27 @@ function VoteForm({
               <select
                 className="field"
                 value={format}
-                onChange={(e) => setFormat(e.target.value as "options" | "election")}
+                onChange={(e) => setFormat(e.target.value as VoteFormat)}
               >
                 <option value="options">אפשרויות מוגדרות מראש</option>
                 <option value="election">בחירות (בחירת מועמדים)</option>
+                <option value="membership">הצבעה לחברות</option>
               </select>
             </div>
 
-            {format === "options" ? (
+            {format === "options" || format === "membership" ? (
               <div>
-                <label className="label">אפשרויות (עד 20) *</label>
+                <label className="label">
+                  {format === "membership" ? "שמות המועמדים לחברות (עד 20) *" : "אפשרויות (עד 20) *"}
+                </label>
                 <div className="space-y-2">
                   {optionLabels.map((val, i) => (
                     <div key={i} className="flex gap-2">
                       <input
                         className="field"
-                        placeholder={`אפשרות ${i + 1}`}
+                        placeholder={
+                          format === "membership" ? `שם משפחה ${i + 1}` : `אפשרות ${i + 1}`
+                        }
                         value={val}
                         onChange={(e) => {
                           const next = [...optionLabels];
@@ -343,7 +349,7 @@ function VoteForm({
                           setOptionLabels(next);
                         }}
                       />
-                      {optionLabels.length > 2 && (
+                      {optionLabels.length > (format === "membership" ? 1 : 2) && (
                         <button
                           type="button"
                           className="btn-secondary shrink-0"
@@ -361,7 +367,7 @@ function VoteForm({
                     className="mt-2 text-sm font-medium text-brand-600 hover:underline"
                     onClick={() => setOptionLabels([...optionLabels, ""])}
                   >
-                    + הוספת אפשרות
+                    {format === "membership" ? "+ הוספת שם" : "+ הוספת אפשרות"}
                   </button>
                 )}
               </div>
@@ -380,19 +386,21 @@ function VoteForm({
           </>
         )}
 
-        <div>
-          <label className="label">מספר בחירות מרבי לכל מצביע *</label>
-          <input
-            type="number"
-            min={1}
-            className="field w-32"
-            value={maxSelections}
-            onChange={(e) => setMaxSelections(Number(e.target.value))}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            1 = בחירה בודדת. יותר מ-1 מאפשר לבחור כמה אפשרויות.
-          </p>
-        </div>
+        {format !== "membership" && (
+          <div>
+            <label className="label">מספר בחירות מרבי לכל מצביע *</label>
+            <input
+              type="number"
+              min={1}
+              className="field w-32"
+              value={maxSelections}
+              onChange={(e) => setMaxSelections(Number(e.target.value))}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              1 = בחירה בודדת. יותר מ-1 מאפשר לבחור כמה אפשרויות.
+            </p>
+          </div>
+        )}
 
         <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-white p-3">
           <input

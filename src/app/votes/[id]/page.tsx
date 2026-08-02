@@ -11,6 +11,7 @@ import {
 } from "@/lib/votes";
 import AppHeader from "@/components/AppHeader";
 import BallotForm from "../BallotForm";
+import MembershipBallot from "../MembershipBallot";
 import CommitteePanel from "../CommitteePanel";
 import PaperTallyPanel from "../PaperTallyPanel";
 import {
@@ -104,7 +105,11 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                   סה״כ הצביעו:{" "}
                   <span className="font-semibold text-gray-800">{outcome.totalVoters}</span> תושבים
                 </p>
-                <ResultsBars options={outcome.options} />
+                {vote.format === "membership" ? (
+                  <MembershipResults options={outcome.options} />
+                ) : (
+                  <ResultsBars options={outcome.options} />
+                )}
               </div>
             ) : (
               <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -127,11 +132,15 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                   הצבעתך נקלטה. תודה שהשתתפת! התוצאות יתפרסמו עם סיום ההצבעה.
                 </p>
               ) : session.residentId ? (
-                <BallotForm
-                  voteId={vote.id}
-                  options={optionsForBallot}
-                  maxSelections={vote.max_selections}
-                />
+                vote.format === "membership" ? (
+                  <MembershipBallot voteId={vote.id} options={optionsForBallot} />
+                ) : (
+                  <BallotForm
+                    voteId={vote.id}
+                    options={optionsForBallot}
+                    maxSelections={vote.max_selections}
+                  />
+                )
               ) : (
                 <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   ההצבעה פתוחה לתושבים רשומים בלבד.
@@ -145,6 +154,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
         {onCommittee && state === "closed" && outcome && (
           <PaperTallyPanel
             voteId={vote.id}
+            format={vote.format}
             options={outcome.options}
             paper={outcome.paper}
             committee={committee}
@@ -157,6 +167,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
         {onCommittee && roster && (
           <CommitteePanel
             voteId={vote.id}
+            format={vote.format}
             canManage={state === "open"}
             allowProxy={vote.allow_proxy_vote}
             options={optionsForBallot}
@@ -194,6 +205,34 @@ function ResultsBars({ options }: { options: VoteOptionOutcome[] }) {
           </div>
         </li>
       ))}
+    </ul>
+  );
+}
+
+/** Membership results: בעד / נגד per candidate. */
+function MembershipResults({ options }: { options: VoteOptionOutcome[] }) {
+  return (
+    <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
+      {options.map((o) => {
+        const total = o.total + o.declineTotal;
+        const acceptPct = total > 0 ? Math.round((o.total / total) * 100) : 0;
+        return (
+          <li key={o.id} className="px-3 py-3">
+            <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-gray-800">{o.label}</span>
+              <span className="shrink-0 tabular-nums text-gray-600">
+                <span className="text-emerald-700">בעד {o.total}</span>
+                {"  ·  "}
+                <span className="text-red-700">נגד {o.declineTotal}</span>
+              </span>
+            </div>
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-gray-100">
+              <div className="h-full bg-emerald-500" style={{ width: `${acceptPct}%` }} />
+              <div className="h-full bg-red-400" style={{ width: `${100 - acceptPct}%` }} />
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

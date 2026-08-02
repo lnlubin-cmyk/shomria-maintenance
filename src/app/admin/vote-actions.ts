@@ -9,7 +9,7 @@ export interface CreateVoteInput {
   title: string;
   description: string;
   subject: string;
-  format: "options" | "election";
+  format: "options" | "election" | "membership";
   maxSelections: number;
   startAt: string; // ISO
   closureMode: "manual" | "scheduled";
@@ -69,7 +69,7 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
   if (!title) return { error: "יש להזין כותרת להצבעה" };
   if (!subject) return { error: "יש להזין את נושא/שאלת ההצבעה" };
 
-  if (input.format !== "options" && input.format !== "election") {
+  if (!["options", "election", "membership"].includes(input.format)) {
     return { error: "סוג הצבעה לא חוקי" };
   }
   if (input.closureMode !== "manual" && input.closureMode !== "scheduled") {
@@ -92,10 +92,15 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
   const admin = createAdminClient();
   let optionRows: { label: string; candidate_resident_id: string | null }[] = [];
 
-  if (input.format === "options") {
+  if (input.format === "options" || input.format === "membership") {
     const labels = (input.optionLabels ?? []).map((s) => s.trim()).filter(Boolean);
-    if (labels.length < 2) return { error: "יש להזין לפחות שתי אפשרויות" };
-    if (labels.length > MAX_OPTIONS) return { error: `עד ${MAX_OPTIONS} אפשרויות` };
+    const membership = input.format === "membership";
+    if (labels.length < (membership ? 1 : 2)) {
+      return { error: membership ? "יש להזין לפחות שם מועמד אחד" : "יש להזין לפחות שתי אפשרויות" };
+    }
+    if (labels.length > MAX_OPTIONS) {
+      return { error: membership ? `עד ${MAX_OPTIONS} מועמדים` : `עד ${MAX_OPTIONS} אפשרויות` };
+    }
     optionRows = labels.map((l) => ({ label: l, candidate_resident_id: null }));
   } else {
     const ids = [...new Set((input.candidateIds ?? []).map((s) => s.trim()).filter(Boolean))];
@@ -110,12 +115,17 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
     optionRows = ids.map((id) => ({ label: nameById.get(id)!, candidate_resident_id: id }));
   }
 
-  const maxSel = Math.trunc(Number(input.maxSelections));
-  if (!Number.isInteger(maxSel) || maxSel < 1) {
-    return { error: "מספר הבחירות המרבי חייב להיות 1 לפחות" };
-  }
-  if (maxSel > optionRows.length) {
-    return { error: "מספר הבחירות המרבי לא יכול לעלות על מספר האפשרויות" };
+  // Membership ballots decide every name (accept/decline), so max-selections
+  // doesn't apply — keep it at 1.
+  let maxSel = 1;
+  if (input.format !== "membership") {
+    maxSel = Math.trunc(Number(input.maxSelections));
+    if (!Number.isInteger(maxSel) || maxSel < 1) {
+      return { error: "מספר הבחירות המרבי חייב להיות 1 לפחות" };
+    }
+    if (maxSel > optionRows.length) {
+      return { error: "מספר הבחירות המרבי לא יכול לעלות על מספר האפשרויות" };
+    }
   }
 
   const memberIds = [...new Set((input.memberIds ?? []).map((s) => s.trim()).filter(Boolean))];

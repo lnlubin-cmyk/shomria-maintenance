@@ -298,13 +298,14 @@ export function formatDateTime(iso: string | null): string {
 // =====================================================================
 // Votes / elections (הצבעות)
 // =====================================================================
-export type VoteFormat = "options" | "election";
+export type VoteFormat = "options" | "election" | "membership";
 export type VoteClosureMode = "manual" | "scheduled";
 export type VoteState = "upcoming" | "open" | "closed";
 
 export const VOTE_FORMAT_LABELS: Record<VoteFormat, string> = {
   options: "אפשרויות מוגדרות מראש",
   election: "בחירות (בחירת מועמדים)",
+  membership: "הצבעה לחברות",
 };
 
 export const VOTE_STATE_LABELS: Record<VoteState, string> = {
@@ -350,13 +351,20 @@ export interface VoteCommitteeMember {
   last_name: string;
 }
 
-/** One option's outcome line — only ever assembled after the vote is closed. */
+/**
+ * One option's outcome line — only ever assembled after the vote is closed.
+ * For options/election the accept fields hold the vote count and decline is 0.
+ * For membership: electronic/paper/total = בעד, decline* = נגד.
+ */
 export interface VoteOptionOutcome {
   id: string;
   label: string;
-  electronic: number; // votes cast in the app
-  paper: number; // approved manual paper count
-  total: number; // electronic + paper (paper counted only once approved)
+  electronic: number; // app votes (membership: בעד)
+  paper: number; // approved manual count (membership: בעד)
+  total: number; // electronic + paper once approved (membership: בעד)
+  declineElectronic: number; // membership only: נגד app votes
+  declinePaper: number; // membership only: נגד manual
+  declineTotal: number; // membership only: נגד total
 }
 
 /** State of the manual paper count for a closed vote. */
@@ -366,7 +374,8 @@ export interface PaperTallyState {
   submissionExists: boolean;
   enteredByName: string | null;
   enteredAt: string | null;
-  counts: Record<string, number>; // option_id → entered paper count
+  counts: Record<string, number>; // option_id → entered paper count (membership: בעד)
+  declineCounts: Record<string, number>; // membership only: option_id → נגד manual count
   approvedResidentIds: string[]; // committee members who approved
   committeeSize: number;
   finalized: boolean; // approved by every committee member

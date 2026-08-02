@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { castVoteOnBehalf, markPaperVote, closeVote } from "./actions";
-import type { VoteRosterEntry } from "@/lib/types";
+import MembershipBallot from "./MembershipBallot";
+import type { VoteFormat, VoteRosterEntry } from "@/lib/types";
 
 /**
  * ועדת קלפי management for an open vote: close it, help a resident vote
@@ -13,6 +14,7 @@ import type { VoteRosterEntry } from "@/lib/types";
  */
 export default function CommitteePanel({
   voteId,
+  format,
   canManage,
   allowProxy,
   options,
@@ -21,6 +23,7 @@ export default function CommitteePanel({
   notVoted,
 }: {
   voteId: string;
+  format: VoteFormat;
   canManage: boolean; // vote is open — closing and helping to vote are allowed
   allowProxy: boolean;
   options: { id: string; label: string }[];
@@ -197,51 +200,69 @@ export default function CommitteePanel({
               {residentId && (
                 <div className="mt-4 space-y-4">
                   {/* Option A: electronic proxy vote (only if enabled) */}
-                  {allowProxy && (
-                    <div className="rounded-lg border border-gray-200 p-3">
-                      <div className="mb-2 text-sm font-medium text-gray-800">
-                        הזנת בחירה אלקטרונית{multi ? ` (עד ${maxSelections})` : ""}
+                  {allowProxy &&
+                    (format === "membership" ? (
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="mb-2 text-sm font-medium text-gray-800">
+                          הזנת הצבעת חברות עבור התושב
+                        </div>
+                        <MembershipBallot
+                          voteId={voteId}
+                          options={options}
+                          onBehalfResidentId={residentId}
+                          submitLabel="רישום ההצבעה"
+                          onSuccess={() => {
+                            resetEntry();
+                            setShowEntry(false);
+                            setMsg("ההצבעה נקלטה ונרשמה עבור התושב.");
+                          }}
+                        />
                       </div>
-                      <ul className="space-y-2">
-                        {options.map((o) => {
-                          const on = picked.includes(o.id);
-                          const disabled = busy || (multi && !on && atCap);
-                          return (
-                            <li key={o.id}>
-                              <label
-                                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 text-sm transition ${
-                                  on ? "border-brand-400 bg-brand-50" : "border-gray-200 hover:bg-gray-50"
-                                } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
-                              >
-                                <input
-                                  type={multi ? "checkbox" : "radio"}
-                                  name="onbehalf-option"
-                                  className="h-4 w-4 accent-brand-500"
-                                  checked={on}
-                                  disabled={disabled}
-                                  onChange={() => toggleOption(o.id)}
-                                />
-                                <span className="font-medium text-gray-800">{o.label}</span>
-                              </label>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          withBusy(
-                            castVoteOnBehalf(voteId, residentId, picked),
-                            "ההצבעה נקלטה ונרשמה עבור התושב."
-                          )
-                        }
-                        disabled={busy || picked.length === 0}
-                        className="btn-primary mt-3 disabled:opacity-50"
-                      >
-                        {busy ? "שולח…" : "רישום הבחירה"}
-                      </button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="mb-2 text-sm font-medium text-gray-800">
+                          הזנת בחירה אלקטרונית{multi ? ` (עד ${maxSelections})` : ""}
+                        </div>
+                        <ul className="space-y-2">
+                          {options.map((o) => {
+                            const on = picked.includes(o.id);
+                            const disabled = busy || (multi && !on && atCap);
+                            return (
+                              <li key={o.id}>
+                                <label
+                                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 text-sm transition ${
+                                    on ? "border-brand-400 bg-brand-50" : "border-gray-200 hover:bg-gray-50"
+                                  } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                                >
+                                  <input
+                                    type={multi ? "checkbox" : "radio"}
+                                    name="onbehalf-option"
+                                    className="h-4 w-4 accent-brand-500"
+                                    checked={on}
+                                    disabled={disabled}
+                                    onChange={() => toggleOption(o.id)}
+                                  />
+                                  <span className="font-medium text-gray-800">{o.label}</span>
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            withBusy(
+                              castVoteOnBehalf(voteId, residentId, picked),
+                              "ההצבעה נקלטה ונרשמה עבור התושב."
+                            )
+                          }
+                          disabled={busy || picked.length === 0}
+                          className="btn-primary mt-3 disabled:opacity-50"
+                        >
+                          {busy ? "שולח…" : "רישום הבחירה"}
+                        </button>
+                      </div>
+                    ))}
 
                   {/* Option B: mark a manual ballot (always available) */}
                   <div className="rounded-lg border border-gray-200 p-3">

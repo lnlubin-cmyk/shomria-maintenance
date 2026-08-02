@@ -117,9 +117,11 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
   const [{ data: tallies }, { data: paperRows }, { data: submission }, { data: approvals }] =
     await Promise.all([
       ids.length
-        ? admin.from("vote_tallies").select("option_id, count").in("option_id", ids)
-        : Promise.resolve({ data: [] as { option_id: string; count: number }[] }),
-      admin.from("vote_paper_counts").select("option_id, count").eq("vote_id", vote.id),
+        ? admin.from("vote_tallies").select("option_id, count, decline_count").in("option_id", ids)
+        : Promise.resolve({
+            data: [] as { option_id: string; count: number; decline_count: number }[],
+          }),
+      admin.from("vote_paper_counts").select("option_id, count, decline_count").eq("vote_id", vote.id),
       admin
         .from("vote_paper_submission")
         .select("entered_by_user_id, entered_at")
@@ -130,6 +132,8 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
 
   const electById = new Map((tallies ?? []).map((t) => [t.option_id, t.count]));
   const paperById = new Map((paperRows ?? []).map((t) => [t.option_id, t.count]));
+  const declElectById = new Map((tallies ?? []).map((t) => [t.option_id, t.decline_count ?? 0]));
+  const declPaperById = new Map((paperRows ?? []).map((t) => [t.option_id, t.decline_count ?? 0]));
 
   const [{ count: committeeSize }, { count: paperVoters }, { count: totalVoters }] =
     await Promise.all([
@@ -166,12 +170,25 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
   let lines = opts.map((o) => {
     const electronic = electById.get(o.id) ?? 0;
     const paper = paperById.get(o.id) ?? 0;
-    return { id: o.id, label: o.label, electronic, paper, total: electronic + (finalized ? paper : 0) };
+    const declineElectronic = declElectById.get(o.id) ?? 0;
+    const declinePaper = declPaperById.get(o.id) ?? 0;
+    return {
+      id: o.id,
+      label: o.label,
+      electronic,
+      paper,
+      total: electronic + (finalized ? paper : 0),
+      declineElectronic,
+      declinePaper,
+      declineTotal: declineElectronic + (finalized ? declinePaper : 0),
+    };
   });
   if (vote.format === "election") lines = lines.sort((a, b) => b.total - a.total);
 
   const counts: Record<string, number> = {};
   for (const [k, v] of paperById) counts[k] = v;
+  const declineCounts: Record<string, number> = {};
+  for (const [k, v] of declPaperById) declineCounts[k] = v;
 
   return {
     ready: !required || finalized,
@@ -184,6 +201,7 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
       enteredByName,
       enteredAt: submission?.entered_at ?? null,
       counts,
+      declineCounts,
       approvedResidentIds,
       committeeSize: size,
       finalized,
