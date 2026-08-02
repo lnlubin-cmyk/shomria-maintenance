@@ -38,11 +38,13 @@ function Chevron({ open }: { open: boolean }) {
 export default function SiteHeader({
   session,
   community = [],
+  infoDocs = [],
   prayerSchedules = [],
   activeVotes = [],
 }: {
   session: Session | null;
   community?: CommunityMenuItem[];
+  infoDocs?: CommunityMenuItem[];
   prayerSchedules?: { id: string; title: string }[];
   activeVotes?: { id: string; title: string }[];
 }) {
@@ -89,6 +91,8 @@ export default function SiteHeader({
         { label: "קו העירוב", href: "/eruv" },
         { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", href: "/phone-directory" },
+        // Admin-managed document items assigned to the "מידע לתושב" section.
+        ...infoDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],
     },
     // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each

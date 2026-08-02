@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
-import { getCommunityMenu } from "@/lib/community";
+import { getMenuDocs } from "@/lib/community";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import AppHeader from "@/components/AppHeader";
 import HeroCarousel from "@/components/HeroCarousel";
@@ -100,7 +100,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
-  const community = session ? await getCommunityMenu() : [];
+  const { community, info } = session
+    ? await getMenuDocs()
+    : { community: [], info: [] };
   const media = await getActiveHomeMedia();
 
   return (
@@ -163,6 +165,16 @@ export default async function HomePage() {
               <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
+              {info.map((d) => (
+                <Tile
+                  key={d.id}
+                  href={`/community/${d.id}`}
+                  tone="accent"
+                  icon="📄"
+                  title={d.subject}
+                  desc="לחצו לצפייה במסמך."
+                />
+              ))}
             </div>
           </section>
 

@@ -7,11 +7,14 @@ import type { CommunityItem } from "@/lib/types";
 import {
   createCommunityItem,
   updateCommunitySubject,
+  updateCommunitySection,
   replaceCommunityFile,
   removeCommunityFile,
   toggleCommunityVisibility,
   deleteCommunityItem,
 } from "./community-actions";
+
+const SECTION_LABELS = { community: "קהילה", info: "מידע לתושב" } as const;
 
 export default function CommunityTab({ items }: { items: CommunityItem[] }) {
   const router = useRouter();
@@ -42,7 +45,8 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
       )}
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
-        פריט מופיע בתפריט „קהילה” רק כאשר יש לו נושא, קובץ PDF, והוא מוגדר „מוצג”.
+        פריט מופיע בתפריט (במדור „קהילה” או „מידע לתושב” לפי הבחירה) רק כאשר יש לו נושא, קובץ PDF,
+        והוא מוגדר „מוצג”.
       </div>
 
       <div className="flex items-center justify-between">
@@ -73,6 +77,15 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
             <input id="new-subject" name="subject" className="field" placeholder="לדוגמה: הידיעון האחרון" required />
           </div>
           <div>
+            <label className="label" htmlFor="new-section">
+              מדור בתפריט *
+            </label>
+            <select id="new-section" name="section" className="field" defaultValue="community">
+              <option value="community">קהילה</option>
+              <option value="info">מידע לתושב</option>
+            </select>
+          </div>
+          <div>
             <label className="label" htmlFor="new-file">
               קובץ PDF
             </label>
@@ -93,7 +106,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
 
       <div className="space-y-3">
         {items.length === 0 && (
-          <div className="card text-center text-sm text-gray-500">עדיין אין פריטים במדור „קהילה”.</div>
+          <div className="card text-center text-sm text-gray-500">עדיין אין פריטים.</div>
         )}
 
         {items.map((item) => {
@@ -148,6 +161,22 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
                 <button type="submit" className="btn-secondary" disabled={busy}>
                   שמור נושא
                 </button>
+              </form>
+
+              {/* Section (changes which menu it appears under) */}
+              <form action={async (fd) => { await run(updateCommunitySection, fd); }}>
+                <input type="hidden" name="id" value={item.id} />
+                <label className="label">מדור בתפריט</label>
+                <select
+                  name="section"
+                  className="field max-w-xs"
+                  defaultValue={item.section}
+                  disabled={busy}
+                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                >
+                  <option value="community">{SECTION_LABELS.community}</option>
+                  <option value="info">{SECTION_LABELS.info}</option>
+                </select>
               </form>
 
               {/* File */}

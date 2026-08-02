@@ -186,10 +186,14 @@ export interface FaultRow extends Fault {
   feedback_rating: number | null;
 }
 
-/** A "קהילה" item: an admin-managed menu entry with an attached PDF. */
+/** Which menu section a document item appears under. */
+export type DocSection = "community" | "info";
+
+/** An admin-managed menu entry with an attached PDF (in "קהילה" or "מידע לתושב"). */
 export interface CommunityItem {
   id: string;
   subject: string;
+  section: DocSection;
   file_path: string | null;
   file_name: string | null;
   is_visible: boolean;

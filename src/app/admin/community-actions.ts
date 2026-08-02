@@ -67,6 +67,9 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const subject = String(formData.get("subject") ?? "").trim();
   if (!subject) return { error: "יש להזין נושא" };
 
+  const section = String(formData.get("section") ?? "community");
+  if (section !== "community" && section !== "info") return { error: "מדור לא חוקי" };
+
   const { file, error: fileErr } = readPdf(formData);
   if (fileErr) return { error: fileErr };
 
@@ -82,7 +85,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const admin = createAdminClient();
   const { error } = await admin
     .from("community_items")
-    .insert({ subject, file_path, file_name, is_visible: !!file });
+    .insert({ subject, section, file_path, file_name, is_visible: !!file });
   if (error) {
     await removeFile(file_path); // don't leave the just-uploaded file orphaned
     return { error: "יצירת הפריט נכשלה" };
@@ -107,6 +110,27 @@ export async function updateCommunitySubject(formData: FormData): Promise<Action
   const admin = createAdminClient();
   const { error } = await admin.from("community_items").update({ subject }).eq("id", id);
   if (error) return { error: "עדכון הנושא נכשל" };
+
+  revalidate();
+  return { ok: true };
+}
+
+/** Move an item to a different menu section ("קהילה" / "מידע לתושב"). */
+export async function updateCommunitySection(formData: FormData): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const section = String(formData.get("section") ?? "");
+  if (!id) return { error: "פריט חסר" };
+  if (section !== "community" && section !== "info") return { error: "מדור לא חוקי" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("community_items").update({ section }).eq("id", id);
+  if (error) return { error: "עדכון המדור נכשל" };
 
   revalidate();
   return { ok: true };

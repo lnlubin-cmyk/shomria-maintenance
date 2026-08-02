@@ -1,5 +1,5 @@
 import SiteHeader from "@/components/SiteHeader";
-import { getCommunityMenu } from "@/lib/community";
+import { getMenuDocs } from "@/lib/community";
 import { getVisibleScheduleList } from "@/lib/prayer-times-server";
 import { getActiveVotesForMenu } from "@/lib/votes";
 import type { Session } from "@/lib/types";
@@ -11,13 +11,14 @@ import type { Session } from "@/lib/types";
  * fetching it.
  */
 export default async function AppHeader({ session }: { session: Session | null }) {
-  const [community, prayerSchedules, activeVotes] = session
-    ? await Promise.all([getCommunityMenu(), getVisibleScheduleList(), getActiveVotesForMenu()])
-    : [[], [], []];
+  const [docs, prayerSchedules, activeVotes] = session
+    ? await Promise.all([getMenuDocs(), getVisibleScheduleList(), getActiveVotesForMenu()])
+    : [{ community: [], info: [] }, [], []];
   return (
     <SiteHeader
       session={session}
-      community={community}
+      community={docs.community}
+      infoDocs={docs.info}
       prayerSchedules={prayerSchedules}
       activeVotes={activeVotes}
     />

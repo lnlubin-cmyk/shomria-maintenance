@@ -4,21 +4,27 @@ import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 export const COMMUNITY_BUCKET = "community";
 
 /**
- * The "קהילה" items to show in the menu: visible, with both a subject and a
- * file. This is the exact condition the menu must satisfy, in one place.
+ * The document items to show in the menu, split by section. An item shows only
+ * when it's visible and has both a subject and a file — the exact condition the
+ * menu must satisfy, in one place.
  */
-export async function getCommunityMenu(): Promise<CommunityMenuItem[]> {
+export async function getMenuDocs(): Promise<{
+  community: CommunityMenuItem[];
+  info: CommunityMenuItem[];
+}> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_items")
-    .select("id, subject, file_path")
+    .select("id, subject, file_path, section")
     .eq("is_visible", true)
     .order("sort_order")
     .order("created_at");
 
-  return (data ?? [])
-    .filter((r) => r.subject.trim() !== "" && !!r.file_path)
-    .map((r) => ({ id: r.id, subject: r.subject }));
+  const rows = (data ?? []).filter((r) => r.subject.trim() !== "" && !!r.file_path);
+  return {
+    community: rows.filter((r) => r.section !== "info").map((r) => ({ id: r.id, subject: r.subject })),
+    info: rows.filter((r) => r.section === "info").map((r) => ({ id: r.id, subject: r.subject })),
+  };
 }
 
 /** All items, for the admin management tab (includes hidden/incomplete ones). */
