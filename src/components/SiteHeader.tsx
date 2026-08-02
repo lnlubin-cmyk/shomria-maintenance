@@ -49,7 +49,16 @@ export default function SiteHeader({
   const staff = session ? isStaff(session.user.role) : false;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Mobile: sections start collapsed and expand on tap (accordion-style).
+  const [openMobileSections, setOpenMobileSections] = useState<Set<string>>(new Set());
   const navRef = useRef<HTMLDivElement>(null);
+
+  const toggleMobileSection = (key: string) =>
+    setOpenMobileSections((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -252,51 +261,65 @@ export default function SiteHeader({
               <span className="text-gray-500"> · פרופיל</span>
             </Link>
 
-            {sections.map((s) => (
-              <div key={s.key}>
-                <div className="px-1 pb-1 text-xs font-semibold uppercase text-gray-500">{s.label}</div>
-                <div className="space-y-0.5">
-                  {s.items.map((it) =>
-                    it.children ? (
-                      <div key={it.label}>
-                        <div className="px-3 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                          {it.label}
-                        </div>
-                        <div className="me-1 ms-3 space-y-0.5 border-s-2 border-brand-100 ps-2">
-                          {it.children.map((c) => (
-                            <Link
-                              key={c.href}
-                              href={c.href}
-                              onClick={() => setMobileOpen(false)}
-                              className="block rounded-lg px-2 py-1.5 text-[13px] text-gray-600 hover:bg-brand-50 hover:text-brand-700"
-                            >
-                              {c.label}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    ) : it.soon || !it.href ? (
-                      <div
-                        key={it.label}
-                        className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-gray-400"
-                      >
-                        {it.label}
-                        {it.soon && <ComingSoon />}
-                      </div>
-                    ) : (
-                      <Link
-                        key={it.label}
-                        href={it.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700"
-                      >
-                        {it.label}
-                      </Link>
-                    )
+            {sections.map((s) => {
+              const open = openMobileSections.has(s.key);
+              return (
+                <div key={s.key} className="overflow-hidden rounded-xl border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => toggleMobileSection(s.key)}
+                    className={`flex w-full items-center justify-between px-3 py-3 text-right transition ${
+                      open ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <span className="text-base font-bold">{s.label}</span>
+                    <Chevron open={open} />
+                  </button>
+                  {open && (
+                    <div className="space-y-0.5 p-1.5">
+                      {s.items.map((it) =>
+                        it.children ? (
+                          <div key={it.label}>
+                            <div className="px-3 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                              {it.label}
+                            </div>
+                            <div className="me-1 ms-3 space-y-0.5 border-s-2 border-brand-100 ps-2">
+                              {it.children.map((c) => (
+                                <Link
+                                  key={c.href}
+                                  href={c.href}
+                                  onClick={() => setMobileOpen(false)}
+                                  className="block rounded-lg px-2 py-1.5 text-[13px] text-gray-600 hover:bg-brand-50 hover:text-brand-700"
+                                >
+                                  {c.label}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ) : it.soon || !it.href ? (
+                          <div
+                            key={it.label}
+                            className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-gray-400"
+                          >
+                            {it.label}
+                            {it.soon && <ComingSoon />}
+                          </div>
+                        ) : (
+                          <Link
+                            key={it.label}
+                            href={it.href}
+                            onClick={() => setMobileOpen(false)}
+                            className="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700"
+                          >
+                            {it.label}
+                          </Link>
+                        )
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {session.user.role === "admin" && (
               <Link
