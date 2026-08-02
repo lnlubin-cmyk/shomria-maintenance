@@ -220,7 +220,8 @@ export async function getVoteRoster(
   const admin = createAdminClient();
   const [{ data: parts }, { data: residents }] = await Promise.all([
     admin.from("vote_participants").select("resident_id, method").eq("vote_id", voteId),
-    admin.from("residents").select("id, first_name, last_name").order("last_name"),
+    // Only kibbutz members are eligible, so the turnout universe is members.
+    admin.from("residents").select("id, first_name, last_name").eq("is_member", true).order("last_name"),
   ]);
 
   const methodByResident = new Map(

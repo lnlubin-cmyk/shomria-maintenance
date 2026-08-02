@@ -64,6 +64,7 @@ export interface Resident {
   email: string | null;
   share_phone: boolean;
   share_house: boolean;
+  is_member: boolean; // kibbutz member — only members may vote
 }
 
 export interface AppUser {

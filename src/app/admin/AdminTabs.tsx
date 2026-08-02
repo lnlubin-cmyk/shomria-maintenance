@@ -37,7 +37,7 @@ export interface AdminUserRow {
   email: string | null;
   phone: string | null;
   is_active: boolean;
-  resident: { first_name: string; last_name: string } | null;
+  resident: { first_name: string; last_name: string; is_member: boolean } | null;
 }
 
 const TABS: { key: Tab; label: string }[] = [

@@ -131,7 +131,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                 <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                   הצבעתך נקלטה. תודה שהשתתפת! התוצאות יתפרסמו עם סיום ההצבעה.
                 </p>
-              ) : session.residentId ? (
+              ) : session.resident?.is_member ? (
                 vote.format === "membership" ? (
                   <MembershipBallot voteId={vote.id} options={optionsForBallot} />
                 ) : (
@@ -143,7 +143,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                 )
               ) : (
                 <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  ההצבעה פתוחה לתושבים רשומים בלבד.
+                  ההצבעה פתוחה לחברי קיבוץ בלבד.
                 </p>
               )}
             </div>

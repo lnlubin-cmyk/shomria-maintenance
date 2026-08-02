@@ -230,13 +230,26 @@ export default function UsersTab({
                   )}
                 </td>
                 <td className="px-3 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      u.resident_id ? "bg-brand-50 text-brand-700" : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {u.resident_id ? "תושב" : "לא תושב"}
-                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        u.resident_id ? "bg-brand-50 text-brand-700" : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {u.resident_id ? "תושב" : "לא תושב"}
+                    </span>
+                    {u.resident_id && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.resident?.is_member
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {u.resident?.is_member ? "חבר קיבוץ" : "לא חבר"}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-3" dir="ltr">
                   {u.resident_id ?? "—"}

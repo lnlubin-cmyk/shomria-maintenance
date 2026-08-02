@@ -33,7 +33,7 @@ export default async function AdminPage() {
     await Promise.all([
       supabase
         .from("residents")
-        .select("id, first_name, last_name, phone, email, share_phone, share_house")
+        .select("id, first_name, last_name, phone, email, share_phone, share_house, is_member")
         .order("last_name"),
       supabase
         .from("buildings")
@@ -43,7 +43,7 @@ export default async function AdminPage() {
         .order("plot_number"),
       supabase
         .from("users")
-        .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name)")
+        .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name, is_member)")
         .order("role"),
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);

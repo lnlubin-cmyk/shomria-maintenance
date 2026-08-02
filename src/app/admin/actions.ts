@@ -115,6 +115,7 @@ export async function upsertResident(formData: FormData): Promise<ActionResult> 
   // resident who agreed verbally but won't register). An unchecked box is absent.
   const sharePhone = formData.get("share_phone") !== null;
   const shareHouse = formData.get("share_house") !== null;
+  const isMember = formData.get("is_member") !== null;
 
   const admin = createAdminClient();
   const { error } = await admin
@@ -128,6 +129,7 @@ export async function upsertResident(formData: FormData): Promise<ActionResult> 
         email,
         share_phone: sharePhone,
         share_house: shareHouse,
+        is_member: isMember,
       },
       { onConflict: "id" }
     );

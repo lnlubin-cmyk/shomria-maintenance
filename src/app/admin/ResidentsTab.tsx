@@ -160,6 +160,17 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
             </p>
           </div>
 
+          <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              name="is_member"
+              className="h-4 w-4 accent-brand-500"
+              defaultChecked={editing ? editing.is_member : true}
+            />
+            <span className="font-medium">חבר קיבוץ</span>
+            <span className="text-xs text-gray-500">— רק חברי קיבוץ רשאים להצביע.</span>
+          </label>
+
           <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <p className="text-sm font-medium text-gray-700">הגדרות פרטיות</p>
             <p className="text-xs text-gray-500">
@@ -212,6 +223,7 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
               <th className="px-3 py-3">שם משפחה</th>
               <th className="px-3 py-3">טלפון</th>
               <th className="px-3 py-3">אימייל</th>
+              <th className="px-3 py-3">חבר קיבוץ</th>
               <th className="px-3 py-3">שיתוף טלפון</th>
               <th className="px-3 py-3">פעולות</th>
             </tr>
@@ -219,7 +231,7 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={8} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תושבים.
                 </td>
               </tr>
@@ -236,6 +248,17 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                 </td>
                 <td className="px-3 py-3" dir="ltr">
                   {r.email ?? <span className="text-gray-400">—</span>}
+                </td>
+                <td className="px-3 py-3">
+                  {r.is_member ? (
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                      חבר
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      לא חבר
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-3">
                   {r.share_phone ? (
