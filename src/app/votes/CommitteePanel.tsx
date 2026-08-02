@@ -243,24 +243,24 @@ export default function CommitteePanel({
                     </div>
                   )}
 
-                  {/* Option B: mark a paper ballot (always available) */}
+                  {/* Option B: mark a manual ballot (always available) */}
                   <div className="rounded-lg border border-gray-200 p-3">
-                    <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה בנייר</div>
+                    <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה ידנית</div>
                     <p className="mb-2 text-xs text-gray-500">
-                      התושב הצביע בפתק. סימון בלבד — הקולות ייספרו ידנית לאחר סגירת ההצבעה.
+                      התושב הצביע ידנית. סימון בלבד — הקולות ייספרו ידנית לאחר סגירת ההצבעה.
                     </p>
                     <button
                       type="button"
                       onClick={() =>
                         withBusy(
                           markPaperVote(voteId, residentId),
-                          `${residentName} סומן/ה כמי שהצביע/ה בנייר.`
+                          `${residentName} סומן/ה כמי שהצביע/ה ידנית.`
                         )
                       }
                       disabled={busy}
                       className="btn-secondary disabled:opacity-50"
                     >
-                      {busy ? "רושם…" : "סימון הצבעה בנייר"}
+                      {busy ? "רושם…" : "סימון הצבעה ידנית"}
                     </button>
                   </div>
                 </div>
@@ -299,7 +299,7 @@ export default function CommitteePanel({
 
 const METHOD_BADGE: Record<string, string> = {
   proxy: "נרשם ע״י ועדת קלפי",
-  paper: "הצביע/ה בנייר",
+  paper: "הצביע/ה ידנית",
 };
 
 function Roster({

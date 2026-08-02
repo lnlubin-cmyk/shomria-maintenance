@@ -108,7 +108,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
               </div>
             ) : (
               <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                ההצבעה הסתיימה. התוצאות יפורסמו לאחר שועדת הקלפי תזין ותאשר את ספירת הקולות שבנייר.
+                ההצבעה הסתיימה. התוצאות יפורסמו לאחר שועדת הקלפי תזין ותאשר את ספירת הקולות הידנית.
               </p>
             ))}
 
@@ -182,7 +182,7 @@ function ResultsBars({ options }: { options: VoteOptionOutcome[] }) {
             <span className="tabular-nums text-gray-600">
               {o.total}
               {anyPaper && (
-                <span className="text-gray-400"> ({o.electronic} + {o.paper} נייר)</span>
+                <span className="text-gray-400"> ({o.electronic} + {o.paper} ידני)</span>
               )}
             </span>
           </div>

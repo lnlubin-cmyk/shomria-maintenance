@@ -78,11 +78,11 @@ export default function PaperTallyPanel({
 
   return (
     <section className="card border-amber-200 bg-amber-50/40">
-      <h2 className="text-lg font-semibold text-gray-900">ספירת קולות בנייר</h2>
+      <h2 className="text-lg font-semibold text-gray-900">ספירת קולות ידנית</h2>
       <p className="mt-1 text-sm text-gray-600">
         {paper.paperVoters > 0
-          ? `סומנו ${paper.paperVoters} הצבעות בנייר. יש לספור את הפתקים ולהזין את מספר הקולות לכל אפשרות.`
-          : "לא סומנו הצבעות בנייר. אם נערכה הצבעה בנייר, ניתן להזין את תוצאות הספירה כאן."}
+          ? `סומנו ${paper.paperVoters} הצבעות ידניות. יש לספור את הקולות ולהזין את מספרם לכל אפשרות.`
+          : "לא סומנו הצבעות ידניות. אם נערכה הצבעה ידנית, ניתן להזין את תוצאות הספירה כאן."}
       </p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -108,7 +108,7 @@ export default function PaperTallyPanel({
             </div>
           ))}
           <div className="flex items-center justify-between pt-1 text-sm text-gray-500">
-            <span>סה״כ קולות בנייר שהוזנו:</span>
+            <span>סה״כ קולות ידניים שהוזנו:</span>
             <span className="tabular-nums font-medium text-gray-700">{enteredTotal}</span>
           </div>
           {paper.submissionExists && (
@@ -143,7 +143,7 @@ export default function PaperTallyPanel({
                 <tr className="text-xs text-gray-400">
                   <th className="pb-1 text-right font-medium">אפשרות</th>
                   <th className="pb-1 text-left font-medium tabular-nums">אלקטרוני</th>
-                  <th className="pb-1 text-left font-medium tabular-nums">נייר</th>
+                  <th className="pb-1 text-left font-medium tabular-nums">ידני</th>
                   <th className="pb-1 text-left font-medium tabular-nums">סה״כ</th>
                 </tr>
               </thead>
