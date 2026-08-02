@@ -120,7 +120,7 @@ export async function submitPaperCounts(
     if (!Number.isInteger(n) || n < 0) return { error: "מספר קולות לא תקין" };
   }
   const mv = Math.trunc(Number(manualVoters) || 0);
-  if (mv < 0) return { error: "מספר המצביעים בנייר לא תקין" };
+  if (mv < 0) return { error: "מספר המצביעים בפתק לא תקין" };
 
   const supabase = createClient();
   const { error } = await supabase.rpc("submit_paper_counts", {
@@ -243,7 +243,7 @@ export async function submitMembershipPaperCounts(
     if (!Number.isInteger(Number(r.decline)) || Number(r.decline) < 0) return { error: "מספר קולות לא תקין" };
   }
   const mv = Math.trunc(Number(manualVoters) || 0);
-  if (mv < 0) return { error: "מספר המצביעים בנייר לא תקין" };
+  if (mv < 0) return { error: "מספר המצביעים בפתק לא תקין" };
 
   const supabase = createClient();
   const { error } = await supabase.rpc("submit_membership_paper_counts", {

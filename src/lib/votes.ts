@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import {
   isVoteOpen,
   voteState,
+  VOTE_APPROVAL_STATEMENT,
   type Vote,
   type VoteOption,
   type VoteCommitteeMember,
@@ -150,15 +151,14 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
 
   const approvedResidentIds = (approvals ?? []).map((a) => a.resident_id);
   const size = committeeSize ?? 0;
-  const finalized = !!submission && size > 0 && approvedResidentIds.length >= size;
+  // Results publish only once EVERY committee member has confirmed (approved).
+  const finalized = size > 0 && approvedResidentIds.length >= size;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const submittedManualVoters = ((submission as any)?.manual_voters as number) ?? 0;
   const markedPaper = paperVoters ?? 0;
   // Manual turnout = marked paper voters, or the number entered with the count.
   const manualVoters = Math.max(markedPaper, submittedManualVoters);
-  // Any manual data (marked voters or an entered count) means the results wait
-  // for the approved manual count before they're final.
-  const required = markedPaper > 0 || !!submission;
+  const required = true; // every vote now waits for the committee's confirmation
   // Effective turnout: electronic participants + manual voters (some of whom may
   // not be individual participants when only the count was entered).
   const electronicVoters = (totalVoters ?? 0) - markedPaper;
@@ -204,7 +204,7 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
   for (const [k, v] of declPaperById) declineCounts[k] = v;
 
   return {
-    ready: !required || finalized,
+    ready: finalized,
     totalVoters: effectiveTotal,
     options: lines,
     paper: {
@@ -269,6 +269,7 @@ export async function getVoteProtocol(vote: Vote): Promise<VoteProtocol | null> 
     committee: committee.map((c) => `${c.first_name} ${c.last_name}`),
     turnout: { total, electronic: electronicCount, manual: manualCount },
     results,
+    confirmation: VOTE_APPROVAL_STATEMENT,
   };
 
   await admin.from("vote_protocols").upsert({ vote_id: vote.id, content }, { onConflict: "vote_id" });

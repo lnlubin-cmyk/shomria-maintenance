@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import { getVoteById, getVoteProtocol } from "@/lib/votes";
 import PrintButton from "../../PrintButton";
-import { formatDateTime, VOTE_FORMAT_LABELS } from "@/lib/types";
+import { formatDateTime, VOTE_FORMAT_LABELS, VOTE_APPROVAL_STATEMENT } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +76,7 @@ export default async function VoteProtocolPage({ params }: { params: { id: strin
               הצביעו במערכת: <span className="font-semibold">{protocol.turnout.electronic}</span>
             </li>
             <li>
-              הצביעו ידנית: <span className="font-semibold">{protocol.turnout.manual}</span>
+              הצביעו בפתק: <span className="font-semibold">{protocol.turnout.manual}</span>
             </li>
           </ul>
         </section>
@@ -117,8 +117,18 @@ export default async function VoteProtocolPage({ params }: { params: { id: strin
           </div>
         </section>
 
+        <section className="mt-6 border-t border-gray-200 pt-4">
+          <h2 className="mb-2 font-semibold">אישור ועדת הקלפי</h2>
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-800">
+            {protocol.confirmation || VOTE_APPROVAL_STATEMENT}
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            כל חברי ועדת הקלפי אישרו את התוצאות: {protocol.committee.join(", ")}.
+          </p>
+        </section>
+
         <footer className="mt-8 border-t border-gray-300 pt-4 text-xs text-gray-500">
-          פרוטוקול זה הופק אוטומטית עם סגירתה הסופית של ההצבעה
+          פרוטוקול זה הופק אוטומטית עם אישור התוצאות על ידי ועדת הקלפי
           {protocol.generatedAt ? ` בתאריך ${formatDateTime(protocol.generatedAt)}` : ""}.
         </footer>
       </article>

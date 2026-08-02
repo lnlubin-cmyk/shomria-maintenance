@@ -120,9 +120,14 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                   </Link>
                 </div>
               </div>
+            ) : onCommittee ? (
+              <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                ההצבעה נסגרה. התוצאות טרם פורסמו — יש להשלים את ספירת קולות הפתקים (אם הייתה הצבעה
+                בפתק) ואת אישור כל חברי ועדת הקלפי (בהמשך העמוד).
+              </p>
             ) : (
               <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                ההצבעה הסתיימה. התוצאות יפורסמו לאחר שועדת הקלפי תזין ותאשר את ספירת הקולות הידנית.
+                ההצבעה נסגרה. התוצאות יפורסמו לאחר סיום ספירת הקולות ואישור ועדת הקלפי.
               </p>
             ))}
 
@@ -202,7 +207,7 @@ function ResultsBars({ options }: { options: VoteOptionOutcome[] }) {
             <span className="tabular-nums text-gray-600">
               {o.total}
               {anyPaper && (
-                <span className="text-gray-400"> ({o.electronic} + {o.paper} ידני)</span>
+                <span className="text-gray-400"> ({o.electronic} + {o.paper} פתק)</span>
               )}
             </span>
           </div>

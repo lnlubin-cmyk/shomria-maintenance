@@ -313,6 +313,10 @@ export const VOTE_FORMAT_LABELS: Record<VoteFormat, string> = {
   membership: "הצבעה לחברות",
 };
 
+/** The honesty declaration each ועדת קלפי member confirms before results publish. */
+export const VOTE_APPROVAL_STATEMENT =
+  "הריני מאשר שהבחירות נערכו בצורה הוגנת וישרה ואני מאשר את התוצאות הנ״ל";
+
 export const VOTE_STATE_LABELS: Record<VoteState, string> = {
   upcoming: "טרם החלה",
   open: "הצבעה פעילה",
@@ -420,6 +424,7 @@ export interface VoteProtocol {
   committee: string[];
   turnout: { total: number; electronic: number; manual: number };
   results: VoteProtocolResult[];
+  confirmation: string; // the honesty declaration the committee confirmed
   generatedAt: string;
 }
 
