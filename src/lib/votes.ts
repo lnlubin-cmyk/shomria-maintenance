@@ -126,7 +126,7 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
       admin.from("vote_paper_counts").select("option_id, count, decline_count").eq("vote_id", vote.id),
       admin
         .from("vote_paper_submission")
-        .select("entered_by_user_id, entered_at")
+        .select("entered_by_user_id, entered_at, manual_voters")
         .eq("vote_id", vote.id)
         .maybeSingle(),
       admin.from("vote_paper_approvals").select("resident_id").eq("vote_id", vote.id),
@@ -151,7 +151,18 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
   const approvedResidentIds = (approvals ?? []).map((a) => a.resident_id);
   const size = committeeSize ?? 0;
   const finalized = !!submission && size > 0 && approvedResidentIds.length >= size;
-  const required = (paperVoters ?? 0) > 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const submittedManualVoters = ((submission as any)?.manual_voters as number) ?? 0;
+  const markedPaper = paperVoters ?? 0;
+  // Manual turnout = marked paper voters, or the number entered with the count.
+  const manualVoters = Math.max(markedPaper, submittedManualVoters);
+  // Any manual data (marked voters or an entered count) means the results wait
+  // for the approved manual count before they're final.
+  const required = markedPaper > 0 || !!submission;
+  // Effective turnout: electronic participants + manual voters (some of whom may
+  // not be individual participants when only the count was entered).
+  const electronicVoters = (totalVoters ?? 0) - markedPaper;
+  const effectiveTotal = electronicVoters + manualVoters;
 
   let enteredByName: string | null = null;
   if (submission?.entered_by_user_id) {
@@ -194,10 +205,11 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
 
   return {
     ready: !required || finalized,
-    totalVoters: totalVoters ?? 0,
+    totalVoters: effectiveTotal,
     options: lines,
     paper: {
-      paperVoters: paperVoters ?? 0,
+      paperVoters: markedPaper,
+      submittedManualVoters,
       required,
       submissionExists: !!submission,
       enteredByName,
@@ -234,13 +246,10 @@ export async function getVoteProtocol(vote: Vote): Promise<VoteProtocol | null> 
   if (!outcome || !outcome.ready) return null;
 
   const committee = await getVoteCommittee(vote.id);
-  const { count: manual } = await admin
-    .from("vote_participants")
-    .select("*", { count: "exact", head: true })
-    .eq("vote_id", vote.id)
-    .eq("method", "paper");
-  const manualCount = manual ?? 0;
-  const total = outcome.totalVoters;
+  // Manual turnout: the marked paper voters or the number entered with the count.
+  const manualCount = Math.max(outcome.paper.paperVoters, outcome.paper.submittedManualVoters);
+  const total = outcome.totalVoters; // already electronic + manual
+  const electronicCount = total - manualCount;
 
   const results: VoteProtocolResult[] = outcome.options.map((o) =>
     vote.format === "membership"
@@ -258,7 +267,7 @@ export async function getVoteProtocol(vote: Vote): Promise<VoteProtocol | null> 
     closedAt: vote.closed_at,
     closureMode: vote.closure_mode,
     committee: committee.map((c) => `${c.first_name} ${c.last_name}`),
-    turnout: { total, electronic: total - manualCount, manual: manualCount },
+    turnout: { total, electronic: electronicCount, manual: manualCount },
     results,
   };
 

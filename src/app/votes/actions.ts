@@ -104,7 +104,8 @@ export async function markPaperVote(voteId: string, residentId: string): Promise
  */
 export async function submitPaperCounts(
   voteId: string,
-  counts: { optionId: string; count: number }[]
+  counts: { optionId: string; count: number }[],
+  manualVoters: number
 ): Promise<ActionResult> {
   const session = await getSession();
   if (!session) return { error: "לא מחובר" };
@@ -118,12 +119,15 @@ export async function submitPaperCounts(
     const n = Number(r.count);
     if (!Number.isInteger(n) || n < 0) return { error: "מספר קולות לא תקין" };
   }
+  const mv = Math.trunc(Number(manualVoters) || 0);
+  if (mv < 0) return { error: "מספר המצביעים בנייר לא תקין" };
 
   const supabase = createClient();
   const { error } = await supabase.rpc("submit_paper_counts", {
     p_vote_id: voteId,
     p_option_ids: rows.map((r) => r.optionId),
     p_counts: rows.map((r) => Math.trunc(Number(r.count))),
+    p_manual_voters: mv,
   });
   if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
 
@@ -223,7 +227,8 @@ export async function castMembershipVoteOnBehalf(
 /** Enter (or re-enter) the manual paper count for a membership vote. */
 export async function submitMembershipPaperCounts(
   voteId: string,
-  rows: { optionId: string; accept: number; decline: number }[]
+  rows: { optionId: string; accept: number; decline: number }[],
+  manualVoters: number
 ): Promise<ActionResult> {
   const session = await getSession();
   if (!session) return { error: "לא מחובר" };
@@ -237,6 +242,8 @@ export async function submitMembershipPaperCounts(
     if (!Number.isInteger(Number(r.accept)) || Number(r.accept) < 0) return { error: "מספר קולות לא תקין" };
     if (!Number.isInteger(Number(r.decline)) || Number(r.decline) < 0) return { error: "מספר קולות לא תקין" };
   }
+  const mv = Math.trunc(Number(manualVoters) || 0);
+  if (mv < 0) return { error: "מספר המצביעים בנייר לא תקין" };
 
   const supabase = createClient();
   const { error } = await supabase.rpc("submit_membership_paper_counts", {
@@ -244,6 +251,7 @@ export async function submitMembershipPaperCounts(
     p_option_ids: clean.map((r) => r.optionId),
     p_accept: clean.map((r) => Math.trunc(Number(r.accept))),
     p_decline: clean.map((r) => Math.trunc(Number(r.decline))),
+    p_manual_voters: mv,
   });
   if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
 

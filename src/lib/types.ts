@@ -374,8 +374,9 @@ export interface VoteOptionOutcome {
 
 /** State of the manual paper count for a closed vote. */
 export interface PaperTallyState {
-  paperVoters: number; // residents marked as having voted on paper
-  required: boolean; // paperVoters > 0 → results wait for the approved count
+  paperVoters: number; // residents marked as having voted on paper (mark_paper_vote)
+  submittedManualVoters: number; // manual voter count entered with the count
+  required: boolean; // there is manual data → results wait for the approved count
   submissionExists: boolean;
   enteredByName: string | null;
   enteredAt: string | null;

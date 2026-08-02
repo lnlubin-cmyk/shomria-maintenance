@@ -45,6 +45,9 @@ export default function PaperTallyPanel({
   const [dec, setDec] = useState<Record<string, string>>(() =>
     Object.fromEntries(options.map((o) => [o.id, String(paper.declineCounts[o.id] ?? 0)]))
   );
+  const [manualVoters, setManualVoters] = useState(
+    String(Math.max(paper.paperVoters, paper.submittedManualVoters))
+  );
 
   const enteredTotal = useMemo(
     () =>
@@ -69,6 +72,7 @@ export default function PaperTallyPanel({
     }
     setError(null);
     setBusy(true);
+    const mv = Math.trunc(Number(manualVoters) || 0);
     const res = isMembership
       ? await submitMembershipPaperCounts(
           voteId,
@@ -76,11 +80,13 @@ export default function PaperTallyPanel({
             optionId: o.id,
             accept: Math.trunc(Number(acc[o.id]) || 0),
             decline: Math.trunc(Number(dec[o.id]) || 0),
-          }))
+          })),
+          mv
         )
       : await submitPaperCounts(
           voteId,
-          options.map((o) => ({ optionId: o.id, count: Math.trunc(Number(acc[o.id]) || 0) }))
+          options.map((o) => ({ optionId: o.id, count: Math.trunc(Number(acc[o.id]) || 0) })),
+          mv
         );
     setBusy(false);
     if ("error" in res) {
@@ -109,9 +115,9 @@ export default function PaperTallyPanel({
     <section className="card border-amber-200 bg-amber-50/40">
       <h2 className="text-lg font-semibold text-gray-900">ספירת קולות ידנית</h2>
       <p className="mt-1 text-sm text-gray-600">
-        {paper.paperVoters > 0
-          ? `סומנו ${paper.paperVoters} הצבעות ידניות. יש לספור את הקולות ולהזין את מספרם.`
-          : "לא סומנו הצבעות ידניות. אם נערכה הצבעה ידנית, ניתן להזין את תוצאות הספירה כאן."}
+        {Math.max(paper.paperVoters, paper.submittedManualVoters) > 0
+          ? `נרשמו ${Math.max(paper.paperVoters, paper.submittedManualVoters)} הצבעות ידניות. יש להזין את מספר המצביעים בנייר ואת ספירת הקולות.`
+          : "אם נערכה הצבעה ידנית (בנייר), יש להזין כאן את מספר המצביעים בנייר ואת ספירת הקולות."}
       </p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -119,6 +125,19 @@ export default function PaperTallyPanel({
       {/* Entry form */}
       {editing ? (
         <div className="mt-4 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 pb-2">
+            <span className="text-sm font-medium text-gray-800">
+              מספר המצביעים בנייר
+              <span className="ms-2 text-xs font-normal text-gray-500">(סה״כ פתקים שנספרו)</span>
+            </span>
+            <input
+              type="number"
+              min={0}
+              className="field w-24"
+              value={manualVoters}
+              onChange={(e) => setManualVoters(e.target.value)}
+            />
+          </div>
           {options.map((o) => (
             <div key={o.id} className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-medium text-gray-800">{o.label}</span>
