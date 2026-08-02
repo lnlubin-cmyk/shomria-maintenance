@@ -17,10 +17,11 @@ export const dynamic = "force-dynamic";
 function VoteCard({ vote }: { vote: Vote }) {
   const state = voteState(vote);
   return (
-    <Link
-      href={`/votes/${vote.id}`}
-      className="card block transition hover:border-brand-200 hover:shadow-md"
-    >
+    <div>
+      <Link
+        href={`/votes/${vote.id}`}
+        className="card block transition hover:border-brand-200 hover:shadow-md"
+      >
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-lg font-semibold text-gray-900">{vote.title}</h3>
         <span
@@ -46,10 +47,21 @@ function VoteCard({ vote }: { vote: Vote }) {
           </dd>
         </div>
       </dl>
-      <div className="mt-3 text-sm font-medium text-brand-600">
-        {state === "open" ? "להצבעה ←" : state === "closed" ? "לצפייה בתוצאות ←" : "לפרטים ←"}
-      </div>
-    </Link>
+        <div className="mt-3 text-sm font-medium text-brand-600">
+          {state === "open" ? "להצבעה ←" : state === "closed" ? "לצפייה בתוצאות ←" : "לפרטים ←"}
+        </div>
+      </Link>
+      {state === "closed" && (
+        <div className="mt-1 px-1">
+          <Link
+            href={`/votes/${vote.id}/protocol`}
+            className="text-xs font-medium text-gray-500 hover:text-brand-600 hover:underline"
+          >
+            פרוטוקול ההצבעה ←
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import {
@@ -110,6 +111,14 @@ export default async function VotePage({ params }: { params: { id: string } }) {
                 ) : (
                   <ResultsBars options={outcome.options} />
                 )}
+                <div className="mt-4 border-t border-gray-100 pt-3">
+                  <Link
+                    href={`/votes/${vote.id}/protocol`}
+                    className="text-sm font-medium text-brand-600 hover:underline"
+                  >
+                    צפייה בפרוטוקול ההצבעה ←
+                  </Link>
+                </div>
               </div>
             ) : (
               <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">

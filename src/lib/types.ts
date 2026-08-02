@@ -398,6 +398,30 @@ export interface VoteOutcome {
   paper: PaperTallyState;
 }
 
+/** One result line in a vote protocol. */
+export interface VoteProtocolResult {
+  label: string;
+  votes?: number; // options / election
+  accept?: number; // membership: בעד
+  decline?: number; // membership: נגד
+}
+
+/** The written protocol of a finally-closed vote (regulatory record). */
+export interface VoteProtocol {
+  title: string;
+  subject: string;
+  description: string | null;
+  format: VoteFormat;
+  startAt: string;
+  closesAt: string | null;
+  closedAt: string | null;
+  closureMode: VoteClosureMode;
+  committee: string[];
+  turnout: { total: number; electronic: number; manual: number };
+  results: VoteProtocolResult[];
+  generatedAt: string;
+}
+
 /** A resident row in the committee's turnout lists (voted / not-yet-voted). */
 export interface VoteRosterEntry {
   resident_id: string;

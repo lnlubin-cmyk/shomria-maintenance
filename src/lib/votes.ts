@@ -6,6 +6,8 @@ import {
   type VoteOption,
   type VoteCommitteeMember,
   type VoteOutcome,
+  type VoteProtocol,
+  type VoteProtocolResult,
   type VoteRosterEntry,
 } from "@/lib/types";
 
@@ -207,6 +209,67 @@ export async function getVoteOutcome(vote: Vote): Promise<VoteOutcome | null> {
       finalized,
     },
   };
+}
+
+/**
+ * The written protocol (regulatory record) of a finally-closed vote. Returns the
+ * stored snapshot if one exists; otherwise, if the vote is final (closed and its
+ * manual count approved, if any), it computes and stores the snapshot, then
+ * returns it. Returns null while the vote isn't final yet.
+ */
+export async function getVoteProtocol(vote: Vote): Promise<VoteProtocol | null> {
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("vote_protocols")
+    .select("content, generated_at")
+    .eq("vote_id", vote.id)
+    .maybeSingle();
+  if (existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { ...(existing.content as any), generatedAt: existing.generated_at } as VoteProtocol;
+  }
+
+  const outcome = await getVoteOutcome(vote);
+  if (!outcome || !outcome.ready) return null;
+
+  const committee = await getVoteCommittee(vote.id);
+  const { count: manual } = await admin
+    .from("vote_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("vote_id", vote.id)
+    .eq("method", "paper");
+  const manualCount = manual ?? 0;
+  const total = outcome.totalVoters;
+
+  const results: VoteProtocolResult[] = outcome.options.map((o) =>
+    vote.format === "membership"
+      ? { label: o.label, accept: o.total, decline: o.declineTotal }
+      : { label: o.label, votes: o.total }
+  );
+
+  const content = {
+    title: vote.title,
+    subject: vote.subject,
+    description: vote.description,
+    format: vote.format,
+    startAt: vote.start_at,
+    closesAt: vote.closes_at,
+    closedAt: vote.closed_at,
+    closureMode: vote.closure_mode,
+    committee: committee.map((c) => `${c.first_name} ${c.last_name}`),
+    turnout: { total, electronic: total - manualCount, manual: manualCount },
+    results,
+  };
+
+  await admin.from("vote_protocols").upsert({ vote_id: vote.id, content }, { onConflict: "vote_id" });
+  const { data: saved } = await admin
+    .from("vote_protocols")
+    .select("generated_at")
+    .eq("vote_id", vote.id)
+    .maybeSingle();
+
+  return { ...content, generatedAt: saved?.generated_at ?? "" } as VoteProtocol;
 }
 
 /**

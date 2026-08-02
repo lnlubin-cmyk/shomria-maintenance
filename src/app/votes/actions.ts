@@ -127,6 +127,9 @@ export async function submitPaperCounts(
   });
   if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
 
+  // Re-entering the count changes the result — void any protocol already produced.
+  await createAdminClient().from("vote_protocols").delete().eq("vote_id", voteId);
+
   revalidatePath(`/votes/${voteId}`);
   revalidatePath("/votes");
   return { ok: true };
@@ -243,6 +246,8 @@ export async function submitMembershipPaperCounts(
     p_decline: clean.map((r) => Math.trunc(Number(r.decline))),
   });
   if (error) return { error: error.message || "הזנת הספירה נכשלה. נסו שוב." };
+
+  await createAdminClient().from("vote_protocols").delete().eq("vote_id", voteId);
 
   revalidatePath(`/votes/${voteId}`);
   revalidatePath("/votes");
