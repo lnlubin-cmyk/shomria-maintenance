@@ -28,24 +28,21 @@ function loadYouTubeApi(): Promise<unknown> {
 }
 
 /**
- * Build a privacy-enhanced (youtube-nocookie) embed URL. enablejsapi is added
- * ONLY when we attach the IFrame API (multi-item carousels) — combining it with
- * a looping single video caused repeated origin/consent reloads and an
- * ERR_TOO_MANY_REDIRECTS on google.com.
+ * Build a privacy-enhanced (youtube-nocookie) embed URL. We deliberately do NOT
+ * use YouTube's own loop (loop=1&playlist=<id>): on the nocookie domain that
+ * bounces through google.com's consent pages when the clip ends and throws
+ * ERR_TOO_MANY_REDIRECTS. Instead we always attach the IFrame API and restart /
+ * advance ourselves on the ENDED event.
  */
-function ytEmbedUrl(id: string, opts: { loop: boolean; jsapi: boolean }): string {
+function ytEmbedUrl(id: string): string {
   const p = new URLSearchParams({
     autoplay: "1",
     mute: "1",
     rel: "0",
     playsinline: "1",
     modestbranding: "1",
+    enablejsapi: "1",
   });
-  if (opts.jsapi) p.set("enablejsapi", "1");
-  if (opts.loop) {
-    p.set("loop", "1");
-    p.set("playlist", id); // required for loop to work
-  }
   return `https://www.youtube-nocookie.com/embed/${id}?${p.toString()}`;
 }
 
@@ -80,9 +77,10 @@ export default function HeroCarousel({
     return () => clearTimeout(t);
   }, [index, count, cur, advance]);
 
-  // YouTube: advance when the video ends (single item loops instead).
+  // YouTube: when the clip ends, advance to the next item (or restart it if it's
+  // the only one) via the IFrame API — never YouTube's own loop, which redirects.
   useEffect(() => {
-    if (cur?.kind !== "youtube" || !cur.youtubeId || count <= 1) return;
+    if (cur?.kind !== "youtube" || !cur.youtubeId) return;
     let cancelled = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let player: any;
@@ -95,7 +93,17 @@ export default function HeroCarousel({
           events: {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onStateChange: (e: any) => {
-              if (e.data === YT.PlayerState.ENDED) advance();
+              if (e.data !== YT.PlayerState.ENDED) return;
+              if (count > 1) {
+                advance();
+              } else {
+                try {
+                  player.seekTo(0);
+                  player.playVideo();
+                } catch {
+                  /* player gone */
+                }
+              }
             },
           },
         });
@@ -123,7 +131,7 @@ export default function HeroCarousel({
         <iframe
           key={cur.id}
           ref={ytIframeRef}
-          src={ytEmbedUrl(cur.youtubeId ?? "", { loop: count === 1, jsapi: count > 1 })}
+          src={ytEmbedUrl(cur.youtubeId ?? "")}
           className="h-full w-full"
           title="וידאו"
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
