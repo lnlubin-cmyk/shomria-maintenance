@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Building, BuildingLayer, CommunityItem, HomeMedia, Resident } from "@/lib/types";
+import type { Building, BuildingLayer, CommunityItem, Contact, HomeMedia, Resident } from "@/lib/types";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
@@ -11,6 +11,7 @@ import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
 import TorahLessonsTab from "./TorahLessonsTab";
+import ContactsTab from "./ContactsTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
 import type { TorahLesson } from "@/lib/types";
@@ -26,6 +27,7 @@ type Tab =
   | "halachic"
   | "prayers"
   | "torah"
+  | "contacts"
   | "votes";
 
 export interface AdminUserRow {
@@ -50,6 +52,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "halachic", label: "זמנים הלכתיים" },
   { key: "prayers", label: "זמני תפילות" },
   { key: "torah", label: "שיעורי תורה" },
+  { key: "contacts", label: "צור קשר" },
   { key: "votes", label: "הצבעות" },
 ];
 
@@ -63,6 +66,7 @@ export default function AdminTabs({
   halachicYears,
   schedules,
   lessons,
+  contacts,
   votes,
   currentUserId,
 }: {
@@ -75,6 +79,7 @@ export default function AdminTabs({
   halachicYears: { year: number; days: number }[];
   schedules: PrayerSchedule[];
   lessons: TorahLesson[];
+  contacts: Contact[];
   votes: AdminVote[];
   currentUserId: string;
 }) {
@@ -111,6 +116,7 @@ export default function AdminTabs({
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
       {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}
       {tab === "torah" && <TorahLessonsTab lessons={lessons} />}
+      {tab === "contacts" && <ContactsTab contacts={contacts} />}
       {tab === "votes" && <VotesTab votes={votes} residents={residents} />}
     </div>
   );

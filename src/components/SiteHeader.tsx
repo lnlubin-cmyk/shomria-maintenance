@@ -200,6 +200,13 @@ export default function SiteHeader({
               </div>
             ))}
 
+            <Link
+              href="/contact"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+            >
+              צור קשר
+            </Link>
+
             {session.user.role === "admin" && (
               <Link
                 href="/admin"
@@ -324,6 +331,14 @@ export default function SiteHeader({
                 </div>
               );
             })}
+
+            <Link
+              href="/contact"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-xl border border-gray-200 bg-gray-100 px-3 py-3 text-base font-bold text-gray-900 hover:bg-gray-200"
+            >
+              צור קשר
+            </Link>
 
             {session.user.role === "admin" && (
               <Link

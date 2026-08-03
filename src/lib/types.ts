@@ -245,6 +245,16 @@ export interface TorahLesson {
   sort_order: number;
 }
 
+/** צור קשר — a kibbutz unit (e.g. משרד) with an optional email/phone. */
+export interface Contact {
+  id: string;
+  name: string; // שם היחידה (e.g. משרד)
+  email: string; // אופציונלי
+  phone: string; // אופציונלי
+  is_visible: boolean;
+  sort_order: number;
+}
+
 /** The signed-in user. `resident` is null for external maintenance staff. */
 export interface Session {
   user: AppUser;
