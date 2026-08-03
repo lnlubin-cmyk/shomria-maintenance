@@ -40,7 +40,6 @@ export default function CommitteePanel({
 
   const [showEntry, setShowEntry] = useState(false);
   const [residentId, setResidentId] = useState("");
-  const [residentName, setResidentName] = useState("");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
 
@@ -63,7 +62,6 @@ export default function CommitteePanel({
 
   function resetEntry() {
     setResidentId("");
-    setResidentName("");
     setQuery("");
     setPicked([]);
   }
@@ -170,7 +168,6 @@ export default function CommitteePanel({
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setResidentId("");
-                  setResidentName("");
                 }}
               />
               {query.trim() && !residentId && (
@@ -181,7 +178,6 @@ export default function CommitteePanel({
                         type="button"
                         onClick={() => {
                           setResidentId(r.resident_id);
-                          setResidentName(`${r.first_name} ${r.last_name}`);
                           setQuery(`${r.first_name} ${r.last_name}`);
                         }}
                         className="block w-full px-3 py-1.5 text-right text-sm hover:bg-brand-50"
@@ -266,29 +262,6 @@ export default function CommitteePanel({
                         </button>
                       </div>
                     ))}
-
-                  {/* Option B: mark a paper (פתק) ballot — only if enabled */}
-                  {allowPaper && (
-                    <div className="rounded-lg border border-gray-200 p-3">
-                      <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה בפתק</div>
-                      <p className="mb-2 text-xs text-gray-500">
-                        התושב הצביע בפתק. סימון בלבד — הקולות ייספרו לאחר סגירת ההצבעה.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          withBusy(
-                            markPaperVote(voteId, residentId),
-                            `${residentName} סומן/ה כמי שהצביע/ה בפתק.`
-                          )
-                        }
-                        disabled={busy}
-                        className="btn-secondary disabled:opacity-50"
-                      >
-                        {busy ? "רושם…" : "סימון הצבעה בפתק"}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -316,6 +289,13 @@ export default function CommitteePanel({
             open={showNotVoted}
             onToggle={() => setShowNotVoted((v) => !v)}
             entries={notVoted}
+            busy={busy}
+            onMark={
+              canManage && allowPaper
+                ? (rid, name) =>
+                    withBusy(markPaperVote(voteId, rid), `${name} סומן/ה כמי שהצביע/ה בפתק.`)
+                : undefined
+            }
           />
         </div>
       </div>
@@ -334,12 +314,17 @@ function Roster({
   onToggle,
   entries,
   showMethod = false,
+  busy = false,
+  onMark,
 }: {
   title: string;
   open: boolean;
   onToggle: () => void;
   entries: VoteRosterEntry[];
   showMethod?: boolean;
+  busy?: boolean;
+  // When set, each not-yet-voted member gets a "mark as voted by פתק" button.
+  onMark?: (residentId: string, name: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white">
@@ -354,7 +339,7 @@ function Roster({
       {open && (
         <ul className="max-h-64 divide-y divide-gray-100 overflow-auto border-t border-gray-100">
           {entries.map((r) => (
-            <li key={r.resident_id} className="flex items-center justify-between px-4 py-2 text-sm">
+            <li key={r.resident_id} className="flex items-center justify-between gap-2 px-4 py-2 text-sm">
               <span>
                 {r.first_name} {r.last_name}
               </span>
@@ -362,6 +347,16 @@ function Roster({
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                   {METHOD_BADGE[r.method]}
                 </span>
+              )}
+              {onMark && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onMark(r.resident_id, `${r.first_name} ${r.last_name}`)}
+                  className="shrink-0 rounded-lg border border-gray-300 px-2 py-0.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50"
+                >
+                  סמן: הצביע/ה בפתק
+                </button>
               )}
             </li>
           ))}

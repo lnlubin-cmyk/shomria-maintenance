@@ -124,6 +124,15 @@ export default function PaperTallyPanel({
   const paperTotal = Math.max(paper.paperVoters, paper.submittedManualVoters);
   const derived = derivedManualVoters();
 
+  // Warn (committee only, not in the protocol) if the number of members marked as
+  // having voted by פתק differs from the number of paper votes counted.
+  const countedManual = paper.submissionExists
+    ? paper.submittedManualVoters
+    : derived !== null
+      ? derived
+      : Math.trunc(Number(manualVoters) || 0);
+  const discrepancy = paper.paperVoters > 0 && countedManual !== paper.paperVoters;
+
   return (
     <section className="card border-amber-200 bg-amber-50/40">
       <h2 className="text-lg font-semibold text-gray-900">סיום ההצבעה ואישור התוצאות</h2>
@@ -189,6 +198,12 @@ export default function PaperTallyPanel({
       {allowPaper && (
         <div className="mt-5 border-t border-amber-200 pt-4">
           <h3 className="mb-2 font-semibold text-gray-800">ספירת קולות פתקים</h3>
+          {discrepancy && (
+            <p className="mb-2 rounded-lg bg-amber-100 px-3 py-2 text-sm text-amber-900">
+              שימו לב: סומנו {paper.paperVoters} מצביעים בפתק, אך נספרו {countedManual} קולות בפתק. יש
+              לוודא את הנתונים.
+            </p>
+          )}
           {paper.submissionExists ? (
             <p className="text-sm text-gray-600">
               הוזנו {paperTotal} מצביעים בפתק
