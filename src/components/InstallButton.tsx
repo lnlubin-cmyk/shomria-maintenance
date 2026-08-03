@@ -121,7 +121,7 @@ export default function InstallButton({
       <button
         type="button"
         onClick={handleClick}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
+        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
       >
         <DownloadIcon />
         התקנת האפליקציה

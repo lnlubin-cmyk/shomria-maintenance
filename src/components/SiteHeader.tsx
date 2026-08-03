@@ -135,10 +135,12 @@ export default function SiteHeader({
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 shadow-soft backdrop-blur">
-      <div ref={navRef} className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-[#5c3a29] shadow-soft">
+      <div ref={navRef} className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
-          <Logo className="h-14 w-auto" />
+          <span className="rounded-xl bg-white px-3 py-1 shadow-sm">
+            <Logo className="h-16 w-auto" />
+          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -149,7 +151,7 @@ export default function SiteHeader({
                 <button
                   onClick={() => setOpenMenu(openMenu === s.key ? null : s.key)}
                   className={`flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    openMenu === s.key ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-100"
+                    openMenu === s.key ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10"
                   }`}
                 >
                   {s.label}
@@ -203,7 +205,7 @@ export default function SiteHeader({
 
             <Link
               href="/contact"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
             >
               צור קשר
             </Link>
@@ -213,7 +215,7 @@ export default function SiteHeader({
             {session.user.role === "admin" && (
               <Link
                 href="/admin"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
               >
                 ניהול מערכת
               </Link>
@@ -227,13 +229,16 @@ export default function SiteHeader({
             <>
               <Link
                 href="/profile"
-                className="hidden rounded-lg px-2 py-1 text-left leading-tight hover:bg-gray-100 sm:block"
+                className="hidden rounded-lg px-2 py-1 text-left leading-tight text-white hover:bg-white/10 sm:block"
               >
                 <div className="text-sm font-medium">{session.displayName}</div>
-                <div className="text-xs text-gray-500">{ROLE_LABELS[session.user.role]} · פרופיל</div>
+                <div className="text-xs text-white/70">{ROLE_LABELS[session.user.role]} · פרופיל</div>
               </Link>
               <form action="/auth/signout" method="post" className="hidden sm:block">
-                <button type="submit" className="btn-secondary">
+                <button
+                  type="submit"
+                  className="rounded-lg border border-white/40 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-white/10"
+                >
                   יציאה
                 </button>
               </form>
@@ -243,7 +248,7 @@ export default function SiteHeader({
                 type="button"
                 aria-label="תפריט"
                 onClick={() => setMobileOpen((v) => !v)}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 md:hidden"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden"
               >
                 <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   {mobileOpen ? (
