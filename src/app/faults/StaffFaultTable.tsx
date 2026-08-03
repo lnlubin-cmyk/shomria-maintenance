@@ -13,7 +13,7 @@ import {
   PRIORITY_ORDER,
   PRIORITY_STYLES,
   formatDate,
-  fullName,
+  callerDisplay,
   staffName,
   buildingLabel,
   type FaultRow,
@@ -77,7 +77,7 @@ export default function StaffFaultTable({
     const filtered = faults.filter(
       (f) =>
         has(String(f.fault_number), filters.fault_number) &&
-        has(fullName(f.caller), filters.caller) &&
+        has(callerDisplay(f), filters.caller) &&
         has(f.building ? buildingLabel(f.building) : "", filters.building) &&
         has(f.building_plot_number, filters.building_plot) &&
         has(f.fault_description, filters.description) &&
@@ -206,7 +206,7 @@ export default function StaffFaultTable({
     const XLSX = await import("xlsx");
     const data = rows.map((f) => ({
       "מס׳": f.fault_number,
-      "שם הפונה": fullName(f.caller),
+      "שם הפונה": callerDisplay(f),
       "שם המבנה": buildingLabel(f.building),
       מגרש: f.building_plot_number,
       "תיאור התקלה": f.fault_description,
@@ -452,7 +452,7 @@ export default function StaffFaultTable({
                   />
                 </td>
                 <td className="px-3 py-3 font-medium">{f.fault_number}</td>
-                <td className="px-3 py-3">{fullName(f.caller)}</td>
+                <td className="px-3 py-3">{callerDisplay(f)}</td>
                 <td className="px-3 py-3">{buildingLabel(f.building)}</td>
                 <td className="px-3 py-3 tabular-nums" dir="ltr">
                   {f.building_plot_number}

@@ -10,7 +10,7 @@ import {
   PRIORITY_LABELS,
   PRIORITY_STYLES,
   formatDate,
-  fullName,
+  callerDisplay,
   buildingLabel,
   canRateFault,
   type FaultRow,
@@ -111,7 +111,7 @@ export default function ResidentFaultList({ faults }: { faults: FaultRow[] }) {
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-gray-500">שם הפונה</dt>
-              <dd className="font-medium">{fullName(f.caller)}</dd>
+              <dd className="font-medium">{callerDisplay(f)}</dd>
             </div>
             <div>
               <dt className="text-gray-500">סוג הטיפול</dt>

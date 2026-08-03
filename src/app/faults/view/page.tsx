@@ -7,7 +7,7 @@ import { getBuildingFacts } from "@/lib/building-facts";
 import FaultDetail from "../FaultDetail";
 
 const FAULT_SELECT = `
-  fault_number, caller_resident_id, created_by_user_id, building_plot_number, fault_description,
+  fault_number, caller_resident_id, caller_name, created_by_user_id, building_plot_number, fault_description,
   status, priority, assigned_to_user_id, treatment_description, treatment_type,
   hours_spent, total_cost, closed_at, created_at,
   caller:residents!faults_caller_resident_id_fkey(first_name, last_name, phone),

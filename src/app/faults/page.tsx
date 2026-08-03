@@ -16,6 +16,7 @@ import StaffFaultTable from "./StaffFaultTable";
 const SELECT = `
   fault_number,
   caller_resident_id,
+  caller_name,
   created_by_user_id,
   building_plot_number,
   fault_description,

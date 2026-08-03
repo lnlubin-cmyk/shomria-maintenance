@@ -133,8 +133,11 @@ export function buildingLabel(
 
 export interface Fault {
   fault_number: number;
-  caller_resident_id: string;
-  created_by_user_id: string;
+  // Nullable: cleared when the caller resident is deleted (the call is kept,
+  // and caller_name preserves the frozen name for display).
+  caller_resident_id: string | null;
+  caller_name: string | null; // frozen snapshot of the caller's name
+  created_by_user_id: string | null;
   building_plot_number: string;
   fault_description: string;
   status: FaultStatus;
@@ -288,6 +291,18 @@ export function canRateFault(status: FaultStatus): boolean {
 
 export function fullName(r: { first_name: string; last_name: string } | null | undefined): string {
   return r ? `${r.first_name} ${r.last_name}` : "—";
+}
+
+/**
+ * The caller's name for display: the linked resident if present, otherwise the
+ * frozen snapshot kept on the fault (for a resident who was since deleted).
+ */
+export function callerDisplay(f: {
+  caller: { first_name: string; last_name: string } | null;
+  caller_name?: string | null;
+}): string {
+  if (f.caller) return `${f.caller.first_name} ${f.caller.last_name}`;
+  return f.caller_name?.trim() || "—";
 }
 
 export function formatDate(iso: string | null): string {

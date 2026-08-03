@@ -159,10 +159,6 @@ export async function deleteResident(formData: FormData): Promise<ActionResult> 
   const { error } = await admin.from("residents").delete().eq("id", id);
 
   if (error) {
-    // FK restrict: the resident is referenced by a user account or a fault.
-    if (error.code === "23503") {
-      return { error: "לא ניתן למחוק תושב שיש לו חשבון משתמש או קריאות במערכת" };
-    }
     return { error: "מחיקת התושב נכשלה" };
   }
 
@@ -402,10 +398,12 @@ export async function deleteUser(formData: FormData): Promise<ActionResult> {
 
   const admin = createAdminClient();
 
-  // Deleting the auth account cascades to public.users.
+  // Deleting the auth account cascades to public.users. Any calls the user
+  // opened are kept (their created_by link is cleared, and the caller name is
+  // preserved on the call).
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
-    return { error: "לא ניתן למחוק משתמש שפתח קריאות. ניתן להשבית אותו במקום." };
+    return { error: "מחיקת המשתמש נכשלה" };
   }
 
   revalidatePath("/admin");

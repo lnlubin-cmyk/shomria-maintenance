@@ -13,7 +13,7 @@ import {
   TREATMENT_TYPE_LABELS,
   TREATMENT_TYPE_ORDER,
   buildingLabel,
-  fullName,
+  callerDisplay,
   staffName,
   formatDate,
   formatDateTime,
@@ -50,6 +50,7 @@ interface DetailFault {
   closed_at: string | null;
   created_at: string;
   caller: { first_name: string; last_name: string; phone: string } | null;
+  caller_name: string | null;
   building: { building_name: string; layer: { prefix: string } | null } | null;
   assignee: NamedUser | null;
 }
@@ -182,7 +183,7 @@ export default function FaultDetail({
         </div>
 
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <Row label="שם הפונה" value={fullName(fault.caller)} />
+          <Row label="שם הפונה" value={callerDisplay(fault)} />
           {staff && <Row label="טלפון" value={fault.caller?.phone ?? "—"} ltr />}
           <Row label="מבנה" value={buildingLabel(fault.building)} />
           <Row label="נפתחה" value={formatDate(fault.created_at)} />
