@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import InstallButton from "@/components/InstallButton";
 import { ROLE_LABELS, isStaff, type Session, type CommunityMenuItem } from "@/lib/types";
 
 type SubItem = { label: string; href: string };
@@ -207,6 +208,8 @@ export default function SiteHeader({
               צור קשר
             </Link>
 
+            <InstallButton variant="desktop" onNavigate={() => setOpenMenu(null)} />
+
             {session.user.role === "admin" && (
               <Link
                 href="/admin"
@@ -339,6 +342,8 @@ export default function SiteHeader({
             >
               צור קשר
             </Link>
+
+            <InstallButton variant="mobile" onNavigate={() => setMobileOpen(false)} />
 
             {session.user.role === "admin" && (
               <Link
