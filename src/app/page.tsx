@@ -110,46 +110,45 @@ export default async function HomePage() {
       <AppHeader session={session} />
 
       <main>
-        {/* Hero band — full-width media with the heading laid over a dark scrim. */}
-        <section className="bg-gradient-to-b from-brand-50 via-white to-gray-50">
-          <div className="mx-auto max-w-6xl px-4 py-10">
-            <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-soft">
-              {/* Admin-managed media carousel, or a static image if none. */}
-              {media.length > 0 ? (
-                <HeroCarousel items={media} bare heightClass="h-[360px] sm:h-[460px] lg:h-[540px]" />
-              ) : (
-                <div className="relative h-[360px] w-full sm:h-[460px] lg:h-[540px]">
-                  <Image
-                    src="/hero.svg"
-                    alt="איור של מבני הקיבוץ"
-                    fill
-                    priority
-                    className="object-cover"
-                  />
+        {/* Hero band — full-bleed media with the heading laid over a dark scrim. */}
+        <section className="relative w-full bg-black">
+          {/* Admin-managed media carousel, or a static image if none. */}
+          {media.length > 0 ? (
+            <HeroCarousel items={media} bare heightClass="h-[380px] sm:h-[480px] lg:h-[560px]" />
+          ) : (
+            <div className="relative h-[380px] w-full sm:h-[480px] lg:h-[560px]">
+              <Image
+                src="/hero.svg"
+                alt="איור של מבני הקיבוץ"
+                fill
+                priority
+                className="object-cover"
+              />
+            </div>
+          )}
+
+          {/* Legibility scrim (darkest at the bottom, where the text sits). */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+          {/* Heading overlay, aligned to the page content width. pointer-events-none
+              lets the carousel controls underneath stay clickable; the CTA re-enables
+              its own clicks. */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="mx-auto flex h-full max-w-6xl flex-col items-start justify-end px-4 pb-6 sm:pb-8">
+              <h1 className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl">
+                מידע ושירות לתושב
+              </h1>
+
+              {!session && (
+                <div className="pointer-events-auto mt-4">
+                  <Link href="/login" className="btn-primary">
+                    כניסה / רישום
+                  </Link>
+                  <p className="mt-2 text-sm text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
+                    השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
+                  </p>
                 </div>
               )}
-
-              {/* Legibility scrim (darkest at the bottom, where the text sits). */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-
-              {/* Heading overlay. pointer-events-none lets the carousel controls
-                  underneath stay clickable; the CTA re-enables its own clicks. */}
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-start justify-end p-6 sm:p-8">
-                <h1 className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl">
-                  מידע ושירות לתושב
-                </h1>
-
-                {!session && (
-                  <div className="pointer-events-auto mt-4">
-                    <Link href="/login" className="btn-primary">
-                      כניסה / רישום
-                    </Link>
-                    <p className="mt-2 text-sm text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
-                      השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </section>

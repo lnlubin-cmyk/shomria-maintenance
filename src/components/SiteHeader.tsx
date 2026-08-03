@@ -138,7 +138,7 @@ export default function SiteHeader({
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 shadow-soft backdrop-blur">
       <div ref={navRef} className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
-          <Logo className="h-11 w-auto" />
+          <Logo className="h-14 w-auto" />
         </Link>
 
         {/* Desktop nav */}
