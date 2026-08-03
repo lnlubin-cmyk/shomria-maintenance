@@ -169,6 +169,8 @@ export default async function VotePage({ params }: { params: { id: string } }) {
           <PaperTallyPanel
             voteId={vote.id}
             format={vote.format}
+            allowPaper={vote.allow_paper_votes}
+            maxSelections={vote.max_selections}
             options={outcome.options}
             paper={outcome.paper}
             committee={committee}
@@ -184,6 +186,7 @@ export default async function VotePage({ params }: { params: { id: string } }) {
             format={vote.format}
             canManage={state === "open"}
             allowProxy={vote.allow_proxy_vote}
+            allowPaper={vote.allow_paper_votes}
             options={optionsForBallot}
             maxSelections={vote.max_selections}
             voted={roster.voted}

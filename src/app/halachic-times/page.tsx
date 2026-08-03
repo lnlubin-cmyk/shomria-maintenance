@@ -5,6 +5,13 @@ import AppHeader from "@/components/AppHeader";
 
 export const metadata = { title: "זמנים הלכתיים — קהילת עצמונה-שומריה" };
 
+// Display overrides for a few stored labels.
+const LABEL_OVERRIDES: Record<string, string> = {
+  "השקיעה במישור": "שקיעה לחומרא (במישור)",
+  "שקיעה במישור": "שקיעה לחומרא (במישור)",
+  "שקיעה בגובה": "שקיעה",
+};
+
 export default async function HalachicTimesPage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/halachic-times");
@@ -47,7 +54,7 @@ export default async function HalachicTimesPage() {
           <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
             {t.times.map((item, i) => (
               <li key={i} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-                <span className="text-gray-700">{item.label}</span>
+                <span className="text-gray-700">{LABEL_OVERRIDES[item.label] ?? item.label}</span>
                 <span className="font-semibold tabular-nums text-gray-900" dir="ltr">
                   {item.time}
                 </span>

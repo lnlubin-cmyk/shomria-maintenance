@@ -14,14 +14,15 @@ import {
 
 /**
  * Committee finalization after closure. Closing stops electronic voting but does
- * NOT publish results. Here the committee reviews the (still-private) results,
- * enters the paper-slip (פתק) count if there was one, and every member confirms
- * an honesty declaration. Only when all have confirmed are the results published
- * and the protocol produced.
+ * NOT publish results. The committee reviews the (still-private) results, enters
+ * the paper-slip (פתק) count once if manual voting was enabled, and every member
+ * confirms an honesty declaration. Results publish only when all have confirmed.
  */
 export default function PaperTallyPanel({
   voteId,
   format,
+  allowPaper,
+  maxSelections,
   options,
   paper,
   committee,
@@ -30,6 +31,8 @@ export default function PaperTallyPanel({
 }: {
   voteId: string;
   format: VoteFormat;
+  allowPaper: boolean;
+  maxSelections: number;
   options: VoteOptionOutcome[];
   paper: PaperTallyState;
   committee: VoteCommitteeMember[];
@@ -38,10 +41,11 @@ export default function PaperTallyPanel({
 }) {
   const router = useRouter();
   const isMembership = format === "membership";
+  const singleChoice = !isMembership && maxSelections === 1;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Open the entry form automatically when paper voters were marked but not counted.
-  const [editing, setEditing] = useState(paper.paperVoters > 0 && !paper.submissionExists);
+  // The count is entered once; open the form if paper voters were marked.
+  const [showEntry, setShowEntry] = useState(paper.paperVoters > 0 && !paper.submissionExists);
   const [confirmed, setConfirmed] = useState(false);
   const [acc, setAcc] = useState<Record<string, string>>(() =>
     Object.fromEntries(options.map((o) => [o.id, String(paper.counts[o.id] ?? 0)]))
@@ -49,14 +53,25 @@ export default function PaperTallyPanel({
   const [dec, setDec] = useState<Record<string, string>>(() =>
     Object.fromEntries(options.map((o) => [o.id, String(paper.declineCounts[o.id] ?? 0)]))
   );
-  const [manualVoters, setManualVoters] = useState(
-    String(Math.max(paper.paperVoters, paper.submittedManualVoters))
-  );
+  const [manualVoters, setManualVoters] = useState("0");
 
   const invalid = (v: string) => {
     const n = Number(v);
     return !Number.isInteger(n) || n < 0;
   };
+
+  // The number of paper voters is derived from the counts where it's determined
+  // (single-choice = sum, membership = the per-candidate total); only multi-select
+  // needs it entered explicitly.
+  function derivedManualVoters(): number | null {
+    if (isMembership) {
+      return Math.max(0, ...options.map((o) => (Number(acc[o.id]) || 0) + (Number(dec[o.id]) || 0)));
+    }
+    if (singleChoice) {
+      return options.reduce((s, o) => s + (Number(acc[o.id]) || 0), 0);
+    }
+    return null;
+  }
 
   async function saveCounts() {
     for (const o of options) {
@@ -65,9 +80,10 @@ export default function PaperTallyPanel({
         return;
       }
     }
+    const derived = derivedManualVoters();
+    const mv = derived !== null ? derived : Math.trunc(Number(manualVoters) || 0);
     setError(null);
     setBusy(true);
-    const mv = Math.trunc(Number(manualVoters) || 0);
     const res = isMembership
       ? await submitMembershipPaperCounts(
           voteId,
@@ -88,7 +104,7 @@ export default function PaperTallyPanel({
       setError(res.error);
       return;
     }
-    setEditing(false);
+    setShowEntry(false);
     router.refresh();
   }
 
@@ -106,13 +122,14 @@ export default function PaperTallyPanel({
 
   const approvedSet = new Set(paper.approvedResidentIds);
   const paperTotal = Math.max(paper.paperVoters, paper.submittedManualVoters);
+  const derived = derivedManualVoters();
 
   return (
     <section className="card border-amber-200 bg-amber-50/40">
       <h2 className="text-lg font-semibold text-gray-900">סיום ההצבעה ואישור התוצאות</h2>
       <p className="mt-1 text-sm text-gray-600">
-        ההצבעה במערכת נסגרה. יש להזין את ספירת קולות הפתקים (אם הייתה הצבעה בפתק), לבדוק את התוצאות,
-        וכל חברי ועדת הקלפי מאשרים אותן. התוצאות יפורסמו רק לאחר אישור כל החברים.
+        ההצבעה במערכת נסגרה. {allowPaper ? "יש להזין את ספירת קולות הפתקים (אם הייתה הצבעה בפתק), " : ""}
+        לבדוק את התוצאות, וכל חברי ועדת הקלפי מאשרים אותן. התוצאות יפורסמו רק לאחר אישור כל החברים.
       </p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -168,73 +185,96 @@ export default function PaperTallyPanel({
         </div>
       </div>
 
-      {/* Paper-slip count entry (optional) */}
-      <div className="mt-5 border-t border-amber-200 pt-4">
-        <h3 className="mb-2 font-semibold text-gray-800">ספירת קולות פתקים</h3>
-        {editing ? (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 pb-2">
-              <span className="text-sm font-medium text-gray-800">
-                מספר המצביעים בפתק
-                <span className="ms-2 text-xs font-normal text-gray-500">(סה״כ פתקים שנספרו)</span>
-              </span>
-              <input
-                type="number"
-                min={0}
-                className="field w-24"
-                value={manualVoters}
-                onChange={(e) => setManualVoters(e.target.value)}
-              />
-            </div>
-            {options.map((o) => (
-              <div key={o.id} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-medium text-gray-800">{o.label}</span>
-                {isMembership ? (
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1 text-xs text-gray-500">
-                      בעד
-                      <input
-                        type="number"
-                        min={0}
-                        className="field w-20"
-                        value={acc[o.id] ?? "0"}
-                        onChange={(e) => setAcc((c) => ({ ...c, [o.id]: e.target.value }))}
-                      />
-                    </label>
-                    <label className="flex items-center gap-1 text-xs text-gray-500">
-                      נגד
-                      <input
-                        type="number"
-                        min={0}
-                        className="field w-20"
-                        value={dec[o.id] ?? "0"}
-                        onChange={(e) => setDec((c) => ({ ...c, [o.id]: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-                ) : (
+      {/* Paper-slip (פתק) count entry — only when enabled; entered once */}
+      {allowPaper && (
+        <div className="mt-5 border-t border-amber-200 pt-4">
+          <h3 className="mb-2 font-semibold text-gray-800">ספירת קולות פתקים</h3>
+          {paper.submissionExists ? (
+            <p className="text-sm text-gray-600">
+              הוזנו {paperTotal} מצביעים בפתק
+              {paper.enteredByName ? ` · עודכן ע״י ${paper.enteredByName}` : ""}
+              {paper.enteredAt ? ` · ${formatDateTime(paper.enteredAt)}` : ""}. הספירה סופית ואינה
+              ניתנת לשינוי.
+            </p>
+          ) : !showEntry ? (
+            <button
+              type="button"
+              onClick={() => setShowEntry(true)}
+              className="btn-secondary"
+            >
+              הזנת ספירת קולות פתקים
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {derived === null && (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 pb-2">
+                  <span className="text-sm font-medium text-gray-800">
+                    מספר המצביעים בפתק
+                    <span className="ms-2 text-xs font-normal text-gray-500">(סה״כ פתקים)</span>
+                  </span>
                   <input
                     type="number"
                     min={0}
                     className="field w-24"
-                    value={acc[o.id] ?? "0"}
-                    onChange={(e) => setAcc((c) => ({ ...c, [o.id]: e.target.value }))}
+                    value={manualVoters}
+                    onChange={(e) => setManualVoters(e.target.value)}
                   />
-                )}
-              </div>
-            ))}
-            <p className="rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800">
-              שמירת הספירה תאפס את אישורי החברים ותידרש הסכמה מחדש מכל חברי הוועדה.
-            </p>
-            <div className="flex gap-2">
-              <button type="button" onClick={saveCounts} disabled={busy} className="btn-primary disabled:opacity-50">
-                {busy ? "שומר…" : "שמירת הספירה"}
-              </button>
-              {paper.submissionExists && (
+                </div>
+              )}
+              {options.map((o) => (
+                <div key={o.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-gray-800">{o.label}</span>
+                  {isMembership ? (
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1 text-xs text-gray-500">
+                        בעד
+                        <input
+                          type="number"
+                          min={0}
+                          className="field w-20"
+                          value={acc[o.id] ?? "0"}
+                          onChange={(e) => setAcc((c) => ({ ...c, [o.id]: e.target.value }))}
+                        />
+                      </label>
+                      <label className="flex items-center gap-1 text-xs text-gray-500">
+                        נגד
+                        <input
+                          type="number"
+                          min={0}
+                          className="field w-20"
+                          value={dec[o.id] ?? "0"}
+                          onChange={(e) => setDec((c) => ({ ...c, [o.id]: e.target.value }))}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      className="field w-24"
+                      value={acc[o.id] ?? "0"}
+                      onChange={(e) => setAcc((c) => ({ ...c, [o.id]: e.target.value }))}
+                    />
+                  )}
+                </div>
+              ))}
+              {derived !== null && (
+                <div className="flex items-center justify-between pt-1 text-sm text-gray-500">
+                  <span>מספר המצביעים בפתק:</span>
+                  <span className="tabular-nums font-medium text-gray-700">{derived}</span>
+                </div>
+              )}
+              <p className="rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800">
+                שימו לב: ספירת הקולות מוזנת פעם אחת ואינה ניתנת לעריכה לאחר השמירה.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={saveCounts} disabled={busy} className="btn-primary disabled:opacity-50">
+                  {busy ? "שומר…" : "שמירת הספירה"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setEditing(false);
+                    setShowEntry(false);
                     setError(null);
                   }}
                   disabled={busy}
@@ -242,26 +282,11 @@ export default function PaperTallyPanel({
                 >
                   ביטול
                 </button>
-              )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
-            <span>
-              {paper.submissionExists
-                ? `הוזנו ${paperTotal} מצביעים בפתק${paper.enteredByName ? ` · עודכן ע״י ${paper.enteredByName}` : ""}${paper.enteredAt ? ` · ${formatDateTime(paper.enteredAt)}` : ""}`
-                : "לא הוזנה ספירת פתקים."}
-            </span>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="text-sm font-medium text-brand-600 hover:underline"
-            >
-              {paper.submissionExists ? "עריכת הספירה" : "הזנת ספירת קולות פתקים"}
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Confirmation & approval */}
       <div className="mt-5 border-t border-amber-200 pt-4">
@@ -291,7 +316,7 @@ export default function PaperTallyPanel({
           })}
         </ul>
 
-        {amCommittee && !paper.finalized && !editing && (
+        {amCommittee && !paper.finalized && !showEntry && (
           <div className="mt-4">
             {iApproved ? (
               <p className="text-sm text-gray-500">אישרת את התוצאות. ממתין לאישור שאר החברים.</p>

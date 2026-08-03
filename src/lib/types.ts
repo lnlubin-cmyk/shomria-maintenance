@@ -341,6 +341,7 @@ export interface Vote {
   closes_at: string | null;
   closed_at: string | null;
   allow_proxy_vote: boolean;
+  allow_paper_votes: boolean;
   created_at: string;
 }
 

@@ -15,6 +15,7 @@ export interface CreateVoteInput {
   closureMode: "manual" | "scheduled";
   closesAt: string | null; // ISO, required when scheduled
   allowProxy: boolean; // may ועדת קלפי enter an electronic vote for another resident
+  allowPaper: boolean; // is manual (פתק) voting enabled for this vote
   optionLabels: string[]; // format === "options"
   candidateIds: string[]; // format === "election"
   memberIds: string[]; // ועדת קלפי
@@ -29,6 +30,7 @@ export interface UpdateVoteMetaInput {
   closureMode: "manual" | "scheduled";
   closesAt: string | null;
   allowProxy: boolean;
+  allowPaper: boolean;
   maxSelections: number;
 }
 
@@ -55,7 +57,9 @@ function parseIso(s: string): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
 
-export async function createVote(input: CreateVoteInput): Promise<ActionResult> {
+export async function createVote(
+  input: CreateVoteInput
+): Promise<{ error: string } | { ok: true; id: string }> {
   let session;
   try {
     session = await requireAdmin();
@@ -146,6 +150,7 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
       closure_mode: input.closureMode,
       closes_at: closesAt,
       allow_proxy_vote: !!input.allowProxy,
+      allow_paper_votes: !!input.allowPaper,
       created_by_user_id: session.user.id,
     })
     .select("id")
@@ -169,7 +174,7 @@ export async function createVote(input: CreateVoteInput): Promise<ActionResult> 
   }
 
   revalidate();
-  return { ok: true };
+  return { ok: true, id: vote.id };
 }
 
 /**
@@ -230,6 +235,7 @@ export async function updateVoteMeta(input: UpdateVoteMetaInput): Promise<Action
       closure_mode: input.closureMode,
       closes_at: closesAt,
       allow_proxy_vote: !!input.allowProxy,
+      allow_paper_votes: !!input.allowPaper,
       max_selections: maxSel,
     })
     .eq("id", input.id);

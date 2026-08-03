@@ -17,6 +17,7 @@ export default function CommitteePanel({
   format,
   canManage,
   allowProxy,
+  allowPaper,
   options,
   maxSelections,
   voted,
@@ -26,6 +27,7 @@ export default function CommitteePanel({
   format: VoteFormat;
   canManage: boolean; // vote is open — closing and helping to vote are allowed
   allowProxy: boolean;
+  allowPaper: boolean;
   options: { id: string; label: string }[];
   maxSelections: number;
   voted: VoteRosterEntry[];
@@ -96,7 +98,8 @@ export default function CommitteePanel({
   }
 
   async function close() {
-    if (!confirm("לסגור את ההצבעה? לאחר הסגירה לא ניתן יהיה להצביע והתוצאות ייחשפו.")) return;
+    if (!confirm("לסגור את ההצבעה? לאחר הסגירה לא ניתן יהיה להצביע. התוצאות יפורסמו רק לאחר אישור הוועדה."))
+      return;
     setError(null);
     setMsg(null);
     setBusy(true);
@@ -127,13 +130,13 @@ export default function CommitteePanel({
             סגירת ההצבעה
           </button>
           <p className="mt-1 text-xs text-gray-500">
-            סגירה מיידית של ההצבעה. לאחריה לא ניתן להצביע והתוצאות נחשפות.
+            סגירה מיידית של ההצבעה. לאחריה לא ניתן להצביע. התוצאות יפורסמו רק לאחר אישור ועדת הקלפי.
           </p>
         </div>
       )}
 
       {/* Help a resident vote: proxy (if enabled) and/or mark a paper ballot */}
-      {canManage && (
+      {canManage && (allowProxy || allowPaper) && (
         <div className="mt-5 border-t border-brand-100 pt-4">
           {!showEntry ? (
             <button type="button" onClick={() => setShowEntry(true)} className="btn-secondary">
@@ -264,26 +267,28 @@ export default function CommitteePanel({
                       </div>
                     ))}
 
-                  {/* Option B: mark a manual ballot (always available) */}
-                  <div className="rounded-lg border border-gray-200 p-3">
-                    <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה ידנית</div>
-                    <p className="mb-2 text-xs text-gray-500">
-                      התושב הצביע ידנית. סימון בלבד — הקולות ייספרו ידנית לאחר סגירת ההצבעה.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        withBusy(
-                          markPaperVote(voteId, residentId),
-                          `${residentName} סומן/ה כמי שהצביע/ה ידנית.`
-                        )
-                      }
-                      disabled={busy}
-                      className="btn-secondary disabled:opacity-50"
-                    >
-                      {busy ? "רושם…" : "סימון הצבעה ידנית"}
-                    </button>
-                  </div>
+                  {/* Option B: mark a paper (פתק) ballot — only if enabled */}
+                  {allowPaper && (
+                    <div className="rounded-lg border border-gray-200 p-3">
+                      <div className="mb-1 text-sm font-medium text-gray-800">סימון הצבעה בפתק</div>
+                      <p className="mb-2 text-xs text-gray-500">
+                        התושב הצביע בפתק. סימון בלבד — הקולות ייספרו לאחר סגירת ההצבעה.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          withBusy(
+                            markPaperVote(voteId, residentId),
+                            `${residentName} סומן/ה כמי שהצביע/ה בפתק.`
+                          )
+                        }
+                        disabled={busy}
+                        className="btn-secondary disabled:opacity-50"
+                      >
+                        {busy ? "רושם…" : "סימון הצבעה בפתק"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -320,7 +325,7 @@ export default function CommitteePanel({
 
 const METHOD_BADGE: Record<string, string> = {
   proxy: "נרשם ע״י ועדת קלפי",
-  paper: "הצביע/ה ידנית",
+  paper: "הצביע/ה בפתק",
 };
 
 function Roster({

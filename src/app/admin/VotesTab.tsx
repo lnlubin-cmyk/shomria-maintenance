@@ -39,6 +39,8 @@ export default function VotesTab({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdLink, setCreatedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function run(p: Promise<{ error: string } | { ok: true }>): Promise<boolean> {
     setError(null);
@@ -59,6 +61,46 @@ export default function VotesTab({
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
+      {createdLink && (
+        <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4">
+          <p className="text-sm font-medium text-brand-800">ההצבעה נוצרה. קישור לשיתוף:</p>
+          <p className="mt-1 text-xs text-brand-700">
+            הקישור מוביל לעמוד ההצבעה — הוא ייפתח להצבעה במועד שנקבע. ניתן לשלוח אותו במייל או בוואטסאפ.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              className="field flex-1 text-xs"
+              dir="ltr"
+              readOnly
+              value={createdLink}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(createdLink);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                } catch {
+                  /* clipboard may be unavailable */
+                }
+              }}
+            >
+              {copied ? "הועתק ✓" : "העתקת הקישור"}
+            </button>
+            <button
+              type="button"
+              className="text-sm text-gray-500 hover:underline"
+              onClick={() => setCreatedLink(null)}
+            >
+              סגירה
+            </button>
+          </div>
+        </div>
+      )}
+
       {!adding && (
         <button className="btn-primary mb-6" onClick={() => setAdding(true)}>
           + הצבעה חדשה
@@ -72,7 +114,17 @@ export default function VotesTab({
             busy={busy}
             onCancel={() => setAdding(false)}
             onSubmit={async (input) => {
-              if (await run(createVote(input))) setAdding(false);
+              setError(null);
+              setBusy(true);
+              const res = await createVote(input);
+              setBusy(false);
+              if ("error" in res) {
+                setError(res.error);
+                return;
+              }
+              setCreatedLink(`${window.location.origin}/votes/${res.id}`);
+              setAdding(false);
+              router.refresh();
             }}
           />
         </div>
@@ -107,6 +159,7 @@ export default function VotesTab({
                           closureMode: input.closureMode,
                           closesAt: input.closesAt,
                           allowProxy: input.allowProxy,
+                          allowPaper: input.allowPaper,
                           maxSelections: input.maxSelections,
                         })
                       )
@@ -204,6 +257,7 @@ interface FormInput {
   closureMode: "manual" | "scheduled";
   closesAt: string | null; // ISO
   allowProxy: boolean;
+  allowPaper: boolean;
   optionLabels: string[];
   candidateIds: string[];
   memberIds: string[];
@@ -233,7 +287,8 @@ function VoteForm({
     editVote?.closure_mode ?? "manual"
   );
   const [closesAt, setClosesAt] = useState(isoToLocalInput(editVote?.closes_at ?? null));
-  const [allowProxy, setAllowProxy] = useState(editVote?.allow_proxy_vote ?? true);
+  const [allowProxy, setAllowProxy] = useState(editVote?.allow_proxy_vote ?? false);
+  const [allowPaper, setAllowPaper] = useState(editVote?.allow_paper_votes ?? true);
   const [optionLabels, setOptionLabels] = useState<string[]>(["", ""]);
   const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -249,6 +304,7 @@ function VoteForm({
       closureMode,
       closesAt: closureMode === "scheduled" ? localInputToIso(closesAt) : null,
       allowProxy,
+      allowPaper,
       optionLabels,
       candidateIds,
       memberIds,
@@ -414,7 +470,22 @@ function VoteForm({
               לאפשר לועדת קלפי להזין הצבעה אלקטרונית עבור תושב אחר
             </span>
             <span className="mt-0.5 block text-xs text-gray-500">
-              עבור תושב שמתקשה לגשת למערכת. סימון הצבעה ידנית אפשרי בכל מקרה.
+              עבור תושב שמתקשה לגשת למערכת.
+            </span>
+          </span>
+        </label>
+
+        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-white p-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-brand-500"
+            checked={allowPaper}
+            onChange={(e) => setAllowPaper(e.target.checked)}
+          />
+          <span className="text-sm">
+            <span className="font-medium text-gray-800">לאפשר הצבעות ידניות ע״י פתקים</span>
+            <span className="mt-0.5 block text-xs text-gray-500">
+              אם מכובה — ועדת הקלפי לא תזין ספירת פתקים, אך עדיין תאשר את התוצאות.
             </span>
           </span>
         </label>
