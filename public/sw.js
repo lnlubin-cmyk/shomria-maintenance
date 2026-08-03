@@ -15,7 +15,7 @@
  *   - govmap tiles/assets: cache-first, in a size-bounded cache.
  *   - Everything else (Supabase API, auth, uploads): straight to network.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const PRECACHE_NAME = `shomria-precache-${VERSION}`;
 const STATIC_NAME = `shomria-static-${VERSION}`;
 const MAP_NAME = `shomria-map-${VERSION}`;
