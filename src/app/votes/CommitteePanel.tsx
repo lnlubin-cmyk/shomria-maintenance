@@ -135,8 +135,8 @@ export default function CommitteePanel({
         </div>
       )}
 
-      {/* Help a resident vote: proxy (if enabled) and/or mark a paper ballot */}
-      {canManage && (allowProxy || allowPaper) && (
+      {/* "רישום הצבעה עבור תושב" — governed by the proxy toggle. */}
+      {canManage && allowProxy && (
         <div className="mt-5 border-t border-brand-100 pt-4">
           {!showEntry ? (
             <button type="button" onClick={() => setShowEntry(true)} className="btn-secondary">
