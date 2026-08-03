@@ -36,6 +36,9 @@ export default function MapView({
   const searchRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
   const showLabelsRef = useRef(true);
+  // Current map extent (ITM meters), used to draw only markers in view.
+  const extentRef = useRef<{ xmin: number; xmax: number; ymin: number; ymax: number } | null>(null);
+  const redrawTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const visible = useMemo(
     () => buildings.filter((b) => b.layer?.name && active.has(b.layer.name)),
@@ -56,40 +59,66 @@ export default function MapView({
   }, [visible, query]);
 
   function redraw() {
+    // Only draw markers within the current view (plus a margin), so a phone
+    // isn't re-rendering every house on each pan/zoom.
+    const ext = extentRef.current;
+    const margin = ext ? Math.max(ext.xmax - ext.xmin, ext.ymax - ext.ymin) * 0.25 : 0;
     const pts: HousePoint[] = visibleRef.current
-      .filter((b) => b.itm_x != null && b.itm_y != null)
+      .filter((b) => {
+        if (b.itm_x == null || b.itm_y == null) return false;
+        if (!ext) return true; // no extent yet — draw all
+        return (
+          b.itm_x >= ext.xmin - margin &&
+          b.itm_x <= ext.xmax + margin &&
+          b.itm_y >= ext.ymin - margin &&
+          b.itm_y <= ext.ymax + margin
+        );
+      })
       .map((b) => ({ itm_x: b.itm_x as number, itm_y: b.itm_y as number, label: b.building_name }));
     drawHouses(pts, { showLabels: showLabelsRef.current });
   }
 
+  // Coalesce redraws so continuous panning/zooming doesn't redraw every frame.
+  function scheduleRedraw() {
+    if (redrawTimerRef.current) clearTimeout(redrawTimerRef.current);
+    redrawTimerRef.current = setTimeout(redraw, 200);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function onExtent(payload: any) {
-    // Pull [xmin, ymin, xmax, ymax] (ITM meters) from whatever shape govmap
-    // sends. The raw payload is also logged (debug box) for calibration.
-    let xmin: unknown, xmax: unknown;
+    // Pull [xmin, ymin, xmax, ymax] (ITM meters) from whatever shape govmap sends.
+    let xmin: unknown, ymin: unknown, xmax: unknown, ymax: unknown;
     const p = payload;
     if (Array.isArray(p) && p.length >= 4) {
-      xmin = p[0];
-      xmax = p[2];
+      [xmin, ymin, xmax, ymax] = p;
     } else if (p && typeof p === "object") {
       const e = p.extent ?? p.mapExtent ?? p.newExtent ?? p;
       if (Array.isArray(e) && e.length >= 4) {
-        xmin = e[0];
-        xmax = e[2];
+        [xmin, ymin, xmax, ymax] = e;
       } else if (e && typeof e === "object") {
         xmin = e.xmin ?? e.xMin ?? e.minx ?? e.left ?? e.west;
         xmax = e.xmax ?? e.xMax ?? e.maxx ?? e.right ?? e.east;
+        ymin = e.ymin ?? e.yMin ?? e.miny ?? e.bottom ?? e.south;
+        ymax = e.ymax ?? e.yMax ?? e.maxy ?? e.top ?? e.north;
       }
     }
     if (typeof xmin !== "number" || typeof xmax !== "number") return;
+
+    extentRef.current = {
+      xmin,
+      xmax,
+      ymin: typeof ymin === "number" ? ymin : -Infinity,
+      ymax: typeof ymax === "number" ? ymax : Infinity,
+    };
 
     const widthM = Math.abs(xmax - xmin);
     const show = widthM <= LABEL_MAX_WIDTH_M;
     if (show !== showLabelsRef.current) {
       showLabelsRef.current = show;
       setLabelsHidden(!show);
-      if (readyRef.current) redraw();
     }
+    // Redraw (debounced) so the visible-only set updates after panning/zooming.
+    if (readyRef.current) scheduleRedraw();
   }
 
   function select(b: Building) {
@@ -125,6 +154,11 @@ export default function MapView({
   useEffect(() => {
     if (readyRef.current) redraw();
   }, [visible]);
+
+  // Clear any pending redraw on unmount.
+  useEffect(() => () => {
+    if (redrawTimerRef.current) clearTimeout(redrawTimerRef.current);
+  }, []);
 
   // Close the search dropdown when clicking/tapping outside it.
   useEffect(() => {

@@ -26,7 +26,7 @@ export default async function MapPage({
   const { data } = await admin
     .from("buildings")
     .select(
-      "plot_number, building_name, street_name, house_number, itm_x, itm_y, latitude, longitude, layer_id, resident_1, resident_2, resident_3, resident_4, layer:building_layers(name, prefix)"
+      "plot_number, building_name, street_name, house_number, itm_x, itm_y, latitude, longitude, resident_1, resident_2, resident_3, resident_4, layer:building_layers(name, prefix)"
     )
     .not("itm_x", "is", null)
     .order("building_name");

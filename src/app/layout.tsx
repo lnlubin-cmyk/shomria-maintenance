@@ -33,6 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        {/* Warm up the GovMap connection so the map (SDK + tiles) loads faster,
+            especially on mobile. */}
+        <link rel="preconnect" href="https://www.govmap.gov.il" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.govmap.gov.il" />
       </head>
       <body className="min-h-screen">
         {children}
