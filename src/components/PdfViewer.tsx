@@ -39,6 +39,11 @@ export default function PdfViewer({ url }: { url: string }) {
           cMapUrl: "/pdfjs/cmaps/",
           cMapPacked: true,
           standardFontDataUrl: "/pdfjs/standard_fonts/",
+          // Draw glyphs as exact vector paths instead of via the browser's
+          // @font-face text engine. The browser re-shapes Hebrew/RTL runs, which
+          // mangles the letter spacing the PDF already positioned; path rendering
+          // places every glyph exactly where the file says. Fixes broken Hebrew.
+          disableFontFace: true,
         });
         task.onProgress = (p: { loaded: number; total: number }) => {
           if (cancelled || !p.total) return;
