@@ -5,7 +5,7 @@ import {
   STATUS_LABELS,
   STATUS_SHORT_LABELS,
   STATUS_STYLES,
-  STATUS_ORDER,
+  STATUS_STEPPER,
   TREATMENT_TYPE_LABELS,
   PRIORITY_LABELS,
   PRIORITY_STYLES,
@@ -19,16 +19,35 @@ import {
 import FeedbackStars from "./FeedbackStars";
 
 /**
- * Visual status tracker — the four stages of a call, with the current one
- * highlighted and earlier ones marked done. The page is RTL, so the first
- * stage (התקבלה) sits on the right.
+ * Visual status tracker — the linear stages of a call (התקבלה → בטיפול →
+ * תוקנה), with the current one highlighted and earlier ones marked done. The
+ * page is RTL, so the first stage sits on the right. "בהמתנה" and "כפול" are
+ * non-linear outcomes: they aren't steps, so they're shown as a note instead.
  */
 function StatusTracker({ status }: { status: FaultStatus }) {
-  const current = STATUS_ORDER.indexOf(status);
+  const current = STATUS_STEPPER.indexOf(status);
+
+  // Non-linear status (on_hold / duplicate) — show a note, not the stepper.
+  if (current === -1) {
+    const note =
+      status === "duplicate"
+        ? "קריאה זו סומנה ככפולה — כבר קיימת במערכת קריאה על תקלה זו."
+        : "הטיפול בקריאה זו ממתין. נעדכן אתכם כשההמשך יתקדם.";
+    return (
+      <div
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${STATUS_STYLES[status]}`}
+      >
+        <span className="rounded-full bg-white/60 px-2 py-0.5 text-xs">
+          {STATUS_LABELS[status]}
+        </span>
+        <span className="font-normal">{note}</span>
+      </div>
+    );
+  }
 
   return (
     <ol className="flex items-start" aria-label="מעקב סטטוס">
-      {STATUS_ORDER.map((s, i) => {
+      {STATUS_STEPPER.map((s, i) => {
         const done = i < current;
         const isCurrent = i === current;
         return (
@@ -57,7 +76,7 @@ function StatusTracker({ status }: { status: FaultStatus }) {
                 {STATUS_SHORT_LABELS[s]}
               </span>
             </div>
-            {i < STATUS_ORDER.length - 1 && (
+            {i < STATUS_STEPPER.length - 1 && (
               <div
                 className={`mt-3.5 h-0.5 flex-1 ${i < current ? "bg-brand-500" : "bg-gray-200"}`}
               />

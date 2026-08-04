@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager";
-export type FaultStatus = "received" | "in_treatment" | "fixed" | "closed";
+export type FaultStatus = "received" | "in_treatment" | "on_hold" | "fixed" | "duplicate";
 export type TreatmentType = "electricity" | "plumbing" | "other";
 export type FaultPriority = "very_urgent" | "normal" | "can_wait";
 
@@ -14,16 +14,18 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const STATUS_LABELS: Record<FaultStatus, string> = {
   received: "התקלה התקבלה במערכת",
   in_treatment: "התקלה בטיפול",
+  on_hold: "בהמתנה",
   fixed: "התקלה תוקנה",
-  closed: "הקריאה סגורה",
+  duplicate: "כפול (יש כבר קריאה במערכת)",
 };
 
 /** Compact labels for the resident status tracker (stepper). */
 export const STATUS_SHORT_LABELS: Record<FaultStatus, string> = {
   received: "התקבלה",
   in_treatment: "בטיפול",
+  on_hold: "בהמתנה",
   fixed: "תוקנה",
-  closed: "סגורה",
+  duplicate: "כפול",
 };
 
 export const TREATMENT_TYPE_LABELS: Record<TreatmentType, string> = {
@@ -38,7 +40,18 @@ export const PRIORITY_LABELS: Record<FaultPriority, string> = {
   can_wait: "יכול לחכות",
 };
 
-export const STATUS_ORDER: FaultStatus[] = ["received", "in_treatment", "fixed", "closed"];
+// All statuses, in the order they appear in staff dropdowns and filters.
+export const STATUS_ORDER: FaultStatus[] = [
+  "received",
+  "in_treatment",
+  "on_hold",
+  "fixed",
+  "duplicate",
+];
+
+// The linear progression shown in the resident status tracker. "בהמתנה" and
+// "כפול" are non-linear outcomes and are shown separately, not as steps.
+export const STATUS_STEPPER: FaultStatus[] = ["received", "in_treatment", "fixed"];
 export const TREATMENT_TYPE_ORDER: TreatmentType[] = ["electricity", "plumbing", "other"];
 // Most urgent first.
 export const PRIORITY_ORDER: FaultPriority[] = ["very_urgent", "normal", "can_wait"];
@@ -46,8 +59,9 @@ export const PRIORITY_ORDER: FaultPriority[] = ["very_urgent", "normal", "can_wa
 export const STATUS_STYLES: Record<FaultStatus, string> = {
   received: "bg-blue-100 text-blue-800",
   in_treatment: "bg-amber-100 text-amber-800",
+  on_hold: "bg-slate-200 text-slate-700",
   fixed: "bg-emerald-100 text-emerald-800",
-  closed: "bg-gray-200 text-gray-700",
+  duplicate: "bg-gray-200 text-gray-600",
 };
 
 export const PRIORITY_STYLES: Record<FaultPriority, string> = {
@@ -286,7 +300,7 @@ export function canExportFaults(role: UserRole): boolean {
 
 /** True once a call's fix is done, so the resident may rate the handling. */
 export function canRateFault(status: FaultStatus): boolean {
-  return status === "fixed" || status === "closed";
+  return status === "fixed";
 }
 
 export function fullName(r: { first_name: string; last_name: string } | null | undefined): string {

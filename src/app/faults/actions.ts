@@ -412,7 +412,7 @@ export async function submitFeedback(
     fault.caller_resident_id === session.residentId ||
     fault.created_by_user_id === session.user.id;
   if (!isCaller) return { error: "ניתן לדרג רק קריאה שנפתחה עבורך" };
-  if (fault.status !== "fixed" && fault.status !== "closed") {
+  if (fault.status !== "fixed") {
     return { error: "ניתן לדרג את הטיפול לאחר סיום הטיפול בקריאה" };
   }
 
