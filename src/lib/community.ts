@@ -1,7 +1,27 @@
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 
 export const COMMUNITY_BUCKET = "community";
+
+/**
+ * A signed URL for a document, cached for an hour so repeat opens reuse the same
+ * URL and hit the browser cache instead of re-downloading the PDF each time. The
+ * URL itself is valid for 2h, comfortably longer than the cache window, so a
+ * served URL is never close to expiring. Uploading a new file changes file_path,
+ * which changes the cache key — so a replaced document is never served stale.
+ */
+const getCachedSignedUrl = unstable_cache(
+  async (path: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage
+      .from(COMMUNITY_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 2); // 2 hours
+    return data?.signedUrl ?? null;
+  },
+  ["community-doc-signed-url"],
+  { revalidate: 60 * 60 } // refresh hourly
+);
 
 /**
  * The document items to show in the menu, split by section. An item shows only
@@ -51,10 +71,8 @@ export async function getCommunityItemForView(
   const item = data as CommunityItem | null;
   if (!item || !item.is_visible || !item.file_path) return null;
 
-  const { data: signed } = await admin.storage
-    .from(COMMUNITY_BUCKET)
-    .createSignedUrl(item.file_path, 60 * 60); // 1 hour
-  if (!signed?.signedUrl) return null;
+  const url = await getCachedSignedUrl(item.file_path);
+  if (!url) return null;
 
-  return { item, url: signed.signedUrl };
+  return { item, url };
 }
