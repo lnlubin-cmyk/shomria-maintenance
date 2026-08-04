@@ -36,14 +36,21 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
   async function run(p: Promise<any>): Promise<boolean> {
     setError(null);
     setBusy(true);
-    const result = await p;
-    setBusy(false);
-    if (result && "error" in result) {
-      setError(result.error);
+    try {
+      const result = await p;
+      if (result && "error" in result) {
+        setError(result.error);
+        return false;
+      }
+      router.refresh();
+      return true;
+    } catch {
+      // A dropped/slow connection must not leave the buttons stuck disabled.
+      setError("שגיאת רשת. נסה שוב.");
       return false;
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
-    return true;
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
