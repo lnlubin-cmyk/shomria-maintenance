@@ -226,16 +226,17 @@ export interface CommunityMenuItem {
   subject: string;
 }
 
-export type HomeMediaKind = "image" | "video" | "youtube";
+export type HomeMediaKind = "image" | "video" | "youtube" | "bunny";
 
-/** Home-page carousel media (image, uploaded video, or YouTube), admin-managed. */
+/** Home-page carousel media (image, uploaded video, YouTube, or Bunny Stream), admin-managed. */
 export interface HomeMedia {
   id: string;
   kind: HomeMediaKind;
-  file_path: string | null; // null for youtube
+  file_path: string | null; // null for youtube/bunny
   file_name: string | null;
   mime_type: string | null;
   youtube_id: string | null; // set only for youtube
+  bunny_video_id: string | null; // set only for bunny (the video GUID)
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -246,7 +247,8 @@ export interface HomeMedia {
 export interface HomeMediaItem {
   id: string;
   kind: HomeMediaKind;
-  url?: string; // image/video: public file URL
+  url?: string; // image/video (incl. Bunny MP4): the media URL
+  poster?: string; // video: optional poster/thumbnail image
   youtubeId?: string; // youtube: the video id
 }
 

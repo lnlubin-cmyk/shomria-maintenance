@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { HOME_MEDIA_BUCKET } from "@/lib/home-media";
+import { parseBunnyGuid } from "@/lib/bunny";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -136,6 +137,42 @@ export async function createYoutubeMedia(url: string): Promise<ActionResult> {
   const { error } = await admin.from("home_media").insert({
     kind: "youtube",
     youtube_id: youtubeId,
+    is_active: true,
+    sort_order,
+  });
+  if (error) return { error: "שמירת הסרטון נכשלה" };
+
+  revalidate();
+  return { ok: true };
+}
+
+/**
+ * Add a Bunny Stream video. Accepts the video GUID, its embed link, an iframe
+ * snippet, or a direct play URL — we extract the GUID from any of them. Active
+ * by default, so it plays now.
+ */
+export async function createBunnyMedia(input: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  const guid = parseBunnyGuid(input ?? "");
+  if (!guid) return { error: "מזהה וידאו של Bunny אינו תקין (הדבק את ה-GUID או קישור ההטמעה)" };
+
+  const admin = createAdminClient();
+  const { data: maxRow } = await admin
+    .from("home_media")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sort_order = (maxRow?.sort_order ?? -1) + 1;
+
+  const { error } = await admin.from("home_media").insert({
+    kind: "bunny",
+    bunny_video_id: guid,
     is_active: true,
     sort_order,
   });

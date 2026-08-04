@@ -142,6 +142,7 @@ export default function HeroCarousel({
         <video
           key={cur.id}
           src={cur.url}
+          poster={cur.poster}
           className="h-full w-full object-cover"
           autoPlay
           muted

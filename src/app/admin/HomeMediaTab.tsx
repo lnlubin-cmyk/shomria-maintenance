@@ -8,6 +8,7 @@ import {
   createSignedUpload,
   createHomeMedia,
   createYoutubeMedia,
+  createBunnyMedia,
   setHomeMediaActive,
   deleteHomeMedia,
   moveHomeMedia,
@@ -16,7 +17,12 @@ import {
 const BUCKET = "home-media";
 const MAX_BYTES = 50 * 1024 * 1024;
 
-const KIND_LABEL: Record<string, string> = { image: "תמונה", video: "וידאו", youtube: "YouTube" };
+const KIND_LABEL: Record<string, string> = {
+  image: "תמונה",
+  video: "וידאו",
+  youtube: "YouTube",
+  bunny: "Bunny",
+};
 
 export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewUrl: string })[] }) {
   const router = useRouter();
@@ -24,6 +30,7 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ytUrl, setYtUrl] = useState("");
+  const [bunnyInput, setBunnyInput] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function run(p: Promise<any>): Promise<boolean> {
@@ -145,6 +152,34 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
         </div>
       </div>
 
+      <div className="card">
+        <h2 className="font-semibold">הוספת סרטון Bunny Stream</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          לסרטוני רקע איכותיים (ללא הגבלת גודל, ללא הטמעת YouTube). הדבק את מזהה הווידאו (GUID)
+          מספריית ה-Stream, קישור ההטמעה, או קוד ה-iframe. יש לוודא שהאפשרות „MP4 Fallback” מופעלת
+          בהגדרות הספרייה.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            dir="ltr"
+            placeholder="GUID או https://iframe.mediadelivery.net/embed/720402/..."
+            value={bunnyInput}
+            onChange={(e) => setBunnyInput(e.target.value)}
+            className="field flex-1"
+          />
+          <button
+            className="btn-secondary"
+            disabled={busy || !bunnyInput.trim()}
+            onClick={async () => {
+              if (await run(createBunnyMedia(bunnyInput))) setBunnyInput("");
+            }}
+          >
+            הוספה
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-3">
         {items.length === 0 && (
           <div className="card text-center text-sm text-gray-500">עדיין לא הועלתה מדיה.</div>
@@ -160,7 +195,7 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={m.previewUrl} alt={m.file_name ?? ""} className="h-full w-full object-cover" />
               )}
-              {m.kind === "youtube" && (
+              {(m.kind === "youtube" || m.kind === "bunny") && (
                 <span className="absolute inset-0 flex items-center justify-center text-2xl text-white drop-shadow">
                   ▶
                 </span>
@@ -183,7 +218,11 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
                 )}
               </div>
               <p className="mt-1 truncate text-sm text-gray-700" dir="ltr">
-                {m.kind === "youtube" ? `YouTube · ${m.youtube_id}` : (m.file_name ?? "מדיה")}
+                {m.kind === "youtube"
+                  ? `YouTube · ${m.youtube_id}`
+                  : m.kind === "bunny"
+                    ? `Bunny · ${m.bunny_video_id}`
+                    : (m.file_name ?? "מדיה")}
               </p>
             </div>
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { HomeMedia, HomeMediaItem } from "@/lib/types";
+import { bunnyMp4Url, bunnyThumb } from "@/lib/bunny";
 
 export const HOME_MEDIA_BUCKET = "home-media";
 
@@ -17,7 +18,7 @@ export async function getActiveHomeMedia(): Promise<HomeMediaItem[]> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("home_media")
-    .select("id, kind, file_path, youtube_id")
+    .select("id, kind, file_path, youtube_id, bunny_video_id")
     .eq("is_active", true)
     .order("sort_order")
     .order("created_at");
@@ -25,6 +26,17 @@ export async function getActiveHomeMedia(): Promise<HomeMediaItem[]> {
   return (data ?? []).map((m) => {
     if (m.kind === "youtube") {
       return { id: m.id, kind: "youtube" as const, youtubeId: m.youtube_id ?? undefined };
+    }
+    // A Bunny video plays like a normal video: its MP4 URL, with the Bunny
+    // thumbnail as a poster while it loads.
+    if (m.kind === "bunny") {
+      const guid = m.bunny_video_id ?? "";
+      return {
+        id: m.id,
+        kind: "video" as const,
+        url: guid ? bunnyMp4Url(guid) : undefined,
+        poster: guid ? bunnyThumb(guid) : undefined,
+      };
     }
     return {
       id: m.id,
@@ -48,9 +60,11 @@ export async function getAllHomeMedia(): Promise<(HomeMedia & { previewUrl: stri
     const previewUrl =
       row.kind === "youtube"
         ? youtubeThumb(row.youtube_id ?? "")
-        : row.file_path
-          ? publicUrl(admin, row.file_path)
-          : "";
+        : row.kind === "bunny"
+          ? bunnyThumb(row.bunny_video_id ?? "")
+          : row.file_path
+            ? publicUrl(admin, row.file_path)
+            : "";
     return { ...row, previewUrl };
   });
 }
