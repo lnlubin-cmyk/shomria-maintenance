@@ -3,6 +3,7 @@ import { getSession, createAdminClient } from "@/lib/supabase/server";
 import AppHeader from "@/components/AppHeader";
 import { isStaff, canSeeFeedback } from "@/lib/types";
 import { getBuildingFacts } from "@/lib/building-facts";
+import { isAIConfigured } from "@/lib/ai";
 import FaultDetail from "../FaultDetail";
 
 const FAULT_SELECT = `
@@ -101,6 +102,7 @@ export default async function FaultDetailPage({
           mode={mode}
           feedbackRating={feedbackRating}
           canSeeFeedback={showFeedback}
+          aiConfigured={isAIConfigured()}
         />
       </main>
     </div>

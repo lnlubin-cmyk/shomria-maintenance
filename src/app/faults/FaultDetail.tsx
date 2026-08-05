@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AiAdvicePanel from "./AiAdvicePanel";
 import {
   STATUS_LABELS,
   STATUS_ORDER,
@@ -68,6 +69,7 @@ export default function FaultDetail({
   embedded = false,
   feedbackRating = null,
   canSeeFeedback = false,
+  aiConfigured = false,
 }: {
   fault: DetailFault;
   messages: FaultMessage[];
@@ -79,6 +81,7 @@ export default function FaultDetail({
   embedded?: boolean;
   feedbackRating?: number | null;
   canSeeFeedback?: boolean;
+  aiConfigured?: boolean;
 }) {
   const router = useRouter();
   const editable = staff && mode === "edit";
@@ -207,6 +210,12 @@ export default function FaultDetail({
           </div>
         )}
       </div>
+
+      {/* Staff: AI advice (history summary + recommendation). Not in the compact
+          multi-fault embedded view. */}
+      {staff && !embedded && (
+        <AiAdvicePanel faultNumber={fault.fault_number} configured={aiConfigured} />
+      )}
 
       {/* Staff edit / read-only treatment */}
       {staff && (
