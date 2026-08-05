@@ -24,6 +24,14 @@ const config: Config = {
           600: "#c85d08",
           700: "#9f4a0b",
         },
+        // Warm brown used for the menu bar and section-title bars.
+        brown: {
+          50: "#f6efe9",
+          100: "#e8d7ca",
+          500: "#a06d4d",
+          600: "#8a5c40",
+          700: "#6d4632",
+        },
       },
       boxShadow: {
         soft: "0 1px 3px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.04)",

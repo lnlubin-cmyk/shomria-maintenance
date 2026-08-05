@@ -71,7 +71,7 @@ export default async function EruvPage() {
         {/* Maps */}
         <section className="mt-8 space-y-6">
           <h2 className="flex items-center gap-3 text-xl font-bold text-gray-900">
-            <span className="h-6 w-1.5 rounded-full bg-accent-500" />
+            <span className="h-6 w-1.5 rounded-full bg-brown-600" />
             המפות
           </h2>
 

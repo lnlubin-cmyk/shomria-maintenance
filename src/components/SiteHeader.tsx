@@ -135,7 +135,7 @@ export default function SiteHeader({
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/10 bg-[#5c3a29] shadow-soft">
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-brown-600 shadow-soft">
       <div ref={navRef} className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
           <span className="rounded-xl bg-white px-3 py-1 shadow-sm">

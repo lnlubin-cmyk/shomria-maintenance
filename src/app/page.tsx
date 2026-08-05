@@ -91,7 +91,7 @@ function Tile({
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-5 flex items-center gap-3">
-      <span className="h-6 w-1.5 rounded-full bg-accent-500" />
+      <span className="h-6 w-1.5 rounded-full bg-brown-600" />
       <h2 className="text-xl font-bold text-gray-900">{children}</h2>
     </div>
   );
