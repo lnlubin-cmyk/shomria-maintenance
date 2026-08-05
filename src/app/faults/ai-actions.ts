@@ -118,7 +118,14 @@ export async function getFaultAdvice(input: {
   try {
     const text = await askAI({ system, messages });
     return { text };
-  } catch {
-    return { error: "הפנייה למנוע ה-AI נכשלה. נסה שוב." };
+  } catch (e) {
+    // Surface the provider's actual error so configuration issues (wrong model,
+    // API not enabled, bad key) are diagnosable instead of a generic failure.
+    const err = e as { message?: string; statusCode?: number; responseBody?: string };
+    const detail = [err.statusCode, err.message, err.responseBody]
+      .filter(Boolean)
+      .join(" | ");
+    console.error("AI advice failed:", detail || e);
+    return { error: `הפנייה למנוע ה-AI נכשלה: ${(detail || String(e)).slice(0, 400)}` };
   }
 }
