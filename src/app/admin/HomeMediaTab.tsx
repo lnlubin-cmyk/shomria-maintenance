@@ -160,7 +160,17 @@ export default function HomeMediaTab({ items }: { items: (HomeMedia & { previewU
       </div>
 
       <div className="card">
-        <h2 className="font-semibold">הוספת סרטון Bunny Stream</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">הוספת סרטון Bunny Stream</h2>
+          <a
+            href="https://dash.bunny.net/stream/720402/library/overview"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            פתח את ספריית ה-Stream ב-Bunny ↗
+          </a>
+        </div>
         <p className="mt-1 text-sm text-gray-600">
           לסרטוני רקע איכותיים (ללא הגבלת גודל, ללא הטמעת YouTube). הדבק את מזהה הווידאו (GUID)
           מספריית ה-Stream, קישור ההטמעה, או קוד ה-iframe. יש לוודא שהאפשרות „MP4 Fallback” מופעלת
