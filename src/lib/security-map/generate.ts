@@ -57,16 +57,30 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     minLat = Math.min(minLat, b.lat); maxLat = Math.max(maxLat, b.lat);
   }
   // Margin around the houses' bounding box (fraction of span on each side).
-  // Larger = more surrounding area shown = more zoomed out.
   const mf = 0.3;
   const dLon = (maxLon - minLon) * mf, dLat = (maxLat - minLat) * mf;
   minLon -= dLon; maxLon += dLon; minLat -= dLat; maxLat += dLat;
 
-  const gxMin = pxX(minLon), gxMax = pxX(maxLon);
-  const gyMin = pxY(maxLat), gyMax = pxY(minLat); // north = smaller py
-  const W = gxMax - gxMin, H = gyMax - gyMin;
+  // A3 landscape (points). The aerial fills the whole page — no margins.
+  const A3W = 1190.55, A3H = 841.89;
 
-  // Tiles covering the bbox.
+  let gxMin = pxX(minLon), gxMax = pxX(maxLon);
+  let gyMin = pxY(maxLat), gyMax = pxY(minLat); // north = smaller py
+  let W = gxMax - gxMin, H = gyMax - gyMin;
+
+  // Expand the bbox to the page's aspect ratio so the photo fills the page
+  // exactly — no white margins and no distortion (just a little more area on the
+  // wider side).
+  const pageAspect = A3W / A3H;
+  if (W / H < pageAspect) {
+    const extra = (H * pageAspect - W) / 2;
+    gxMin -= extra; gxMax += extra; W = gxMax - gxMin;
+  } else {
+    const extra = (W / pageAspect - H) / 2;
+    gyMin -= extra; gyMax += extra; H = gyMax - gyMin;
+  }
+
+  // Tiles covering the (expanded) bbox.
   const txMin = Math.floor(gxMin / TILE), txMax = Math.floor(gxMax / TILE);
   const tyMin = Math.floor(gyMin / TILE), tyMax = Math.floor(gyMax / TILE);
   const tileList: { tx: number; ty: number }[] = [];
@@ -79,19 +93,14 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     })
   ).filter(Boolean) as { tx: number; ty: number; bytes: Uint8Array }[];
 
-  // PDF (A3 landscape, points).
-  const A3W = 1190.55, A3H = 841.89;
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(Buffer.from(ALEF_BOLD_BASE64, "base64"), { subset: true });
   const page = doc.addPage([A3W, A3H]);
 
-  const M = { l: 22, r: 22, t: 64, b: 46 };
-  const area = { x: M.l, y: M.b, w: A3W - M.l - M.r, h: A3H - M.t - M.b };
-  const scale = Math.min(area.w / W, area.h / H);
-  const mapW = W * scale, mapH = H * scale;
-  const ox = area.x + (area.w - mapW) / 2;
-  const oy = area.y + (area.h - mapH) / 2;
+  // Full-bleed: the aerial covers the entire page (bbox aspect matches the page).
+  const scale = A3W / W;
+  const mapW = A3W, mapH = A3H, ox = 0, oy = 0;
   const toPage = (gx: number, gy: number) => ({
     x: ox + (gx - gxMin) * scale,
     y: oy + mapH - (gy - gyMin) * scale,
@@ -104,13 +113,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     page.drawImage(img, { x: p.x, y: p.y, width: TILE * scale, height: TILE * scale });
   }
 
-  // Mask tile bleed outside the map area, then frame it.
   const white = rgb(1, 1, 1);
-  page.drawRectangle({ x: 0, y: 0, width: A3W, height: oy, color: white });
-  page.drawRectangle({ x: 0, y: oy + mapH, width: A3W, height: A3H - (oy + mapH), color: white });
-  page.drawRectangle({ x: 0, y: 0, width: ox, height: A3H, color: white });
-  page.drawRectangle({ x: ox + mapW, y: 0, width: A3W - (ox + mapW), height: A3H, color: white });
-  page.drawRectangle({ x: ox, y: oy, width: mapW, height: mapH, borderColor: rgb(0.1, 0.1, 0.1), borderWidth: 1 });
 
   // Labels with simple de-collision.
   const SIZE = 5.5, LH = 6.2, padX = 1.6, padY = 1.2, dot = 1.7;
@@ -152,7 +155,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
   }
 
   drawCompass(page, font, { ox, oy, mapW, mapH });
-  drawChrome(page, font, { A3W, A3H, M, ox, oy, mapW, minLat, maxLat, scale, world: WORLD, attribution: src.attribution });
+  drawChrome(page, font, { A3W, A3H, minLat, maxLat, scale, world: WORLD, attribution: src.attribution });
   return doc.save();
 }
 
@@ -181,34 +184,48 @@ function drawCompass(
   drawDirection(page, font, "מערב", o.ox + 26, cy);
 }
 
-/** Title, date, internal-use note, imagery credit, scale bar. */
+/** A text label on a translucent white chip, so it reads over the aerial.
+ *  align: "l" left-anchored, "r" right-anchored at x, "c" centered on x. */
+function chip(page: PDFPage, font: PDFFont, text: string, size: number, x: number, y: number, align: "l" | "r" | "c") {
+  const w = font.widthOfTextAtSize(text, size);
+  const bx = align === "r" ? x - w : align === "c" ? x - w / 2 : x;
+  page.drawRectangle({ x: bx - 4, y: y - 3, width: w + 8, height: size + 6, color: rgb(1, 1, 1), opacity: 0.72 });
+  page.drawText(text, { x: bx, y, size, font, color: rgb(0.1, 0.1, 0.1) });
+}
+
+/** Title, date, internal-use note, imagery credit, scale bar — all overlaid on
+ *  the full-bleed map with translucent backings. */
 function drawChrome(
   page: PDFPage,
   font: PDFFont,
-  o: { A3W: number; A3H: number; M: { l: number; r: number }; ox: number; oy: number; mapW: number; minLat: number; maxLat: number; scale: number; world: number; attribution: string }
+  o: { A3W: number; A3H: number; minLat: number; maxLat: number; scale: number; world: number; attribution: string }
 ) {
-  const ink = rgb(0.1, 0.1, 0.1), gray = rgb(0.35, 0.35, 0.35);
-  const title = "מפת ביטחון — קהילת עצמונה-שומריה";
-  page.drawText(title, { x: (o.A3W - font.widthOfTextAtSize(title, 18)) / 2, y: o.A3H - 40, size: 18, font, color: ink });
+  const pad = 12;
+  // Title + internal note, top-right (RTL).
+  chip(page, font, "מפת ביטחון — קהילת עצמונה-שומריה", 16, o.A3W - pad, o.A3H - pad - 16, "r");
+  chip(page, font, "מסמך פנימי — למחלקת הביטחון", 9, o.A3W - pad, o.A3H - pad - 32, "r");
 
+  // Date, top-left.
   const now = new Date();
   const dstr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
-  page.drawText(dstr, { x: o.A3W - o.M.r - font.widthOfTextAtSize(dstr, 9), y: o.A3H - 20, size: 9, font, color: gray });
-  const internal = "מסמך פנימי — למחלקת הביטחון";
-  page.drawText(internal, { x: o.M.l, y: o.A3H - 20, size: 9, font, color: gray });
+  chip(page, font, dstr, 9, pad, o.A3H - pad - 9, "l");
 
-  page.drawText(o.attribution, { x: o.M.l, y: 20, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+  // Imagery credit, bottom-left.
+  chip(page, font, o.attribution, 8, pad, pad, "l");
 
-  // Scale bar (100 m).
+  // Scale bar (100 m), bottom-right on a chip.
   const mPerGpx = (Math.cos(((o.minLat + o.maxLat) / 2) * Math.PI / 180) * 2 * Math.PI * 6378137) / o.world;
-  const mPerPt = mPerGpx / o.scale;
-  const barPt = 100 / mPerPt;
-  const bx = o.A3W - o.M.r - barPt, by = 24;
+  const barPt = 100 / (mPerGpx / o.scale);
+  const label = "100 מ׳";
+  const boxW = Math.max(barPt, font.widthOfTextAtSize(label, 8)) + 10;
+  const boxX = o.A3W - pad - boxW;
+  page.drawRectangle({ x: boxX, y: pad, width: boxW, height: 24, color: rgb(1, 1, 1), opacity: 0.72 });
+  const bx = boxX + 5, by = pad + 6;
+  const ink = rgb(0.1, 0.1, 0.1);
   const bar = (x1: number, y1: number, x2: number, y2: number) =>
     page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 1.5, color: ink });
   bar(bx, by, bx + barPt, by);
   bar(bx, by - 3, bx, by + 3);
   bar(bx + barPt, by - 3, bx + barPt, by + 3);
-  const sl = "100 מ׳";
-  page.drawText(sl, { x: bx + barPt - font.widthOfTextAtSize(sl, 8), y: by + 5, size: 8, font, color: ink });
+  page.drawText(label, { x: bx, y: by + 5, size: 8, font, color: ink });
 }
