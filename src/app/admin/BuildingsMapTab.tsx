@@ -16,6 +16,7 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
   const [selectedPlot, setSelectedPlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
   const readyRef = useRef(false);
 
   const placed = useMemo(() => buildings.filter((b) => b.itm_x != null && b.itm_y != null), [buildings]);
@@ -75,6 +76,31 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
     if (b.itm_x != null && b.itm_y != null) zoomTo(b.itm_x, b.itm_y, 10);
   }
 
+  async function downloadSecurityMap() {
+    setError(null);
+    setGenBusy(true);
+    try {
+      const res = await fetch("/api/admin/security-map");
+      if (!res.ok) {
+        setError("יצירת מפת הביטחון נכשלה. נסה שוב.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "shomria-security-map-A3.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("שגיאת רשת ביצירת המפה.");
+    } finally {
+      setGenBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {error && (
@@ -82,6 +108,24 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
           {error}
         </div>
       )}
+
+      <div className="card flex flex-wrap items-center justify-between gap-3 border-brown-100 bg-brown-50/40">
+        <div>
+          <h2 className="font-semibold text-gray-900">מפת ביטחון (A3)</h2>
+          <p className="mt-0.5 text-sm text-gray-600">
+            מפה עם צילום אוויר וכל שמות הבתים, לייצוא כקובץ PDF בגודל A3. כוללת את כל הבתים שמוקמו
+            ({placed.length}). היצירה עשויה לקחת מספר שניות.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={downloadSecurityMap}
+          disabled={genBusy || placed.length === 0}
+          className="btn-primary shrink-0 disabled:opacity-50"
+        >
+          {genBusy ? "יוצר מפה…" : "הורדת מפת ביטחון (PDF)"}
+        </button>
+      </div>
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
         {selectedPlot ? (
