@@ -98,6 +98,9 @@ export default function GovMap({
   extentRef.current = onExtent;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [nativeFs, setNativeFs] = useState(false);
+  const [expanded, setExpanded] = useState(false); // CSS fallback when the API is unavailable
 
   useEffect(() => {
     let cancelled = false;
@@ -180,6 +183,64 @@ export default function GovMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Nudge the map to re-lay-out when its size changes (govmap doesn't always
+  // auto-resize when its container grows/shrinks).
+  const nudgeResize = () => {
+    for (const t of [60, 300]) window.setTimeout(() => window.dispatchEvent(new Event("resize")), t);
+  };
+
+  useEffect(() => {
+    const onFs = () => {
+      setNativeFs(!!document.fullscreenElement);
+      nudgeResize();
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  // Esc exits the CSS fallback (native fullscreen exits on its own).
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setExpanded(false);
+        nudgeResize();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
+  async function toggleFullscreen() {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (expanded) {
+      setExpanded(false);
+      nudgeResize();
+      return;
+    }
+    if (el.requestFullscreen) {
+      try {
+        await el.requestFullscreen();
+        return;
+      } catch {
+        /* fall through to the CSS fallback */
+      }
+    }
+    setExpanded(true);
+    nudgeResize();
+  }
+
+  const isOpen = nativeFs || expanded;
+
   return (
     <div>
       {error && (
@@ -187,7 +248,13 @@ export default function GovMap({
           {error}
         </div>
       )}
-      <div className="relative w-full overflow-hidden rounded-xl border border-gray-200" style={{ height }}>
+      <div
+        ref={wrapRef}
+        className={`relative w-full overflow-hidden border border-gray-200 ${
+          expanded ? "fixed inset-0 z-[60] rounded-none bg-white" : "rounded-xl"
+        }`}
+        style={{ height: isOpen ? "100vh" : height }}
+      >
         <div id="govmap" className="h-full w-full" />
         {!ready && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 text-gray-500">
@@ -198,7 +265,22 @@ export default function GovMap({
             <span className="text-sm">טוען מפה…</span>
           </div>
         )}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute right-2 top-2 z-20 flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-medium text-gray-700 shadow hover:bg-white"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            {isOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9H4m5 0V4m6 5h5m-5 0V4m0 16v-5m0 5h5m-11 0v-5m0 5H4" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            )}
+          </svg>
+          {isOpen ? "יציאה ממסך מלא" : "מסך מלא"}
+        </button>
       </div>
+      <p className="mt-1 text-xs text-gray-400">שים לב: תצוגת מסך מלא אינה נתמכת בכל המכשירים.</p>
     </div>
   );
 }
