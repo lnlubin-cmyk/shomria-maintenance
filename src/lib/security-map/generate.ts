@@ -95,8 +95,8 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     })
   ).filter(Boolean) as { tx: number; ty: number; bytes: Uint8Array }[];
 
-  // PDF (A3 portrait, points).
-  const A3W = 841.89, A3H = 1190.55;
+  // PDF (A3 landscape, points).
+  const A3W = 1190.55, A3H = 841.89;
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(Buffer.from(ALEF_BOLD_BASE64, "base64"), { subset: true });
