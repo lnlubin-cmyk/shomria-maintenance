@@ -156,8 +156,34 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     });
   }
 
+  drawCompass(page, font, { ox, oy, mapW, mapH });
   drawChrome(page, font, { A3W, A3H, M, ox, oy, mapW, minLat, maxLat, scale });
   return doc.save();
+}
+
+/** A single direction label — white box + centered bold text — centered on (cx, cy). */
+function drawDirection(page: PDFPage, font: PDFFont, text: string, cx: number, cy: number) {
+  const size = 11;
+  const w = font.widthOfTextAtSize(text, size);
+  const bw = w + 7, bh = size + 5;
+  page.drawRectangle({
+    x: cx - bw / 2, y: cy - bh / 2, width: bw, height: bh,
+    color: rgb(1, 1, 1), opacity: 0.85, borderColor: rgb(0.1, 0.1, 0.1), borderWidth: 0.5,
+  });
+  page.drawText(text, { x: cx - w / 2, y: cy - size / 2 + 1.5, size, font, color: rgb(0.05, 0.05, 0.05) });
+}
+
+/** Compass directions inside the map edges (north is up). */
+function drawCompass(
+  page: PDFPage,
+  font: PDFFont,
+  o: { ox: number; oy: number; mapW: number; mapH: number }
+) {
+  const cx = o.ox + o.mapW / 2, cy = o.oy + o.mapH / 2;
+  drawDirection(page, font, "צפון", cx, o.oy + o.mapH - 14);
+  drawDirection(page, font, "דרום", cx, o.oy + 14);
+  drawDirection(page, font, "מזרח", o.ox + o.mapW - 26, cy);
+  drawDirection(page, font, "מערב", o.ox + 26, cy);
 }
 
 /** Title, date, internal-use note, imagery credit, scale bar. */

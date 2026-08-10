@@ -16,7 +16,7 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
   const [selectedPlot, setSelectedPlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [genBusy, setGenBusy] = useState(false);
+  const [genBusy, setGenBusy] = useState<null | "pdf" | "png">(null);
   const readyRef = useRef(false);
 
   const placed = useMemo(() => buildings.filter((b) => b.itm_x != null && b.itm_y != null), [buildings]);
@@ -76,11 +76,11 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
     if (b.itm_x != null && b.itm_y != null) zoomTo(b.itm_x, b.itm_y, 10);
   }
 
-  async function downloadSecurityMap() {
+  async function downloadSecurityMap(format: "pdf" | "png") {
     setError(null);
-    setGenBusy(true);
+    setGenBusy(format);
     try {
-      const res = await fetch("/api/admin/security-map");
+      const res = await fetch(`/api/admin/security-map${format === "png" ? "?format=png" : ""}`);
       if (!res.ok) {
         setError("יצירת מפת הביטחון נכשלה. נסה שוב.");
         return;
@@ -89,7 +89,7 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "shomria-security-map-A3.pdf";
+      a.download = `shomria-security-map-A3.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -97,7 +97,7 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
     } catch {
       setError("שגיאת רשת ביצירת המפה.");
     } finally {
-      setGenBusy(false);
+      setGenBusy(null);
     }
   }
 
@@ -113,18 +113,29 @@ export default function BuildingsMapTab({ buildings }: { buildings: Building[] }
         <div>
           <h2 className="font-semibold text-gray-900">מפת ביטחון (A3)</h2>
           <p className="mt-0.5 text-sm text-gray-600">
-            מפה עם צילום אוויר וכל שמות הבתים, לייצוא כקובץ PDF בגודל A3. כוללת את כל הבתים שמוקמו
-            ({placed.length}). היצירה עשויה לקחת מספר שניות.
+            מפה עם צילום אוויר וכל שמות הבתים, כולל כיווני צפון/דרום/מזרח/מערב. כוללת את כל הבתים
+            שמוקמו ({placed.length}). ה-PDF להדפסה; ה-PNG לעריכה ידנית (למשל הוספת בתים חדשים)
+            בתוכנת „צייר” (Paint). היצירה עשויה לקחת מספר שניות.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={downloadSecurityMap}
-          disabled={genBusy || placed.length === 0}
-          className="btn-primary shrink-0 disabled:opacity-50"
-        >
-          {genBusy ? "יוצר מפה…" : "הורדת מפת ביטחון (PDF)"}
-        </button>
+        <div className="flex shrink-0 flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => downloadSecurityMap("pdf")}
+            disabled={genBusy !== null || placed.length === 0}
+            className="btn-primary disabled:opacity-50"
+          >
+            {genBusy === "pdf" ? "יוצר מפה…" : "הורדת מפה (PDF)"}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadSecurityMap("png")}
+            disabled={genBusy !== null || placed.length === 0}
+            className="btn-secondary disabled:opacity-50"
+          >
+            {genBusy === "png" ? "יוצר תמונה…" : "הורדת מפה לעריכה (PNG)"}
+          </button>
+        </div>
       </div>
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">

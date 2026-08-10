@@ -11,11 +11,12 @@ export const dynamic = "force-dynamic";
  * return it as a download. Includes ALL placed houses (this is an internal
  * security document, so it is not filtered by the residents' share consent).
  */
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getSession();
   if (!session || session.user.role !== "admin") {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
+  const format = new URL(req.url).searchParams.get("format"); // "png" for an editable image
 
   const admin = createAdminClient();
   const { data } = await admin
@@ -34,6 +35,20 @@ export async function GET() {
 
   try {
     const pdf = await generateSecurityMapPdf(buildings);
+
+    if (format === "png") {
+      // An editable raster (openable in MS Paint) at ~200 DPI.
+      const { renderPdfToPng } = await import("@/lib/security-map/rasterize");
+      const png = renderPdfToPng(pdf, 200);
+      return new NextResponse(Buffer.from(png), {
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Disposition": 'attachment; filename="shomria-security-map-A3.png"',
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
