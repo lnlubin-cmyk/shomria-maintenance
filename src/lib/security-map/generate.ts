@@ -57,7 +57,9 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     minLon = Math.min(minLon, b.lon); maxLon = Math.max(maxLon, b.lon);
     minLat = Math.min(minLat, b.lat); maxLat = Math.max(maxLat, b.lat);
   }
-  const mf = 0.06;
+  // Margin around the houses' bounding box (fraction of span on each side).
+  // Larger = more surrounding area shown = more zoomed out.
+  const mf = 0.15;
   const dLon = (maxLon - minLon) * mf, dLat = (maxLat - minLat) * mf;
   minLon -= dLon; maxLon += dLon; minLat -= dLat; maxLat += dLat;
 
