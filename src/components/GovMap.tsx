@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { splitHouseLabel } from "@/lib/types";
 
 /**
  * Shared govmap canvas. Loads the govmap SDK, creates a streets-and-buildings
@@ -52,7 +53,8 @@ export function drawHouses(points: HousePoint[], opts: { showLabels?: boolean } 
     // (a dot would sit on top of the text and muddy it).
     g.displayGeometries({
       ...common,
-      labels: points.map((p) => p.label),
+      // Surname on the first row, first names (if any) on a second row.
+      labels: points.map((p) => splitHouseLabel(p.label).join("\n")),
       defaultSymbol: { url: TRANSPARENT_PIN, width: 1, height: 1 },
       fontLabel: { fontName: "Arial", fontSize: 16, fillColor: "#14532d" },
     });

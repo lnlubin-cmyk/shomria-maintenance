@@ -290,6 +290,22 @@ export function canDeleteFaults(role: UserRole): boolean {
   return role === "maintenance_manager" || role === "admin";
 }
 
+/**
+ * Split a house label into up to two display rows. Labels are usually just a
+ * surname; when families share a surname, first names are appended. Row 1 is the
+ * surname, row 2 the rest. The surname is the first word — or the first TWO words
+ * when it starts with "בן" (e.g. "בן עגו" is a two-word surname). A hyphen keeps
+ * a surname as one word (e.g. "כהן-לוי"), so it stays on a single row.
+ */
+export function splitHouseLabel(name: string): string[] {
+  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return [words[0] ?? ""];
+  const surnameWords = words[0] === "בן" ? 2 : 1;
+  const surname = words.slice(0, surnameWords).join(" ");
+  const rest = words.slice(surnameWords).join(" ");
+  return rest ? [surname, rest] : [surname];
+}
+
 /** Only מנהל תחזוקה / אדמין may see residents' handling feedback. */
 export function canSeeFeedback(role: UserRole): boolean {
   return role === "maintenance_manager" || role === "admin";

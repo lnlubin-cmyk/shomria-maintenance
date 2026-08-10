@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import { splitHouseLabel } from "@/lib/types";
 import { ALEF_BOLD_BASE64 } from "./alef-bold";
 
 export type MapBuilding = { name: string; lat: number; lon: number };
@@ -17,16 +18,6 @@ const pxY = (lat: number) => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * WORLD;
 };
-
-/** Split a label into up to two rows: when it holds more than one name
- *  (separated by / , & | or " ו "), put the first on row 1 and the rest on row 2. */
-function splitNames(name: string): string[] {
-  const parts = name
-    .split(/\s*[/|,&\n]\s*|\s+ו\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return parts.length >= 2 ? [parts[0], parts.slice(1).join(" ")] : [name];
-}
 
 async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
@@ -134,7 +125,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
   const items = buildings
     .map((b) => {
       const p = toPage(pxX(b.lon), pxY(b.lat));
-      const lines = splitNames(b.name); // pdf-lib renders Hebrew RTL correctly
+      const lines = splitHouseLabel(b.name); // pdf-lib renders Hebrew RTL correctly
       const w = Math.max(...lines.map((l) => font.widthOfTextAtSize(l, SIZE)));
       return { p, lines, bw: w + padX * 2, bh: lines.length * LH + padY * 2 };
     })
