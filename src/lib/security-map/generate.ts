@@ -2,22 +2,11 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { splitHouseLabel } from "@/lib/types";
 import { ALEF_BOLD_BASE64 } from "./alef-bold";
+import { getImagerySource } from "./imagery";
 
 export type MapBuilding = { name: string; lat: number; lon: number };
 
-// Esri World Imagery (XYZ). z18 is the deepest level with real imagery over
-// Shomria (z19 returns "not available" placeholders). ~0.5 m/px.
-const Z = 18;
 const TILE = 256;
-const WORLD = TILE * 2 ** Z;
-const ESRI = (z: number, y: number, x: number) =>
-  `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
-
-const pxX = (lon: number) => ((lon + 180) / 360) * WORLD;
-const pxY = (lat: number) => {
-  const r = (lat * Math.PI) / 180;
-  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * WORLD;
-};
 
 async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
@@ -52,6 +41,15 @@ function haloText(page: PDFPage, font: PDFFont, text: string, x: number, y: numb
  * family name at every house. Returns the PDF bytes.
  */
 export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<Uint8Array> {
+  const src = await getImagerySource();
+  const Z = src.z;
+  const WORLD = TILE * 2 ** Z;
+  const pxX = (lon: number) => ((lon + 180) / 360) * WORLD;
+  const pxY = (lat: number) => {
+    const r = (lat * Math.PI) / 180;
+    return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * WORLD;
+  };
+
   // Bounding box (+ margin) over all houses.
   let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
   for (const b of buildings) {
@@ -76,13 +74,8 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     for (let ty = tyMin; ty <= tyMax; ty++) tileList.push({ tx, ty });
   const tiles = (
     await pool(tileList, 12, async ({ tx, ty }) => {
-      try {
-        const r = await fetch(ESRI(Z, ty, tx));
-        if (!r.ok) return null;
-        return { tx, ty, bytes: new Uint8Array(await r.arrayBuffer()) };
-      } catch {
-        return null;
-      }
+      const bytes = await src.fetchTile(tx, ty);
+      return bytes ? { tx, ty, bytes } : null;
     })
   ).filter(Boolean) as { tx: number; ty: number; bytes: Uint8Array }[];
 
@@ -159,7 +152,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
   }
 
   drawCompass(page, font, { ox, oy, mapW, mapH });
-  drawChrome(page, font, { A3W, A3H, M, ox, oy, mapW, minLat, maxLat, scale });
+  drawChrome(page, font, { A3W, A3H, M, ox, oy, mapW, minLat, maxLat, scale, world: WORLD, attribution: src.attribution });
   return doc.save();
 }
 
@@ -192,7 +185,7 @@ function drawCompass(
 function drawChrome(
   page: PDFPage,
   font: PDFFont,
-  o: { A3W: number; A3H: number; M: { l: number; r: number }; ox: number; oy: number; mapW: number; minLat: number; maxLat: number; scale: number }
+  o: { A3W: number; A3H: number; M: { l: number; r: number }; ox: number; oy: number; mapW: number; minLat: number; maxLat: number; scale: number; world: number; attribution: string }
 ) {
   const ink = rgb(0.1, 0.1, 0.1), gray = rgb(0.35, 0.35, 0.35);
   const title = "מפת ביטחון — קהילת עצמונה-שומריה";
@@ -204,10 +197,10 @@ function drawChrome(
   const internal = "מסמך פנימי — למחלקת הביטחון";
   page.drawText(internal, { x: o.M.l, y: o.A3H - 20, size: 9, font, color: gray });
 
-  page.drawText("Imagery: Esri, Maxar, Earthstar Geographics", { x: o.M.l, y: 20, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+  page.drawText(o.attribution, { x: o.M.l, y: 20, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
 
   // Scale bar (100 m).
-  const mPerGpx = (Math.cos(((o.minLat + o.maxLat) / 2) * Math.PI / 180) * 2 * Math.PI * 6378137) / WORLD;
+  const mPerGpx = (Math.cos(((o.minLat + o.maxLat) / 2) * Math.PI / 180) * 2 * Math.PI * 6378137) / o.world;
   const mPerPt = mPerGpx / o.scale;
   const barPt = 100 / mPerPt;
   const bx = o.A3W - o.M.r - barPt, by = 24;
