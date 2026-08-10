@@ -23,8 +23,9 @@ export default function MapView({
   }, [buildings]);
 
   // Labels declutter: shown only when the visible map is at most this wide
-  // (meters east–west); dots-only above it.
-  const LABEL_MAX_WIDTH_M = 1053;
+  // (meters east–west); dots-only above it. Raised so labels appear about one
+  // zoom level further out (e.g. in full-screen, without needing to zoom in).
+  const LABEL_MAX_WIDTH_M = 2100;
 
   const [active, setActive] = useState<Set<string>>(() => new Set(layerNames));
   const [query, setQuery] = useState("");

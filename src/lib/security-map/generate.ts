@@ -46,6 +46,16 @@ type Rect = { x: number; y: number; w: number; h: number };
 const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
+/** Draw text with a thin white outline (halo) so it stays readable over the
+ *  aerial photo without a solid background box covering the image. */
+function haloText(page: PDFPage, font: PDFFont, text: string, x: number, y: number, size: number) {
+  const o = 0.6;
+  const white = rgb(1, 1, 1);
+  for (const [dx, dy] of [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, -o], [-o, o], [o, o]] as const)
+    page.drawText(text, { x: x + dx, y: y + dy, size, font, color: white });
+  page.drawText(text, { x, y, size, font, color: rgb(0.05, 0.05, 0.05) });
+}
+
 /**
  * Build an A3 (portrait) security map PDF: aerial background with a dot and the
  * family name at every house. Returns the PDF bytes.
@@ -149,12 +159,11 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
     placed.push(box);
 
     page.drawCircle({ x: p.x, y: p.y, size: dot, color: rgb(0.85, 0.1, 0.1), borderColor: white, borderWidth: 0.4 });
-    page.drawRectangle({ x: box.x, y: box.y, width: box.w, height: box.h, color: white, opacity: 0.8 });
     lines.forEach((ln, i) => {
       const lw = font.widthOfTextAtSize(ln, SIZE);
       const tx = box!.x + (box!.w - lw) / 2;
       const ty = box!.y + box!.h - padY - (i + 1) * LH + (LH - SIZE) / 2 + 1;
-      page.drawText(ln, { x: tx, y: ty, size: SIZE, font, color: rgb(0.05, 0.05, 0.05) });
+      haloText(page, font, ln, tx, ty, SIZE);
     });
   }
 
