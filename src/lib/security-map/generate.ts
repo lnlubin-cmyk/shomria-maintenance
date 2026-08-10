@@ -18,13 +18,6 @@ const pxY = (lat: number) => {
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * WORLD;
 };
 
-/** Reorder a (mostly-Hebrew) string to visual order for a LTR text engine,
- *  keeping digit runs in their normal order. Good enough for house labels. */
-function visualHebrew(s: string): string {
-  const reversed = [...s].reverse().join("");
-  return reversed.replace(/\d+/g, (d) => [...d].reverse().join(""));
-}
-
 /** Split a label into up to two rows: when it holds more than one name
  *  (separated by / , & | or " ו "), put the first on row 1 and the rest on row 2. */
 function splitNames(name: string): string[] {
@@ -129,7 +122,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
   const items = buildings
     .map((b) => {
       const p = toPage(pxX(b.lon), pxY(b.lat));
-      const lines = splitNames(b.name).map(visualHebrew);
+      const lines = splitNames(b.name); // pdf-lib renders Hebrew RTL correctly
       const w = Math.max(...lines.map((l) => font.widthOfTextAtSize(l, SIZE)));
       return { p, lines, bw: w + padX * 2, bh: lines.length * LH + padY * 2 };
     })
@@ -174,13 +167,13 @@ function drawChrome(
   o: { A3W: number; A3H: number; M: { l: number; r: number }; ox: number; oy: number; mapW: number; minLat: number; maxLat: number; scale: number }
 ) {
   const ink = rgb(0.1, 0.1, 0.1), gray = rgb(0.35, 0.35, 0.35);
-  const title = visualHebrew("מפת ביטחון — קהילת עצמונה-שומריה");
+  const title = "מפת ביטחון — קהילת עצמונה-שומריה";
   page.drawText(title, { x: (o.A3W - font.widthOfTextAtSize(title, 18)) / 2, y: o.A3H - 40, size: 18, font, color: ink });
 
   const now = new Date();
   const dstr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   page.drawText(dstr, { x: o.A3W - o.M.r - font.widthOfTextAtSize(dstr, 9), y: o.A3H - 20, size: 9, font, color: gray });
-  const internal = visualHebrew("מסמך פנימי — למחלקת הביטחון");
+  const internal = "מסמך פנימי — למחלקת הביטחון";
   page.drawText(internal, { x: o.M.l, y: o.A3H - 20, size: 9, font, color: gray });
 
   page.drawText("Imagery: Esri, Maxar, Earthstar Geographics", { x: o.M.l, y: 20, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
@@ -195,6 +188,6 @@ function drawChrome(
   bar(bx, by, bx + barPt, by);
   bar(bx, by - 3, bx, by + 3);
   bar(bx + barPt, by - 3, bx + barPt, by + 3);
-  const sl = visualHebrew("100 מ׳");
+  const sl = "100 מ׳";
   page.drawText(sl, { x: bx + barPt - font.widthOfTextAtSize(sl, 8), y: by + 5, size: 8, font, color: ink });
 }
