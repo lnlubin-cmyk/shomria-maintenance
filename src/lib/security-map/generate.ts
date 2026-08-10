@@ -59,7 +59,7 @@ export async function generateSecurityMapPdf(buildings: MapBuilding[]): Promise<
   }
   // Margin around the houses' bounding box (fraction of span on each side).
   // Larger = more surrounding area shown = more zoomed out.
-  const mf = 0.15;
+  const mf = 0.3;
   const dLon = (maxLon - minLon) * mf, dLat = (maxLat - minLat) * mf;
   minLon -= dLon; maxLon += dLon; minLat -= dLat; maxLat += dLat;
 
