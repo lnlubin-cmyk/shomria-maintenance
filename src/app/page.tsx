@@ -3,8 +3,10 @@ import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
 import { getActiveHomeMedia } from "@/lib/home-media";
+import { getActiveCampaign } from "@/lib/campaigns";
 import AppHeader from "@/components/AppHeader";
 import HeroCarousel from "@/components/HeroCarousel";
+import CampaignModal from "@/components/CampaignModal";
 import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
 
@@ -104,9 +106,11 @@ export default async function HomePage() {
     ? await getMenuDocs()
     : { community: [], info: [] };
   const media = await getActiveHomeMedia();
+  const campaign = await getActiveCampaign();
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {campaign && <CampaignModal campaign={campaign} loggedIn={!!session} />}
       <AppHeader session={session} />
 
       <main>

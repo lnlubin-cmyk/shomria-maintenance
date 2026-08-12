@@ -264,6 +264,27 @@ export interface TorahLesson {
   sort_order: number;
 }
 
+/** A campaign — a poster image shown on first entry, with an optional link. */
+export interface Campaign {
+  id: string;
+  title: string;
+  file_path: string | null;
+  file_name: string | null;
+  link_url: string | null; // "/path" (internal, login-gated) or "https://…" (external)
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** The active campaign, reduced to what the home-page modal needs. */
+export interface ActiveCampaign {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl: string | null;
+}
+
 /** צור קשר — a kibbutz unit (e.g. משרד) with an optional email/phone. */
 export interface Contact {
   id: string;
