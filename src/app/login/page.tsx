@@ -41,7 +41,7 @@ function LoginFallback() {
 
 // Errors the SSO callback can redirect back with.
 const SSO_ERRORS: Record<string, string> = {
-  sso_not_registered: "כתובת ה-Google שלך אינה רשומה ברשימת התושבים. היכנס עם האימייל הרשום וקוד אימות.",
+  sso_not_registered: "כתובת ה-Google שלך אינה רשומה ברשימת התושבים. היכנס עם מספר הטלפון הרשום וקוד אימות.",
   account_exists: "לתושב זה כבר קיים חשבון במערכת. פנה למזכירות.",
   auth_failed: "ההתחברות עם Google נכשלה. נסה שוב.",
   link_failed: "אירעה שגיאה בהשלמת ההרשמה. נסה שוב.",
@@ -117,7 +117,7 @@ function LoginForm() {
       } else {
         const normalized = normalizeIsraeliPhone(identifier);
         if (!normalized) {
-          setError("הזן אימייל תקין או מספר טלפון ישראלי.");
+          setError("הזן מספר טלפון ישראלי תקין.");
           return;
         }
         loginEmail = phoneAccountEmail(normalized);
@@ -291,7 +291,7 @@ function LoginForm() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="label" htmlFor="email">
-                    אימייל או מספר טלפון
+                    מספר טלפון
                   </label>
                   <input
                     id="email"
@@ -299,7 +299,7 @@ function LoginForm() {
                     type="text"
                     dir="ltr"
                     autoComplete="username"
-                    placeholder="you@example.com או 050-123-4567"
+                    placeholder="050-123-4567"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -430,8 +430,7 @@ function LoginForm() {
           {step === "set-password" && (
             <form onSubmit={handleSetPassword} className="space-y-4">
               <p className="text-sm text-gray-600">
-                מספר הטלפון אומת. בחר סיסמה — בכניסות הבאות תוכל להיכנס עם מספר הטלפון (או האימייל,
-                אם קיים) והסיסמה בלבד.
+                מספר הטלפון אומת. בחר סיסמה — בכניסות הבאות תוכל להיכנס עם מספר הטלפון והסיסמה בלבד.
               </p>
               <div>
                 <label className="label" htmlFor="new-password">
