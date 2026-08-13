@@ -33,18 +33,30 @@ export default function ContactsTab({ contacts }: { contacts: Contact[] }) {
   }
 
   const fields = (c?: Contact) => (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <div>
-        <label className="label">שם היחידה *</label>
-        <input name="name" className="field" placeholder="לדוגמה: משרד" defaultValue={c?.name} required />
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label className="label">שם היחידה *</label>
+          <input name="name" className="field" placeholder="לדוגמה: משרד" defaultValue={c?.name} required />
+        </div>
+        <div>
+          <label className="label">דוא״ל</label>
+          <input name="email" type="email" className="field" placeholder="אופציונלי" defaultValue={c?.email} dir="ltr" />
+        </div>
+        <div>
+          <label className="label">טלפון</label>
+          <input name="phone" className="field" placeholder="אופציונלי" defaultValue={c?.phone} dir="ltr" />
+        </div>
       </div>
       <div>
-        <label className="label">דוא״ל</label>
-        <input name="email" type="email" className="field" placeholder="אופציונלי" defaultValue={c?.email} dir="ltr" />
-      </div>
-      <div>
-        <label className="label">טלפון</label>
-        <input name="phone" className="field" placeholder="אופציונלי" defaultValue={c?.phone} dir="ltr" />
+        <label className="label">מידע נוסף (אופציונלי)</label>
+        <textarea
+          name="notes"
+          className="field"
+          rows={2}
+          placeholder="לדוגמה: שעות פעילות: א׳–ה׳ 8:00–13:00"
+          defaultValue={c?.notes}
+        />
       </div>
     </div>
   );

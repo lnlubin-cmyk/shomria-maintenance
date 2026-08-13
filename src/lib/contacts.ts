@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { Contact } from "@/lib/types";
 
-const SELECT = "id, name, email, phone, is_visible, sort_order";
+const SELECT = "id, name, email, phone, notes, is_visible, sort_order";
 
 /** All contacts (visible + hidden), for the admin tab. */
 export async function getAllContacts(): Promise<Contact[]> {

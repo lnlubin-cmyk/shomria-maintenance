@@ -25,6 +25,7 @@ export async function createContact(formData: FormData): Promise<ActionResult> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
   if (!name) return { error: "יש להזין שם ליחידה" };
 
   const admin = createAdminClient();
@@ -36,7 +37,7 @@ export async function createContact(formData: FormData): Promise<ActionResult> {
     .maybeSingle();
   const sort_order = (maxRow?.sort_order ?? -1) + 1;
 
-  const { error } = await admin.from("contacts").insert({ name, email, phone, sort_order });
+  const { error } = await admin.from("contacts").insert({ name, email, phone, notes, sort_order });
   if (error) return { error: "יצירת איש הקשר נכשלה" };
 
   revalidate();
@@ -53,11 +54,12 @@ export async function updateContact(formData: FormData): Promise<ActionResult> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
   if (!id) return { error: "איש קשר חסר" };
   if (!name) return { error: "יש להזין שם ליחידה" };
 
   const admin = createAdminClient();
-  const { error } = await admin.from("contacts").update({ name, email, phone }).eq("id", id);
+  const { error } = await admin.from("contacts").update({ name, email, phone, notes }).eq("id", id);
   if (error) return { error: "עדכון איש הקשר נכשל" };
 
   revalidate();

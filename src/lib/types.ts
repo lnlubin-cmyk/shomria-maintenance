@@ -291,6 +291,7 @@ export interface Contact {
   name: string; // שם היחידה (e.g. משרד)
   email: string; // אופציונלי
   phone: string; // אופציונלי
+  notes: string; // מידע חופשי נוסף (למשל שעות פעילות)
   is_visible: boolean;
   sort_order: number;
 }

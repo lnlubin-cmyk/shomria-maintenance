@@ -61,6 +61,10 @@ export default async function ContactPage() {
                     )}
                   </div>
                 )}
+
+                {c.notes && (
+                  <p className="mt-3 whitespace-pre-line ps-[3.25rem] text-sm text-gray-500">{c.notes}</p>
+                )}
               </li>
             ))}
           </ul>
