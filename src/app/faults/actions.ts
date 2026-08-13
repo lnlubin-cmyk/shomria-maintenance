@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient, getSession } from "@/lib/supabase/server";
-import { sendFaultSms, resendFaultSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
+import { sendFaultSms, resendFaultSms, sendFaultStatusSms, FAULT_RECEIVED_MESSAGE } from "@/lib/fault-sms";
 import { getBuildingFacts } from "@/lib/building-facts";
 import type { BuildingFact } from "@/lib/types";
 import {
@@ -197,9 +197,24 @@ export async function updateFaults(formData: FormData): Promise<ActionResult> {
 
   if (Object.keys(patch).length === 0) return { error: "לא בוצעו שינויים" };
 
+  // Capture prior statuses so we notify only when the status actually changes.
+  const prevStatus = new Map<number, string>();
+  if (patch.status) {
+    const { data: cur } = await supabase.from("faults").select("fault_number, status").in("fault_number", ids);
+    for (const f of cur ?? []) prevStatus.set(f.fault_number, f.status);
+  }
+
   const { error } = await supabase.from("faults").update(patch).in("fault_number", ids);
 
   if (error) return { error: "עדכון נכשל. נסה שוב." };
+
+  // Automatic SMS to each caller whose status changed.
+  if (patch.status) {
+    const next = patch.status as FaultStatus;
+    for (const id of ids) {
+      if (prevStatus.get(id) !== next) await sendFaultStatusSms(id, next);
+    }
+  }
 
   revalidatePath("/faults");
   return { ok: true };
@@ -230,24 +245,6 @@ export async function deleteFaults(formData: FormData): Promise<ActionResult> {
 // ---------------------------------------------------------------------
 // Messages (SMS to the resident) — staff only
 // ---------------------------------------------------------------------
-
-/** Send an editable SMS to the caller and log it. Always logged; if the SMS
- *  provider fails, the message is still saved with a "not delivered" status. */
-export async function sendFaultMessage(faultNumber: number, body: string): Promise<ActionResult> {
-  const session = await getSession();
-  if (!session) return { error: "לא מחובר" };
-  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה לשלוח הודעות" };
-
-  const text = String(body ?? "").trim();
-  if (!text) return { error: "יש להזין תוכן הודעה" };
-  if (!Number.isInteger(faultNumber)) return { error: "קריאה חסרה" };
-
-  await sendFaultSms(faultNumber, text, { senderUserId: session.user.id });
-
-  revalidatePath(`/faults/${faultNumber}`);
-  revalidatePath("/faults");
-  return { ok: true };
-}
 
 /** Re-send a message whose SMS previously failed. */
 export async function resendFaultMessage(

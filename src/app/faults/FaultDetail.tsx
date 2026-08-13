@@ -28,7 +28,6 @@ import {
 } from "@/lib/types";
 import {
   updateFaults,
-  sendFaultMessage,
   resendFaultMessage,
   addCostItem,
   deleteCostItem,
@@ -99,7 +98,6 @@ export default function FaultDetail({
 
   // messages
   const [showMessages, setShowMessages] = useState(false);
-  const [msgBody, setMsgBody] = useState("");
 
   // cost
   const [costDesc, setCostDesc] = useState("");
@@ -133,10 +131,6 @@ export default function FaultDetail({
     fd.set("assigned_to_user_id", assignee || "__none__");
     fd.set("hours_spent", hours);
     await run(updateFaults(fd));
-  }
-
-  async function sendMessage() {
-    if (await run(sendFaultMessage(fault.fault_number, msgBody))) setMsgBody("");
   }
 
   async function addCost() {
@@ -392,19 +386,9 @@ export default function FaultDetail({
         )}
 
         {editable && (
-          <div className="space-y-2 border-t border-gray-100 pt-3">
-            <label className="label">שליחת הודעת SMS לתושב</label>
-            <textarea
-              className="field"
-              rows={3}
-              placeholder="כתבו הודעה לתושב..."
-              value={msgBody}
-              onChange={(e) => setMsgBody(e.target.value)}
-            />
-            <button className="btn-primary" disabled={busy || !msgBody.trim()} onClick={sendMessage}>
-              {busy ? "שולח..." : "שליחת SMS"}
-            </button>
-          </div>
+          <p className="border-t border-gray-100 pt-3 text-xs text-gray-500">
+            הודעת SMS נשלחת אוטומטית לתושב עם כל שינוי סטטוס של הקריאה.
+          </p>
         )}
       </div>
 

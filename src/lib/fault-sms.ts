@@ -1,11 +1,33 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendSms019 } from "@/lib/sms019";
+import { faultUrl } from "@/lib/site";
+import type { FaultStatus } from "@/lib/types";
 
 /** The automatic SMS sent to the resident when a call is opened. */
 export const FAULT_RECEIVED_MESSAGE =
   "פנייתך לצוות חצר התקבלה במערכת\n" +
   "והועברה לטיפולו של צוות חצר\n" +
   "צוות חצר יעדכן על המשך הטיפול בפנייתך ויצור איתך קשר במידת הצורך";
+
+/** Plain-Hebrew wording for each status, used in the automatic status SMS. */
+const STATUS_SMS_TEXT: Record<FaultStatus, string> = {
+  received: "התקלה התקבלה במערכת",
+  in_treatment: "התקלה בטיפול",
+  on_hold: "הטיפול בקריאה בהמתנה",
+  fixed: "התקלה תוקנה",
+  duplicate: "הקריאה סומנה ככפולה (קיימת כבר קריאה במערכת על תקלה זו)",
+};
+
+/** Automatic SMS sent to the caller when a call's status changes. Includes a
+ *  link to the call page; the "fixed" message invites rating the handling. */
+export async function sendFaultStatusSms(faultNumber: number, status: FaultStatus): Promise<{ ok: boolean }> {
+  const link = faultUrl(faultNumber);
+  const body =
+    status === "fixed"
+      ? `הקריאה שלך (#${faultNumber}) — התקלה תוקנה.\nלצפייה בפרטי הטיפול ולדירוג הטיפול:\n${link}`
+      : `עודכן סטטוס הקריאה שלך (#${faultNumber}): ${STATUS_SMS_TEXT[status]}.\nלצפייה בפרטים:\n${link}`;
+  return sendFaultSms(faultNumber, body, { automatic: true });
+}
 
 function statusOf(r: { ok: boolean; status?: number; message?: string }): string {
   return r.status !== undefined ? String(r.status) : (r.message ?? (r.ok ? "0" : "failed"));
