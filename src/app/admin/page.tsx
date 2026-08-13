@@ -9,6 +9,7 @@ import { getAllSchedules } from "@/lib/prayer-times-server";
 import { getAllLessons } from "@/lib/torah-lessons";
 import { getAllContacts } from "@/lib/contacts";
 import { getAllCampaigns } from "@/lib/campaigns";
+import { getHousesForMove } from "@/lib/houses";
 import { getAdminVotes } from "@/lib/votes";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
@@ -50,7 +51,7 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const [community, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, votes] =
+  const [community, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes] =
     await Promise.all([
       getAllCommunityItems(),
       getAllHomeMedia(),
@@ -59,6 +60,7 @@ export default async function AdminPage() {
       getAllLessons(),
       getAllContacts(),
       getAllCampaigns(),
+      getHousesForMove(),
       getAdminVotes(),
     ]);
 
@@ -81,6 +83,7 @@ export default async function AdminPage() {
           lessons={lessons}
           contacts={contacts}
           campaigns={campaigns}
+          moveHouses={moveHouses}
           votes={votes}
           currentUserId={session.user.id}
         />

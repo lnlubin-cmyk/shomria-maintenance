@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Building, BuildingLayer, Campaign, CommunityItem, Contact, HomeMedia, Resident } from "@/lib/types";
+import type { MoveHouse } from "@/lib/houses";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
@@ -13,6 +14,7 @@ import PrayerTimesTab from "./PrayerTimesTab";
 import TorahLessonsTab from "./TorahLessonsTab";
 import ContactsTab from "./ContactsTab";
 import CampaignTab from "./CampaignTab";
+import MoveTab from "./MoveTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
 import type { TorahLesson } from "@/lib/types";
@@ -30,6 +32,7 @@ type Tab =
   | "torah"
   | "contacts"
   | "campaigns"
+  | "moves"
   | "votes";
 
 export interface AdminUserRow {
@@ -49,6 +52,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "residents", label: "תושבים" },
   { key: "buildings", label: "מבנים" },
   { key: "map", label: "מפה" },
+  { key: "moves", label: "מעבר דירות" },
   { key: "community", label: "קהילה" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
@@ -71,6 +75,7 @@ export default function AdminTabs({
   lessons,
   contacts,
   campaigns,
+  moveHouses,
   votes,
   currentUserId,
 }: {
@@ -85,6 +90,7 @@ export default function AdminTabs({
   lessons: TorahLesson[];
   contacts: Contact[];
   campaigns: (Campaign & { previewUrl: string })[];
+  moveHouses: MoveHouse[];
   votes: AdminVote[];
   currentUserId: string;
 }) {
@@ -116,6 +122,7 @@ export default function AdminTabs({
         <BuildingsTab buildings={buildings} residents={residents} layers={layers} />
       )}
       {tab === "map" && <BuildingsMapTab buildings={buildings} />}
+      {tab === "moves" && <MoveTab houses={moveHouses} />}
       {tab === "community" && <CommunityTab items={community} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
