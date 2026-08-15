@@ -1,4 +1,5 @@
-import { generateText, type CoreMessage } from "ai";
+import { generateText, generateObject, type CoreMessage } from "ai";
+import type { z } from "zod";
 
 /**
  * Provider-agnostic AI adapter. The rest of the app only calls askAI(); which
@@ -73,4 +74,27 @@ export async function askAI(opts: {
     temperature: 0.3,
   });
   return text;
+}
+
+/**
+ * Run a completion that must return a structured object matching `schema`. The
+ * provider is forced to produce JSON that validates, so callers get typed data
+ * (no manual parsing). Throws if not configured or the provider errors.
+ */
+export async function askAIObject<T>(opts: {
+  system: string;
+  messages: AiMessage[];
+  schema: z.ZodType<T>;
+  maxTokens?: number;
+}): Promise<T> {
+  const model = await resolveModel();
+  const { object } = await generateObject({
+    model,
+    system: opts.system,
+    messages: opts.messages,
+    schema: opts.schema,
+    maxTokens: opts.maxTokens ?? 2000,
+    temperature: 0.2,
+  });
+  return object;
 }

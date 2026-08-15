@@ -11,6 +11,7 @@ import { getAllContacts } from "@/lib/contacts";
 import { getAllCampaigns } from "@/lib/campaigns";
 import { getHousesForMove } from "@/lib/houses";
 import { getAdminVotes } from "@/lib/votes";
+import { isAIConfigured } from "@/lib/ai";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
 export default async function AdminPage() {
@@ -86,6 +87,7 @@ export default async function AdminPage() {
           moveHouses={moveHouses}
           votes={votes}
           currentUserId={session.user.id}
+          aiConfigured={isAIConfigured()}
         />
       </main>
     </div>

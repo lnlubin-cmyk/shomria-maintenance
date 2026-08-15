@@ -8,6 +8,7 @@ import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
+import NewsletterTab from "./NewsletterTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
@@ -26,6 +27,7 @@ type Tab =
   | "buildings"
   | "map"
   | "community"
+  | "newsletter"
   | "media"
   | "halachic"
   | "prayers"
@@ -54,6 +56,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "map", label: "מפה" },
   { key: "moves", label: "מעבר דירות" },
   { key: "community", label: "קהילה" },
+  { key: "newsletter", label: "פיצול ידיעון" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
   { key: "prayers", label: "זמני תפילות" },
@@ -78,6 +81,7 @@ export default function AdminTabs({
   moveHouses,
   votes,
   currentUserId,
+  aiConfigured,
 }: {
   residents: Resident[];
   buildings: Building[];
@@ -93,6 +97,7 @@ export default function AdminTabs({
   moveHouses: MoveHouse[];
   votes: AdminVote[];
   currentUserId: string;
+  aiConfigured: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("users");
 
@@ -124,6 +129,7 @@ export default function AdminTabs({
       {tab === "map" && <BuildingsMapTab buildings={buildings} />}
       {tab === "moves" && <MoveTab houses={moveHouses} />}
       {tab === "community" && <CommunityTab items={community} />}
+      {tab === "newsletter" && <NewsletterTab aiConfigured={aiConfigured} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
       {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}
