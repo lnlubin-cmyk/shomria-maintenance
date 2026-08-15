@@ -40,12 +40,14 @@ export default function SiteHeader({
   session,
   community = [],
   infoDocs = [],
+  torahDocs = [],
   prayerSchedules = [],
   activeVotes = [],
 }: {
   session: Session | null;
   community?: CommunityMenuItem[];
   infoDocs?: CommunityMenuItem[];
+  torahDocs?: CommunityMenuItem[];
   prayerSchedules?: { id: string; title: string }[];
   activeVotes?: { id: string; title: string }[];
 }) {
@@ -86,14 +88,22 @@ export default function SiteHeader({
       key: "info",
       label: "מידע לתושב",
       items: [
-        prayerItem,
-        { label: "שיעורי תורה", href: "/torah-lessons" },
-        { label: "זמנים הלכתיים", href: "/halachic-times" },
-        { label: "קו העירוב", href: "/eruv" },
         { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", href: "/phone-directory" },
         // Admin-managed document items assigned to the "מידע לתושב" section.
         ...infoDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
+      ],
+    },
+    // "תורה ותפילה" — the religious items, plus any admin-managed docs in this section.
+    {
+      key: "torah",
+      label: "תורה ותפילה",
+      items: [
+        prayerItem,
+        { label: "שיעורי תורה", href: "/torah-lessons" },
+        { label: "זמנים הלכתיים", href: "/halachic-times" },
+        { label: "קו העירוב", href: "/eruv" },
+        ...torahDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],
     },
     // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each

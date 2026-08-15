@@ -205,7 +205,7 @@ export interface FaultRow extends Fault {
 }
 
 /** Which menu section a document item appears under. */
-export type DocSection = "community" | "info";
+export type DocSection = "community" | "info" | "torah";
 
 /** An admin-managed menu entry with an attached PDF (in "קהילה" or "מידע לתושב"). */
 export interface CommunityItem {

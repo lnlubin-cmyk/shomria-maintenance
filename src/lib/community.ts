@@ -31,6 +31,7 @@ const getCachedSignedUrl = unstable_cache(
 export async function getMenuDocs(): Promise<{
   community: CommunityMenuItem[];
   info: CommunityMenuItem[];
+  torah: CommunityMenuItem[];
 }> {
   const admin = createAdminClient();
   const { data } = await admin
@@ -41,9 +42,12 @@ export async function getMenuDocs(): Promise<{
     .order("created_at");
 
   const rows = (data ?? []).filter((r) => r.subject.trim() !== "" && !!r.file_path);
+  const inSection = (s: string) => rows.filter((r) => r.section === s).map((r) => ({ id: r.id, subject: r.subject }));
   return {
-    community: rows.filter((r) => r.section !== "info").map((r) => ({ id: r.id, subject: r.subject })),
-    info: rows.filter((r) => r.section === "info").map((r) => ({ id: r.id, subject: r.subject })),
+    // Legacy rows default to 'community', so anything not info/torah counts as community.
+    community: rows.filter((r) => r.section !== "info" && r.section !== "torah").map((r) => ({ id: r.id, subject: r.subject })),
+    info: inSection("info"),
+    torah: inSection("torah"),
   };
 }
 

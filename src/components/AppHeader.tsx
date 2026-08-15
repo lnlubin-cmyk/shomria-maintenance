@@ -13,12 +13,13 @@ import type { Session } from "@/lib/types";
 export default async function AppHeader({ session }: { session: Session | null }) {
   const [docs, prayerSchedules, activeVotes] = session
     ? await Promise.all([getMenuDocs(), getVisibleScheduleList(), getActiveVotesForMenu()])
-    : [{ community: [], info: [] }, [], []];
+    : [{ community: [], info: [], torah: [] }, [], []];
   return (
     <SiteHeader
       session={session}
       community={docs.community}
       infoDocs={docs.info}
+      torahDocs={docs.torah}
       prayerSchedules={prayerSchedules}
       activeVotes={activeVotes}
     />

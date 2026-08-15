@@ -14,7 +14,7 @@ import {
   deleteCommunityItem,
 } from "./community-actions";
 
-const SECTION_LABELS = { community: "קהילה", info: "מידע לתושב" } as const;
+const SECTION_LABELS = { community: "קהילה", info: "מידע לתושב", torah: "תורה ותפילה" } as const;
 
 export default function CommunityTab({ items }: { items: CommunityItem[] }) {
   const router = useRouter();
@@ -45,8 +45,8 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
       )}
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
-        פריט מופיע בתפריט (במדור „קהילה” או „מידע לתושב” לפי הבחירה) רק כאשר יש לו נושא, קובץ PDF,
-        והוא מוגדר „מוצג”.
+        פריט מופיע בתפריט (במדור „קהילה”, „מידע לתושב” או „תורה ותפילה” לפי הבחירה) רק כאשר יש לו נושא,
+        קובץ PDF, והוא מוגדר „מוצג”.
       </div>
 
       <div className="flex items-center justify-between">
@@ -83,6 +83,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
             <select id="new-section" name="section" className="field" defaultValue="community">
               <option value="community">קהילה</option>
               <option value="info">מידע לתושב</option>
+              <option value="torah">תורה ותפילה</option>
             </select>
           </div>
           <div>
@@ -176,6 +177,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
                 >
                   <option value="community">{SECTION_LABELS.community}</option>
                   <option value="info">{SECTION_LABELS.info}</option>
+                  <option value="torah">{SECTION_LABELS.torah}</option>
                 </select>
               </form>
 

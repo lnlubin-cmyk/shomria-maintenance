@@ -68,7 +68,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   if (!subject) return { error: "יש להזין נושא" };
 
   const section = String(formData.get("section") ?? "community");
-  if (section !== "community" && section !== "info") return { error: "מדור לא חוקי" };
+  if (section !== "community" && section !== "info" && section !== "torah") return { error: "מדור לא חוקי" };
 
   const { file, error: fileErr } = readPdf(formData);
   if (fileErr) return { error: fileErr };
@@ -115,7 +115,7 @@ export async function updateCommunitySubject(formData: FormData): Promise<Action
   return { ok: true };
 }
 
-/** Move an item to a different menu section ("קהילה" / "מידע לתושב"). */
+/** Move an item to a different menu section ("קהילה" / "מידע לתושב" / "תורה ותפילה"). */
 export async function updateCommunitySection(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -126,7 +126,7 @@ export async function updateCommunitySection(formData: FormData): Promise<Action
   const id = String(formData.get("id") ?? "").trim();
   const section = String(formData.get("section") ?? "");
   if (!id) return { error: "פריט חסר" };
-  if (section !== "community" && section !== "info") return { error: "מדור לא חוקי" };
+  if (section !== "community" && section !== "info" && section !== "torah") return { error: "מדור לא חוקי" };
 
   const admin = createAdminClient();
   const { error } = await admin.from("community_items").update({ section }).eq("id", id);
