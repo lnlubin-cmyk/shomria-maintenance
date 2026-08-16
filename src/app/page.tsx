@@ -102,11 +102,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
-  const { community, info } = session
-    ? await getMenuDocs()
-    : { community: [], info: [] };
-  const media = await getActiveHomeMedia();
-  const campaign = await getActiveCampaign();
+  // Fetch the independent data concurrently rather than one round trip at a time.
+  const [{ community, info }, media, campaign] = await Promise.all([
+    session ? getMenuDocs() : Promise.resolve({ community: [], info: [] }),
+    getActiveHomeMedia(),
+    getActiveCampaign(),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">

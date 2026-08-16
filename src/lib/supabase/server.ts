@@ -1,6 +1,7 @@
 import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import type { Session } from "@/lib/types";
 
 // `cookies` accepts a union of the current and deprecated method shapes, so TS
@@ -51,9 +52,11 @@ export function createAdminClient() {
 
 /**
  * The signed-in user with their resident record, or null if not signed in or
- * not yet linked to a resident.
+ * not yet linked to a resident. Wrapped in React `cache` so multiple calls
+ * within one request (e.g. a page and its header) share a single lookup instead
+ * of each making the same round trips to Supabase.
  */
-export async function getSession(): Promise<Session | null> {
+export const getSession = cache(async (): Promise<Session | null> => {
   const supabase = createClient();
 
   const {
@@ -89,4 +92,4 @@ export async function getSession(): Promise<Session | null> {
     displayName,
     residentId: resident?.id ?? null,
   };
-}
+});

@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 
@@ -28,11 +29,11 @@ const getCachedSignedUrl = unstable_cache(
  * when it's visible and has both a subject and a file — the exact condition the
  * menu must satisfy, in one place.
  */
-export async function getMenuDocs(): Promise<{
+export const getMenuDocs = cache(async (): Promise<{
   community: CommunityMenuItem[];
   info: CommunityMenuItem[];
   torah: CommunityMenuItem[];
-}> {
+}> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_items")
@@ -49,7 +50,7 @@ export async function getMenuDocs(): Promise<{
     info: inSection("info"),
     torah: inSection("torah"),
   };
-}
+});
 
 /** All items, for the admin management tab (includes hidden/incomplete ones). */
 export async function getAllCommunityItems(): Promise<CommunityItem[]> {
