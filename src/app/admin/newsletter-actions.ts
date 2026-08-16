@@ -9,9 +9,8 @@ import { renderNewsletter, cropSection } from "@/lib/newsletter/render";
 import { imageToPdf } from "@/lib/newsletter/wrap-pdf";
 import { suggestSections, type SectionSuggestion } from "@/lib/newsletter/ai";
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // matches the 'community' bucket size limit
 const WORK_PREFIX = "newsletter-work"; // temp working files, cleaned up on publish
-const SIGNED_URL_TTL = 60 * 60 * 3; // 3h — comfortably longer than a review session
 const SECTIONS = ["community", "info", "torah"] as const;
 type SectionKey = (typeof SECTIONS)[number];
 
@@ -52,7 +51,7 @@ export async function analyzeNewsletter(formData: FormData): Promise<{ error: st
   if (!(file instanceof File) || file.size === 0) return { error: "יש להעלות קובץ ידיעון" };
   const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   if (!isPdf) return { error: "יש להעלות קובץ PDF בלבד" };
-  if (file.size > MAX_FILE_BYTES) return { error: "הקובץ גדול מ-25MB" };
+  if (file.size > MAX_FILE_BYTES) return { error: "הקובץ גדול מ-20MB" };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const token = randomUUID();
@@ -74,19 +73,15 @@ export async function analyzeNewsletter(formData: FormData): Promise<{ error: st
     return { error: "עיבוד קובץ הידיעון נכשל (ודא שזהו PDF תקין)" };
   }
 
-  const analyzed: AnalyzedPage[] = [];
-  for (const p of pages) {
-    const path = `${WORK_PREFIX}/${token}/p${p.index}.jpg`;
-    const up = await admin.storage
-      .from(COMMUNITY_BUCKET)
-      .upload(path, Buffer.from(p.jpeg), { contentType: "image/jpeg", upsert: true });
-    if (up.error) {
-      await cleanupWork(token);
-      return { error: "שמירת תצוגת העמודים נכשלה" };
-    }
-    const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
-    analyzed.push({ index: p.index, url: data?.signedUrl ?? "", w: p.previewW, h: p.previewH });
-  }
+  // Previews are returned inline as data URLs. They're only needed during the
+  // review session, and the 'community' bucket permits application/pdf only —
+  // so there's nothing to store (or clean up) for them.
+  const analyzed: AnalyzedPage[] = pages.map((p) => ({
+    index: p.index,
+    url: `data:image/jpeg;base64,${Buffer.from(p.jpeg).toString("base64")}`,
+    w: p.previewW,
+    h: p.previewH,
+  }));
 
   const aiUsed = isAIConfigured();
   const suggestions = await suggestSections(pages.map((p) => ({ index: p.index, jpeg: p.jpeg })));
