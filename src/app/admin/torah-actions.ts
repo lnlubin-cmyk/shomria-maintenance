@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
+import { sanitizeRichText } from "@/lib/rich-text";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -26,7 +27,7 @@ export async function createLesson(formData: FormData): Promise<ActionResult> {
   const lecturer = String(formData.get("lecturer") ?? "").trim();
   const occurrence = String(formData.get("occurrence") ?? "").trim();
   const hour = String(formData.get("hour") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const notes = sanitizeRichText(String(formData.get("notes") ?? ""));
   if (!subject) return { error: "יש להזין נושא לשיעור" };
 
   const admin = createAdminClient();
@@ -58,7 +59,7 @@ export async function updateLesson(formData: FormData): Promise<ActionResult> {
   const lecturer = String(formData.get("lecturer") ?? "").trim();
   const occurrence = String(formData.get("occurrence") ?? "").trim();
   const hour = String(formData.get("hour") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const notes = sanitizeRichText(String(formData.get("notes") ?? ""));
   if (!id) return { error: "שיעור חסר" };
   if (!subject) return { error: "יש להזין נושא לשיעור" };
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TorahLesson } from "@/lib/types";
+import RichTextEditor from "@/components/RichTextEditor";
 import {
   createLesson,
   updateLesson,
@@ -54,7 +55,7 @@ export default function TorahLessonsTab({ lessons }: { lessons: TorahLesson[] })
       </div>
       <div>
         <label className="label">הערות</label>
-        <textarea name="notes" className="field" rows={2} defaultValue={l?.notes} />
+        <RichTextEditor name="notes" defaultValue={l?.notes ?? ""} />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import { getVisibleContacts } from "@/lib/contacts";
 import AppHeader from "@/components/AppHeader";
+import RichText from "@/components/RichText";
 
 export const metadata = { title: "צור קשר — קהילת עצמונה-שומריה" };
 
@@ -63,7 +64,7 @@ export default async function ContactPage() {
                 )}
 
                 {c.notes && (
-                  <p className="mt-3 whitespace-pre-line ps-[3.25rem] text-sm text-gray-500">{c.notes}</p>
+                  <RichText value={c.notes} className="mt-3 ps-[3.25rem] text-sm text-gray-500" />
                 )}
               </li>
             ))}

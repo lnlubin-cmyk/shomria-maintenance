@@ -3,6 +3,7 @@ import { getSession } from "@/lib/supabase/server";
 import { getStoreView } from "@/lib/store";
 import AppHeader from "@/components/AppHeader";
 import DocViewer from "@/components/DocViewer";
+import RichText from "@/components/RichText";
 
 /**
  * מכולת — the grocery info the admin configured: either free text (e.g. opening
@@ -38,7 +39,9 @@ export default async function GroceryPage() {
             <DocViewer url={store.url} kind={store.kind} />
           </>
         ) : (
-          <div className="card whitespace-pre-line text-base leading-relaxed text-gray-800">{store.body}</div>
+          <div className="card text-base leading-relaxed text-gray-800">
+            <RichText value={store.body} />
+          </div>
         )}
       </main>
     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact } from "@/lib/types";
+import RichTextEditor from "@/components/RichTextEditor";
 import {
   createContact,
   updateContact,
@@ -50,13 +51,8 @@ export default function ContactsTab({ contacts }: { contacts: Contact[] }) {
       </div>
       <div>
         <label className="label">מידע נוסף (אופציונלי)</label>
-        <textarea
-          name="notes"
-          className="field"
-          rows={2}
-          placeholder="לדוגמה: שעות פעילות: א׳–ה׳ 8:00–13:00"
-          defaultValue={c?.notes}
-        />
+        <RichTextEditor name="notes" defaultValue={c?.notes ?? ""} />
+        <p className="mt-1 text-xs text-gray-500">אפשר להדגיש טקסט. לדוגמה: „שעות פעילות: א׳–ה׳ 8:00–13:00”.</p>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { StoreInfo } from "@/lib/types";
 import { DOC_ACCEPT } from "@/lib/doc-files";
+import RichTextEditor from "@/components/RichTextEditor";
 import { updateStore } from "./store-actions";
 
 export default function StoreTab({ info }: { info: StoreInfo }) {
@@ -83,17 +84,13 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
 
       {/* Free text */}
       <div className={mode === "text" ? "" : "opacity-50"}>
-        <label className="label" htmlFor="body">
+        <label className="label">
           טקסט חופשי {mode === "text" && <span className="text-red-600">*</span>}
         </label>
-        <textarea
-          id="body"
-          name="body"
-          className="field min-h-[140px] font-mono"
-          defaultValue={info.body}
-          placeholder={"זמני פתיחה\nימים א׳-ה׳: 7:00-19:00\nיום ו׳: 7:00-13:00"}
-        />
-        <p className="mt-1 text-xs text-gray-500">כל שורה תוצג כשורה נפרדת.</p>
+        <RichTextEditor name="body" defaultValue={info.body} />
+        <p className="mt-1 text-xs text-gray-500">
+          אפשר להדגיש טקסט (מודגש / נטוי / קו תחתון). כל שורה תוצג כשורה נפרדת. לדוגמה: „זמני פתיחה — ימים א׳-ה׳ 7:00-19:00”.
+        </p>
       </div>
 
       {/* PDF */}

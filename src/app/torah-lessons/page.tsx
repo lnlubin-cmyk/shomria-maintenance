@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import { getVisibleLessons } from "@/lib/torah-lessons";
 import AppHeader from "@/components/AppHeader";
+import RichText from "@/components/RichText";
 
 export const metadata = { title: "שיעורי תורה — קהילת עצמונה-שומריה" };
 
@@ -54,7 +55,7 @@ export default async function TorahLessonsPage() {
                   {l.notes && (
                     <div className="flex gap-2">
                       <dt className="text-gray-500">הערות:</dt>
-                      <dd className="whitespace-pre-line">{l.notes}</dd>
+                      <dd><RichText value={l.notes} /></dd>
                     </div>
                   )}
                 </dl>

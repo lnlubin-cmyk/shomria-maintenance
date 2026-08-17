@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
+import { sanitizeRichText } from "@/lib/rich-text";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -31,7 +32,7 @@ export async function updateStore(formData: FormData): Promise<ActionResult> {
   const menu_label = String(formData.get("menu_label") ?? "").trim() || "מכולת";
   const mode = String(formData.get("mode") ?? "text");
   if (mode !== "text" && mode !== "pdf") return { error: "מצב תצוגה לא חוקי" };
-  const body = String(formData.get("body") ?? "");
+  const body = sanitizeRichText(String(formData.get("body") ?? ""));
 
   const admin = createAdminClient();
   const { data: cur } = await admin
