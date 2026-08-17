@@ -72,6 +72,15 @@ export default async function MapPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Start fetching the govmap SDK during the initial HTML load so it's
+          cached by the time <GovMap> mounts, instead of only downloading it
+          after hydration. React hoists this <link> into <head>. URL mirrors
+          SDK_URL in components/GovMap.tsx. */}
+      <link
+        rel="preload"
+        as="script"
+        href="https://www.govmap.gov.il/govmap/api/govmap.api.js"
+      />
       <AppHeader session={session} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <h1 className="mb-1 text-2xl font-bold">מפת הישוב</h1>
