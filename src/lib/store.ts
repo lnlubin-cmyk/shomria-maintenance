@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
+import { docKind } from "@/lib/doc-files";
 import type { StoreInfo } from "@/lib/types";
 
 /** The route for the מכולת info page. */
@@ -47,9 +48,17 @@ export async function getStoreView(): Promise<{
   mode: "text" | "pdf";
   body: string;
   url: string | null;
+  kind: "pdf" | "image";
   configured: boolean;
 }> {
   const s = await getStoreInfo();
   const url = s.mode === "pdf" && s.file_path ? await getCachedSignedUrl(s.file_path) : null;
-  return { label: s.menu_label, mode: s.mode, body: s.body, url, configured: isStoreConfigured(s) };
+  return {
+    label: s.menu_label,
+    mode: s.mode,
+    body: s.body,
+    url,
+    kind: docKind(s.file_path),
+    configured: isStoreConfigured(s),
+  };
 }

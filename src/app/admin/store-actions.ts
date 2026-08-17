@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
+import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -44,14 +45,14 @@ export async function updateStore(formData: FormData): Promise<ActionResult> {
   const removeFile = String(formData.get("remove_file") ?? "") === "1";
   const file = formData.get("file");
   if (file instanceof File && file.size > 0) {
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) return { error: "יש להעלות קובץ PDF בלבד" };
+    const ext = docExt(file);
+    if (!ext) return { error: `יש להעלות קובץ ${DOC_KINDS_HE}` };
     if (file.size > MAX_FILE_BYTES) return { error: "הקובץ גדול מ-20MB" };
-    const path = `${randomUUID()}.pdf`;
+    const path = `${randomUUID()}.${ext}`;
     const bytes = await file.arrayBuffer();
     const up = await admin.storage
       .from(COMMUNITY_BUCKET)
-      .upload(path, bytes, { contentType: "application/pdf", upsert: false });
+      .upload(path, bytes, { contentType: docContentType(ext), upsert: false });
     if (up.error) return { error: "העלאת הקובץ נכשלה" };
     if (file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([file_path]);
     file_path = path;
@@ -63,7 +64,7 @@ export async function updateStore(formData: FormData): Promise<ActionResult> {
   }
 
   if (mode === "pdf" && !file_path) {
-    return { error: "במצב PDF יש להעלות קובץ, או לעבור למצב טקסט חופשי." };
+    return { error: "במצב „קובץ” יש להעלות קובץ (PDF או תמונה), או לעבור למצב טקסט חופשי." };
   }
 
   const { error } = await admin

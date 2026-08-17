@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CommunityItem } from "@/lib/types";
+import { DOC_ACCEPT } from "@/lib/doc-files";
 import {
   createCommunityItem,
   updateCommunitySubject,
@@ -46,7 +47,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
         פריט מופיע בתפריט (במדור „קהילה”, „מידע לתושב” או „תורה ותפילה” לפי הבחירה) רק כאשר יש לו נושא,
-        קובץ PDF, והוא מוגדר „מוצג”.
+        קובץ (PDF או תמונה), והוא מוגדר „מוצג”.
       </div>
 
       <div className="flex items-center justify-between">
@@ -88,16 +89,16 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
           </div>
           <div>
             <label className="label" htmlFor="new-file">
-              קובץ PDF
+              קובץ (PDF או תמונה)
             </label>
             <input
               id="new-file"
               name="file"
               type="file"
-              accept="application/pdf,.pdf"
+              accept={DOC_ACCEPT}
               className="block w-full text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
             />
-            <p className="mt-1 text-xs text-gray-500">אפשר להוסיף קובץ עכשיו או מאוחר יותר. עד 20MB.</p>
+            <p className="mt-1 text-xs text-gray-500">PDF או תמונה (JPG/PNG/WEBP). אפשר להוסיף עכשיו או מאוחר יותר. עד 20MB.</p>
           </div>
           <button type="submit" className="btn-primary" disabled={busy}>
             {busy ? "שומר..." : "יצירה"}
@@ -207,7 +208,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
                   <input
                     name="file"
                     type="file"
-                    accept="application/pdf,.pdf"
+                    accept={DOC_ACCEPT}
                     required
                     className="block text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
                   />

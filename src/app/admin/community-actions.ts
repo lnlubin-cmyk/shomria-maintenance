@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
+import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
 
@@ -16,27 +17,28 @@ async function requireAdmin() {
   return session;
 }
 
-function readPdf(formData: FormData): { file: File | null; error?: string } {
+function readDoc(formData: FormData): { file: File | null; ext?: string; error?: string } {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { file: null };
-  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-  if (!isPdf) return { file: null, error: "יש להעלות קובץ PDF בלבד" };
+  const ext = docExt(file);
+  if (!ext) return { file: null, error: `יש להעלות קובץ ${DOC_KINDS_HE}` };
   if (file.size > MAX_FILE_BYTES) return { file: null, error: "הקובץ גדול מ-20MB" };
-  return { file };
+  return { file, ext };
 }
 
 /**
- * Upload a PDF to a fresh, random storage key and return that key. Uploading
- * first (before touching the DB) means a failed upload can't leave an orphaned
- * row, and a random key means each file is independent of the row id.
+ * Upload a document (PDF or image) to a fresh, random storage key — with the
+ * file's real extension so its kind is knowable later — and return that key.
+ * Uploading first (before touching the DB) means a failed upload can't leave an
+ * orphaned row, and a random key means each file is independent of the row id.
  */
-async function uploadPdf(file: File): Promise<{ path?: string; error?: string }> {
+async function uploadDoc(file: File, ext: string): Promise<{ path?: string; error?: string }> {
   const admin = createAdminClient();
-  const path = `${randomUUID()}.pdf`;
+  const path = `${randomUUID()}.${ext}`;
   const bytes = await file.arrayBuffer();
   const { error } = await admin.storage
     .from(COMMUNITY_BUCKET)
-    .upload(path, bytes, { contentType: "application/pdf", upsert: false });
+    .upload(path, bytes, { contentType: docContentType(ext), upsert: false });
   if (error) return { error: error.message };
   return { path };
 }
@@ -70,13 +72,13 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const section = String(formData.get("section") ?? "community");
   if (section !== "community" && section !== "info" && section !== "torah") return { error: "מדור לא חוקי" };
 
-  const { file, error: fileErr } = readPdf(formData);
+  const { file, ext, error: fileErr } = readDoc(formData);
   if (fileErr) return { error: fileErr };
 
   let file_path: string | null = null;
   let file_name: string | null = null;
-  if (file) {
-    const { path, error } = await uploadPdf(file);
+  if (file && ext) {
+    const { path, error } = await uploadDoc(file, ext);
     if (error || !path) return { error: "העלאת הקובץ נכשלה" };
     file_path = path;
     file_name = file.name;
@@ -136,7 +138,7 @@ export async function updateCommunitySection(formData: FormData): Promise<Action
   return { ok: true };
 }
 
-/** Replace (or add) the item's PDF: upload the new one, then drop the old file. */
+/** Replace (or add) the item's file: upload the new one, then drop the old file. */
 export async function replaceCommunityFile(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -147,9 +149,9 @@ export async function replaceCommunityFile(formData: FormData): Promise<ActionRe
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return { error: "פריט חסר" };
 
-  const { file, error: fileErr } = readPdf(formData);
+  const { file, ext, error: fileErr } = readDoc(formData);
   if (fileErr) return { error: fileErr };
-  if (!file) return { error: "לא נבחר קובץ" };
+  if (!file || !ext) return { error: "לא נבחר קובץ" };
 
   const admin = createAdminClient();
   const { data: existing } = await admin
@@ -158,7 +160,7 @@ export async function replaceCommunityFile(formData: FormData): Promise<ActionRe
     .eq("id", id)
     .maybeSingle();
 
-  const { path, error: upErr } = await uploadPdf(file);
+  const { path, error: upErr } = await uploadDoc(file, ext);
   if (upErr || !path) return { error: "העלאת הקובץ נכשלה" };
 
   const { error } = await admin

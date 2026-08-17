@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import { getStoreView } from "@/lib/store";
 import AppHeader from "@/components/AppHeader";
-import PdfViewer from "@/components/PdfViewer";
+import DocViewer from "@/components/DocViewer";
 
 /**
  * מכולת — the grocery info the admin configured: either free text (e.g. opening
@@ -32,10 +32,10 @@ export default async function GroceryPage() {
           <>
             <div className="mb-4 flex justify-end">
               <a href={store.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                פתח / הורד PDF
+                {store.kind === "image" ? "פתח / הורד תמונה" : "פתח / הורד PDF"}
               </a>
             </div>
-            <PdfViewer url={store.url} />
+            <DocViewer url={store.url} kind={store.kind} />
           </>
         ) : (
           <div className="card whitespace-pre-line text-base leading-relaxed text-gray-800">{store.body}</div>

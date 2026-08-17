@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { StoreInfo } from "@/lib/types";
+import { DOC_ACCEPT } from "@/lib/doc-files";
 import { updateStore } from "./store-actions";
 
 export default function StoreTab({ info }: { info: StoreInfo }) {
@@ -37,8 +38,8 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
       {ok && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">ההגדרות נשמרו.</div>}
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
-        מידע על המכולת שיוצג לתושבים תחת „מידע לתושב”. אפשר להציג טקסט חופשי (למשל שעות פתיחה) או קובץ PDF —
-        בחר את מצב התצוגה. שני התכנים נשמרים, כך שאפשר לעבור ביניהם בכל עת.
+        מידע על המכולת שיוצג לתושבים תחת „מידע לתושב”. אפשר להציג טקסט חופשי (למשל שעות פתיחה) או קובץ
+        (PDF או תמונה) — בחר את מצב התצוגה. שני התכנים נשמרים, כך שאפשר לעבור ביניהם בכל עת.
       </div>
 
       <div>
@@ -75,7 +76,7 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
               checked={mode === "pdf"}
               onChange={() => setMode("pdf")}
             />
-            קובץ PDF
+            קובץ (PDF או תמונה)
           </label>
         </div>
       </div>
@@ -97,7 +98,7 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
 
       {/* PDF */}
       <div className={`rounded-lg border border-gray-200 bg-gray-50 p-3 ${mode === "pdf" ? "" : "opacity-50"}`}>
-        <label className="label">קובץ PDF</label>
+        <label className="label">קובץ (PDF או תמונה)</label>
         {info.file_path ? (
           <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
             <span className="font-medium text-gray-700">קובץ נוכחי: {info.file_name ?? "PDF"}</span>
@@ -115,10 +116,10 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
         <input
           name="file"
           type="file"
-          accept="application/pdf,.pdf"
+          accept={DOC_ACCEPT}
           className="block text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
         />
-        <p className="mt-1 text-xs text-gray-500">העלאת קובץ חדש תחליף את הקיים. עד 20MB.</p>
+        <p className="mt-1 text-xs text-gray-500">PDF או תמונה (JPG/PNG/WEBP). העלאת קובץ חדש תחליף את הקיים. עד 20MB.</p>
       </div>
 
       <button type="submit" className="btn-primary" disabled={busy}>
