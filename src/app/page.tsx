@@ -124,8 +124,8 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   // Fetch the independent data concurrently rather than one round trip at a time.
-  const [{ community, info }, media, campaign, store] = await Promise.all([
-    session ? getMenuDocs() : Promise.resolve({ community: [], info: [] }),
+  const [{ community, info, torah }, media, campaign, store] = await Promise.all([
+    session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     getActiveHomeMedia(),
     getActiveCampaign(),
     getStoreInfo(),
@@ -182,14 +182,31 @@ export default async function HomePage() {
         </section>
 
         <div className="mx-auto max-w-6xl px-4 py-12">
-          {/* מידע לתושב — all coming soon for now */}
+          {/* תורה ותפילה — shown first */}
           <section>
-            <SectionTitle>מידע לתושב</SectionTitle>
+            <SectionTitle>תורה ותפילה</SectionTitle>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/prayer-times" tone="accent" icon={<ClockIcon />} title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
               <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
               <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
               <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
+              {torah.map((d) => (
+                <Tile
+                  key={d.id}
+                  href={`/community/${d.id}`}
+                  tone="accent"
+                  icon="📄"
+                  title={d.subject}
+                  desc="לחצו לצפייה במסמך."
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* מידע לתושב */}
+          <section className="mt-12">
+            <SectionTitle>מידע לתושב</SectionTitle>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
               {storeTile && (

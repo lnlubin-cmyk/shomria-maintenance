@@ -86,6 +86,19 @@ export default function SiteHeader({
       : { label: "זמני תפילות", href: "/prayer-times" };
 
   const sections: MenuSection[] = [
+    // "תורה ותפילה" — the religious items, plus any admin-managed docs in this
+    // section. Shown first per the requested menu order.
+    {
+      key: "torah",
+      label: "תורה ותפילה",
+      items: [
+        prayerItem,
+        { label: "שיעורי תורה", href: "/torah-lessons" },
+        { label: "זמנים הלכתיים", href: "/halachic-times" },
+        { label: "קו העירוב", href: "/eruv" },
+        ...torahDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
+      ],
+    },
     {
       key: "info",
       label: "מידע לתושב",
@@ -96,18 +109,6 @@ export default function SiteHeader({
         ...(storeLabel ? [{ label: storeLabel, href: "/grocery" }] : []),
         // Admin-managed document items assigned to the "מידע לתושב" section.
         ...infoDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
-      ],
-    },
-    // "תורה ותפילה" — the religious items, plus any admin-managed docs in this section.
-    {
-      key: "torah",
-      label: "תורה ותפילה",
-      items: [
-        prayerItem,
-        { label: "שיעורי תורה", href: "/torah-lessons" },
-        { label: "זמנים הלכתיים", href: "/halachic-times" },
-        { label: "קו העירוב", href: "/eruv" },
-        ...torahDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],
     },
     // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each
