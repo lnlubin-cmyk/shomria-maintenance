@@ -9,10 +9,14 @@ import PdfViewer from "@/components/PdfViewer";
  */
 export default function DocViewer({ url, kind }: { url: string; kind: "pdf" | "image" }) {
   if (kind === "image") {
+    // Cap at the image's real size (max-w-full, not w-full): stretching a
+    // low-resolution image to the full container width blurs it — text worst of
+    // all — especially on high-DPI screens. Shown at native size it stays crisp;
+    // the page's "open / download" link gives the full image either way.
     return (
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-soft">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" className="mx-auto block h-auto w-full" />
+        <img src={url} alt="" className="mx-auto block h-auto max-w-full" />
       </div>
     );
   }
