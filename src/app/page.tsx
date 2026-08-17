@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
-import { getStoreInfo, isStoreConfigured } from "@/lib/store";
+import { getInfoPanels, isPanelConfigured, panelHref } from "@/lib/info-panels";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import { getActiveCampaign } from "@/lib/campaigns";
 import AppHeader from "@/components/AppHeader";
@@ -49,6 +49,31 @@ function CartIcon() {
     </svg>
   );
 }
+
+/** Medical-cross icon (Lucide) for the "מרפאה" tile. */
+function MedicalIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" />
+    </svg>
+  );
+}
+
+/** Per-panel tile icon + description (keyed by slug). */
+const PANEL_ICON: Record<string, React.ReactNode> = { store: <CartIcon />, clinic: <MedicalIcon /> };
+const PANEL_DESC: Record<string, string> = {
+  store: "שעות פתיחה ומידע על המכולת.",
+  clinic: "שעות פעילות ומידע על המרפאה.",
+};
 
 /**
  * A portal tile. A working tile links somewhere and lifts on hover; a "בקרוב"
@@ -124,13 +149,13 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   // Fetch the independent data concurrently rather than one round trip at a time.
-  const [{ community, info, torah }, media, campaign, store] = await Promise.all([
+  const [{ community, info, torah }, media, campaign, panels] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     getActiveHomeMedia(),
     getActiveCampaign(),
-    getStoreInfo(),
+    getInfoPanels(),
   ]);
-  const storeTile = isStoreConfigured(store) ? { label: store.menu_label } : null;
+  const infoPanels = panels.filter(isPanelConfigured);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,9 +234,16 @@ export default async function HomePage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
-              {storeTile && (
-                <Tile href="/grocery" tone="accent" icon={<CartIcon />} title={storeTile.label} desc="שעות פתיחה ומידע על המכולת." />
-              )}
+              {infoPanels.map((p) => (
+                <Tile
+                  key={p.slug}
+                  href={panelHref(p.slug)}
+                  tone="accent"
+                  icon={PANEL_ICON[p.slug] ?? "📄"}
+                  title={p.menu_label}
+                  desc={PANEL_DESC[p.slug] ?? ""}
+                />
+              ))}
               {info.map((d) => (
                 <Tile
                   key={d.id}

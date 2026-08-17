@@ -9,7 +9,7 @@ import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
 import NewsletterTab from "./NewsletterTab";
-import StoreTab from "./StoreTab";
+import PanelTab from "./PanelTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
@@ -19,7 +19,8 @@ import CampaignTab from "./CampaignTab";
 import MoveTab from "./MoveTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
-import type { TorahLesson, StoreInfo } from "@/lib/types";
+import type { TorahLesson } from "@/lib/types";
+import type { InfoPanel } from "@/lib/info-panels-shared";
 import type { AdminVote } from "@/lib/votes";
 
 type Tab =
@@ -29,6 +30,7 @@ type Tab =
   | "map"
   | "community"
   | "newsletter"
+  | "clinic"
   | "store"
   | "media"
   | "halachic"
@@ -59,6 +61,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "moves", label: "מעבר דירות" },
   { key: "community", label: "קהילה" },
   { key: "newsletter", label: "פיצול ידיעון" },
+  { key: "clinic", label: "מרפאה" },
   { key: "store", label: "מכולת" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
@@ -85,7 +88,7 @@ export default function AdminTabs({
   votes,
   currentUserId,
   aiConfigured,
-  storeInfo,
+  panels,
 }: {
   residents: Resident[];
   buildings: Building[];
@@ -102,8 +105,9 @@ export default function AdminTabs({
   votes: AdminVote[];
   currentUserId: string;
   aiConfigured: boolean;
-  storeInfo: StoreInfo;
+  panels: InfoPanel[];
 }) {
+  const panelBySlug = (slug: string) => panels.find((p) => p.slug === slug);
   const [tab, setTab] = useState<Tab>("users");
 
   return (
@@ -135,7 +139,8 @@ export default function AdminTabs({
       {tab === "moves" && <MoveTab houses={moveHouses} />}
       {tab === "community" && <CommunityTab items={community} />}
       {tab === "newsletter" && <NewsletterTab aiConfigured={aiConfigured} />}
-      {tab === "store" && <StoreTab info={storeInfo} />}
+      {tab === "clinic" && panelBySlug("clinic") && <PanelTab panel={panelBySlug("clinic")!} />}
+      {tab === "store" && panelBySlug("store") && <PanelTab panel={panelBySlug("store")!} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
       {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}

@@ -3,23 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { StoreInfo } from "@/lib/types";
+import type { InfoPanel } from "@/lib/info-panels-shared";
+import { panelHref } from "@/lib/info-panels-shared";
 import { DOC_ACCEPT } from "@/lib/doc-files";
 import RichTextEditor from "@/components/RichTextEditor";
-import { updateStore } from "./store-actions";
+import { updatePanel } from "./info-actions";
 
-export default function StoreTab({ info }: { info: StoreInfo }) {
+/** Admin editor for one info panel (מכולת / מרפאה …). */
+export default function PanelTab({ panel }: { panel: InfoPanel }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"text" | "pdf">(info.mode);
+  const [mode, setMode] = useState<"text" | "pdf">(panel.mode);
 
   async function onSave(fd: FormData) {
     setError(null);
     setOk(false);
     setBusy(true);
-    const res = await updateStore(fd);
+    const res = await updatePanel(fd);
     setBusy(false);
     if ("error" in res) {
       setError(res.error);
@@ -31,6 +33,8 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
 
   return (
     <form action={onSave} className="max-w-2xl space-y-5">
+      <input type="hidden" name="slug" value={panel.slug} />
+
       {error && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">
           {error}
@@ -39,20 +43,19 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
       {ok && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">ההגדרות נשמרו.</div>}
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
-        מידע על המכולת שיוצג לתושבים תחת „מידע לתושב”. אפשר להציג טקסט חופשי (למשל שעות פתיחה) או קובץ
-        (PDF או תמונה) — בחר את מצב התצוגה. שני התכנים נשמרים, כך שאפשר לעבור ביניהם בכל עת.
+        מידע שיוצג לתושבים תחת „מידע לתושב”. אפשר להציג טקסט חופשי או קובץ (PDF או תמונה) — בחר את מצב
+        התצוגה. שני התכנים נשמרים, כך שאפשר לעבור ביניהם בכל עת. הפריט יוצג בתפריט ובדף הבית רק כשיש בו תוכן.
       </div>
 
       <div>
-        <label className="label" htmlFor="menu_label">
+        <label className="label" htmlFor={`menu_label_${panel.slug}`}>
           שם הפריט בתפריט
         </label>
         <input
-          id="menu_label"
+          id={`menu_label_${panel.slug}`}
           name="menu_label"
           className="field max-w-sm"
-          defaultValue={info.menu_label}
-          placeholder="מכולת"
+          defaultValue={panel.menu_label}
         />
       </div>
 
@@ -60,23 +63,11 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
         <span className="label">מצב תצוגה</span>
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="mode"
-              value="text"
-              checked={mode === "text"}
-              onChange={() => setMode("text")}
-            />
+            <input type="radio" name="mode" value="text" checked={mode === "text"} onChange={() => setMode("text")} />
             טקסט חופשי
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="mode"
-              value="pdf"
-              checked={mode === "pdf"}
-              onChange={() => setMode("pdf")}
-            />
+            <input type="radio" name="mode" value="pdf" checked={mode === "pdf"} onChange={() => setMode("pdf")} />
             קובץ (PDF או תמונה)
           </label>
         </div>
@@ -87,19 +78,17 @@ export default function StoreTab({ info }: { info: StoreInfo }) {
         <label className="label">
           טקסט חופשי {mode === "text" && <span className="text-red-600">*</span>}
         </label>
-        <RichTextEditor name="body" defaultValue={info.body} />
-        <p className="mt-1 text-xs text-gray-500">
-          אפשר להדגיש טקסט (מודגש / נטוי / קו תחתון). כל שורה תוצג כשורה נפרדת. לדוגמה: „זמני פתיחה — ימים א׳-ה׳ 7:00-19:00”.
-        </p>
+        <RichTextEditor name="body" defaultValue={panel.body} />
+        <p className="mt-1 text-xs text-gray-500">אפשר להדגיש טקסט (מודגש / נטוי / קו תחתון). כל שורה תוצג כשורה נפרדת.</p>
       </div>
 
-      {/* PDF */}
+      {/* File */}
       <div className={`rounded-lg border border-gray-200 bg-gray-50 p-3 ${mode === "pdf" ? "" : "opacity-50"}`}>
         <label className="label">קובץ (PDF או תמונה)</label>
-        {info.file_path ? (
+        {panel.file_path ? (
           <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-medium text-gray-700">קובץ נוכחי: {info.file_name ?? "PDF"}</span>
-            <Link href="/grocery" target="_blank" className="text-brand-600 hover:underline">
+            <span className="font-medium text-gray-700">קובץ נוכחי: {panel.file_name ?? "קובץ"}</span>
+            <Link href={panelHref(panel.slug)} target="_blank" className="text-brand-600 hover:underline">
               צפייה
             </Link>
             <label className="flex items-center gap-2 text-gray-600">

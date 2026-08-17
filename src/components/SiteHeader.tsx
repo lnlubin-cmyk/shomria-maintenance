@@ -41,7 +41,7 @@ export default function SiteHeader({
   community = [],
   infoDocs = [],
   torahDocs = [],
-  storeLabel = null,
+  infoPanels = [],
   prayerSchedules = [],
   activeVotes = [],
 }: {
@@ -49,7 +49,7 @@ export default function SiteHeader({
   community?: CommunityMenuItem[];
   infoDocs?: CommunityMenuItem[];
   torahDocs?: CommunityMenuItem[];
-  storeLabel?: string | null;
+  infoPanels?: { label: string; href: string }[];
   prayerSchedules?: { id: string; title: string }[];
   activeVotes?: { id: string; title: string }[];
 }) {
@@ -105,8 +105,8 @@ export default function SiteHeader({
       items: [
         { label: "חפש בית בישוב", href: "/map" },
         { label: "חפש מספר טלפון", href: "/phone-directory" },
-        // מכולת — shown only when the admin has configured content for it.
-        ...(storeLabel ? [{ label: storeLabel, href: "/grocery" }] : []),
+        // Info panels (מרפאה / מכולת …) — each shown only once it has content.
+        ...infoPanels,
         // Admin-managed document items assigned to the "מידע לתושב" section.
         ...infoDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],

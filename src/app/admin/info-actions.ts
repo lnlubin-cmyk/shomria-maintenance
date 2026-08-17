@@ -6,6 +6,7 @@ import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 import { sanitizeRichText } from "@/lib/rich-text";
+import { isPanelSlug } from "@/lib/info-panels";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -18,28 +19,32 @@ async function requireAdmin() {
 }
 
 /**
- * Save the מכולת settings: the menu label, the display mode (text / PDF), the
- * free text, and optionally a new/removed PDF. Both the text and the PDF are
- * kept so the admin can toggle between them without re-entering either.
+ * Save one info panel (מכולת / מרפאה …): the menu label, the display mode
+ * (text / file), the rich text, and optionally a new/removed file. Both the text
+ * and the file are kept so the admin can toggle between them without re-entering.
  */
-export async function updateStore(formData: FormData): Promise<ActionResult> {
+export async function updatePanel(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
   } catch (e) {
     return { error: (e as Error).message };
   }
 
-  const menu_label = String(formData.get("menu_label") ?? "").trim() || "מכולת";
+  const slug = String(formData.get("slug") ?? "");
+  if (!isPanelSlug(slug)) return { error: "פריט לא חוקי" };
+
   const mode = String(formData.get("mode") ?? "text");
   if (mode !== "text" && mode !== "pdf") return { error: "מצב תצוגה לא חוקי" };
   const body = sanitizeRichText(String(formData.get("body") ?? ""));
 
   const admin = createAdminClient();
   const { data: cur } = await admin
-    .from("store_info")
-    .select("file_path, file_name")
-    .eq("id", true)
+    .from("info_panels")
+    .select("menu_label, file_path, file_name")
+    .eq("slug", slug)
     .maybeSingle();
+
+  const menu_label = String(formData.get("menu_label") ?? "").trim() || cur?.menu_label || slug;
   let file_path: string | null = cur?.file_path ?? null;
   let file_name: string | null = cur?.file_name ?? null;
 
@@ -69,13 +74,13 @@ export async function updateStore(formData: FormData): Promise<ActionResult> {
   }
 
   const { error } = await admin
-    .from("store_info")
+    .from("info_panels")
     .update({ menu_label, mode, body, file_path, file_name, updated_at: new Date().toISOString() })
-    .eq("id", true);
+    .eq("slug", slug);
   if (error) return { error: "שמירת ההגדרות נכשלה" };
 
   revalidatePath("/admin");
-  revalidatePath("/grocery");
+  revalidatePath(`/info/${slug}`);
   revalidatePath("/", "layout"); // refresh the menu + home tile
   return { ok: true };
 }
