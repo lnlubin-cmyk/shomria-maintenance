@@ -6,7 +6,7 @@ import DocViewer from "@/components/DocViewer";
 import RichText from "@/components/RichText";
 
 /** Header emoji per panel. */
-const ICON: Record<string, string> = { store: "🛒", clinic: "⚕️" };
+const ICON: Record<string, string> = { store: "🛒", clinic: "🩺" };
 
 /**
  * An info panel (מכולת / מרפאה …): the admin-configured content — free (rich)

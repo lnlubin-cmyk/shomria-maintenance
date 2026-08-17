@@ -50,7 +50,7 @@ function CartIcon() {
   );
 }
 
-/** Medical-cross icon (Lucide) for the "מרפאה" tile. */
+/** Stethoscope icon (Lucide) for the "מרפאה" tile. */
 function MedicalIcon() {
   return (
     <svg
@@ -63,7 +63,9 @@ function MedicalIcon() {
       className="h-6 w-6"
       aria-hidden="true"
     >
-      <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" />
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .2.3" />
+      <path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4" />
+      <circle cx="20" cy="10" r="2" />
     </svg>
   );
 }
