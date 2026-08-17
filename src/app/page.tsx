@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
+import { getStoreInfo, isStoreConfigured } from "@/lib/store";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import { getActiveCampaign } from "@/lib/campaigns";
 import AppHeader from "@/components/AppHeader";
@@ -25,6 +26,26 @@ function ClockIcon() {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3.4 2" />
+    </svg>
+  );
+}
+
+/** Shopping-cart icon (Lucide) for the "מכולת" tile. */
+function CartIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
     </svg>
   );
 }
@@ -103,11 +124,13 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   // Fetch the independent data concurrently rather than one round trip at a time.
-  const [{ community, info }, media, campaign] = await Promise.all([
+  const [{ community, info }, media, campaign, store] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [] }),
     getActiveHomeMedia(),
     getActiveCampaign(),
+    getStoreInfo(),
   ]);
+  const storeTile = isStoreConfigured(store) ? { label: store.menu_label } : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,6 +192,9 @@ export default async function HomePage() {
               <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
+              {storeTile && (
+                <Tile href="/grocery" tone="accent" icon={<CartIcon />} title={storeTile.label} desc="שעות פתיחה ומידע על המכולת." />
+              )}
               {info.map((d) => (
                 <Tile
                   key={d.id}

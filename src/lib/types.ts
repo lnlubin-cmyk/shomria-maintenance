@@ -207,6 +207,15 @@ export interface FaultRow extends Fault {
 /** Which menu section a document item appears under. */
 export type DocSection = "community" | "info" | "torah";
 
+/** The מכולת (grocery) info record: free text or an uploaded PDF, per `mode`. */
+export interface StoreInfo {
+  menu_label: string;
+  mode: "text" | "pdf";
+  body: string;
+  file_path: string | null;
+  file_name: string | null;
+}
+
 /** An admin-managed menu entry with an attached PDF (in "קהילה" or "מידע לתושב"). */
 export interface CommunityItem {
   id: string;

@@ -9,6 +9,7 @@ import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
 import NewsletterTab from "./NewsletterTab";
+import StoreTab from "./StoreTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
@@ -18,7 +19,7 @@ import CampaignTab from "./CampaignTab";
 import MoveTab from "./MoveTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
-import type { TorahLesson } from "@/lib/types";
+import type { TorahLesson, StoreInfo } from "@/lib/types";
 import type { AdminVote } from "@/lib/votes";
 
 type Tab =
@@ -28,6 +29,7 @@ type Tab =
   | "map"
   | "community"
   | "newsletter"
+  | "store"
   | "media"
   | "halachic"
   | "prayers"
@@ -57,6 +59,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "moves", label: "מעבר דירות" },
   { key: "community", label: "קהילה" },
   { key: "newsletter", label: "פיצול ידיעון" },
+  { key: "store", label: "מכולת" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
   { key: "prayers", label: "זמני תפילות" },
@@ -82,6 +85,7 @@ export default function AdminTabs({
   votes,
   currentUserId,
   aiConfigured,
+  storeInfo,
 }: {
   residents: Resident[];
   buildings: Building[];
@@ -98,6 +102,7 @@ export default function AdminTabs({
   votes: AdminVote[];
   currentUserId: string;
   aiConfigured: boolean;
+  storeInfo: StoreInfo;
 }) {
   const [tab, setTab] = useState<Tab>("users");
 
@@ -130,6 +135,7 @@ export default function AdminTabs({
       {tab === "moves" && <MoveTab houses={moveHouses} />}
       {tab === "community" && <CommunityTab items={community} />}
       {tab === "newsletter" && <NewsletterTab aiConfigured={aiConfigured} />}
+      {tab === "store" && <StoreTab info={storeInfo} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
       {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}

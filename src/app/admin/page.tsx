@@ -11,6 +11,7 @@ import { getAllContacts } from "@/lib/contacts";
 import { getAllCampaigns } from "@/lib/campaigns";
 import { getHousesForMove } from "@/lib/houses";
 import { getAdminVotes } from "@/lib/votes";
+import { getStoreInfo } from "@/lib/store";
 import { isAIConfigured } from "@/lib/ai";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
@@ -52,7 +53,7 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const [community, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes] =
+  const [community, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes, storeInfo] =
     await Promise.all([
       getAllCommunityItems(),
       getAllHomeMedia(),
@@ -63,6 +64,7 @@ export default async function AdminPage() {
       getAllCampaigns(),
       getHousesForMove(),
       getAdminVotes(),
+      getStoreInfo(),
     ]);
 
   return (
@@ -88,6 +90,7 @@ export default async function AdminPage() {
           votes={votes}
           currentUserId={session.user.id}
           aiConfigured={isAIConfigured()}
+          storeInfo={storeInfo}
         />
       </main>
     </div>
