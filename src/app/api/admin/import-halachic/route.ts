@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
+import { canEditReligious } from "@/lib/types";
 import { parseHalachicWorkbook } from "@/lib/halachic-parse";
 
 /**
@@ -12,8 +13,8 @@ import { parseHalachicWorkbook } from "@/lib/halachic-parse";
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "לא מחובר" }, { status: 401 });
-  if (session.user.role !== "admin") {
-    return NextResponse.json({ error: "אין לך הרשאת אדמין" }, { status: 403 });
+  if (!canEditReligious(session.user.role)) {
+    return NextResponse.json({ error: "אין לך הרשאה" }, { status: 403 });
   }
 
   const formData = await request.formData();

@@ -227,6 +227,15 @@ export default async function HomePage() {
                   desc="לחצו לצפייה במסמך."
                 />
               ))}
+              {session?.user.role === "gabbai" && (
+                <Tile
+                  href="/admin"
+                  tone="accent"
+                  icon="🛠️"
+                  title="ניהול תורה ותפילה"
+                  desc="עדכון זמני תפילות, שיעורי תורה וזמנים הלכתיים."
+                />
+              )}
             </div>
           </section>
 

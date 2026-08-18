@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager";
+export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager" | "gabbai";
 export type FaultStatus = "received" | "in_treatment" | "on_hold" | "fixed" | "duplicate";
 export type TreatmentType = "electricity" | "plumbing" | "other";
 export type FaultPriority = "very_urgent" | "normal" | "can_wait";
@@ -9,6 +9,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   resident: "תושב",
   maintenance: "איש תחזוקה",
   maintenance_manager: "מנהל תחזוקה",
+  gabbai: "גבאי",
 };
 
 export const STATUS_LABELS: Record<FaultStatus, string> = {
@@ -306,6 +307,14 @@ export interface Session {
 
 export function isStaff(role: UserRole): boolean {
   return role === "maintenance" || role === "maintenance_manager" || role === "admin";
+}
+
+/**
+ * Who may edit the religious content (זמני תפילות / שיעורי תורה / זמנים הלכתיים):
+ * an admin, or a גבאי (whose access is limited to exactly these).
+ */
+export function canEditReligious(role: UserRole): boolean {
+  return role === "admin" || role === "gabbai";
 }
 
 export function canDeleteFaults(role: UserRole): boolean {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
+import { canEditReligious } from "@/lib/types";
 import { PRAYER_TITLES, type Minyan, type Prayer, type PrayerTitle } from "@/lib/prayer-times";
 
 export type ActionResult = { error: string } | { ok: true };
@@ -13,10 +14,10 @@ interface SchedulePayload {
   prayers: Prayer[];
 }
 
-async function requireAdmin() {
+async function requireReligiousEditor() {
   const session = await getSession();
   if (!session) throw new Error("לא מחובר");
-  if (session.user.role !== "admin") throw new Error("אין לך הרשאת אדמין");
+  if (!canEditReligious(session.user.role)) throw new Error("אין לך הרשאה");
 }
 
 function revalidate() {
@@ -51,7 +52,7 @@ function sanitizePrayers(prayers: unknown): Prayer[] {
 
 export async function saveSchedule(payload: SchedulePayload): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -89,7 +90,7 @@ export async function saveSchedule(payload: SchedulePayload): Promise<ActionResu
 
 export async function toggleScheduleVisible(id: string, visible: boolean): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -106,7 +107,7 @@ export async function toggleScheduleVisible(id: string, visible: boolean): Promi
 
 export async function deleteSchedule(id: string): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -121,7 +122,7 @@ export async function deleteSchedule(id: string): Promise<ActionResult> {
 /** Reorder schedules (up/down) — normalizes sort_order across all rows. */
 export async function moveSchedule(id: string, direction: "up" | "down"): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }

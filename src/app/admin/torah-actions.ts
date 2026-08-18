@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { sanitizeRichText } from "@/lib/rich-text";
+import { canEditReligious } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true };
 
-async function requireAdmin() {
+async function requireReligiousEditor() {
   const session = await getSession();
   if (!session) throw new Error("לא מחובר");
-  if (session.user.role !== "admin") throw new Error("אין לך הרשאת אדמין");
+  if (!canEditReligious(session.user.role)) throw new Error("אין לך הרשאה");
 }
 
 function revalidate() {
@@ -19,7 +20,7 @@ function revalidate() {
 
 export async function createLesson(formData: FormData): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -50,7 +51,7 @@ export async function createLesson(formData: FormData): Promise<ActionResult> {
 
 export async function updateLesson(formData: FormData): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -76,7 +77,7 @@ export async function updateLesson(formData: FormData): Promise<ActionResult> {
 
 export async function toggleLessonVisible(id: string, visible: boolean): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -90,7 +91,7 @@ export async function toggleLessonVisible(id: string, visible: boolean): Promise
 
 export async function deleteLesson(id: string): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -105,7 +106,7 @@ export async function deleteLesson(id: string): Promise<ActionResult> {
 /** Reorder (up/down) — normalizes sort_order across all lessons. */
 export async function moveLesson(id: string, direction: "up" | "down"): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireReligiousEditor();
   } catch (e) {
     return { error: (e as Error).message };
   }
