@@ -59,7 +59,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "buildings", label: "מבנים" },
   { key: "map", label: "מפה" },
   { key: "moves", label: "מעבר דירות" },
-  { key: "community", label: "קהילה" },
+  { key: "community", label: "קהילה/מידע לתושב" },
   { key: "newsletter", label: "פיצול ידיעון" },
   { key: "clinic", label: "מרפאה" },
   { key: "store", label: "מכולת" },

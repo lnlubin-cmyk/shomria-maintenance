@@ -103,18 +103,6 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
               />
             </div>
             <div>
-              <label className="label" htmlFor="first_name">
-                שם פרטי *
-              </label>
-              <input
-                id="first_name"
-                name="first_name"
-                className="field"
-                defaultValue={editing?.first_name}
-                required
-              />
-            </div>
-            <div>
               <label className="label" htmlFor="last_name">
                 שם משפחה *
               </label>
@@ -123,6 +111,18 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                 name="last_name"
                 className="field"
                 defaultValue={editing?.last_name}
+                required
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="first_name">
+                שם פרטי *
+              </label>
+              <input
+                id="first_name"
+                name="first_name"
+                className="field"
+                defaultValue={editing?.first_name}
                 required
               />
             </div>
@@ -219,8 +219,8 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
           <thead className="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
               <th className="px-3 py-3">תעודת זהות</th>
-              <th className="px-3 py-3">שם פרטי</th>
               <th className="px-3 py-3">שם משפחה</th>
+              <th className="px-3 py-3">שם פרטי</th>
               <th className="px-3 py-3">טלפון</th>
               <th className="px-3 py-3">אימייל</th>
               <th className="px-3 py-3">חבר קיבוץ</th>
@@ -241,8 +241,8 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                 <td className="px-3 py-3" dir="ltr">
                   {r.id}
                 </td>
-                <td className="px-3 py-3">{r.first_name}</td>
                 <td className="px-3 py-3">{r.last_name}</td>
+                <td className="px-3 py-3">{r.first_name}</td>
                 <td className="px-3 py-3" dir="ltr">
                   {formatIsraeliPhone(r.phone)}
                 </td>
@@ -286,7 +286,7 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
                         await run(deleteResident, fd);
                       }}
                       onSubmit={(e) => {
-                        if (!confirm(`למחוק את ${r.first_name} ${r.last_name}?`)) {
+                        if (!confirm(`למחוק את ${r.last_name} ${r.first_name}?`)) {
                           e.preventDefault();
                         }
                       }}

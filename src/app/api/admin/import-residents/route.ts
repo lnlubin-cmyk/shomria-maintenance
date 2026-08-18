@@ -12,7 +12,7 @@ interface RowError {
 /**
  * Spec screen 4: bulk resident import from Excel. Column order is fixed and read
  * positionally, not by header name:
- *   1. תעודת זהות  2. שם פרטי  3. שם משפחה  4. מספר טלפון  5. אימייל (optional)
+ *   1. תעודת זהות  2. שם משפחה  3. שם פרטי  4. מספר טלפון  5. אימייל (optional)
  *
  * Email is column 5, appended to the spec's original four. It's optional per
  * row, but a resident without one cannot be given a login account later.
@@ -88,8 +88,8 @@ export async function POST(request: Request) {
     const rowNumber = i + (dataRows === rows ? 1 : 2);
 
     const id = cell(row, 0);
-    const firstName = cell(row, 1);
-    const lastName = cell(row, 2);
+    const lastName = cell(row, 1);
+    const firstName = cell(row, 2);
     const phoneRaw = cell(row, 3);
     const emailRaw = cell(row, 4);
 
@@ -99,12 +99,12 @@ export async function POST(request: Request) {
       errors.push({ row: rowNumber, message: "תעודת זהות חסרה" });
       return;
     }
-    if (!firstName) {
-      errors.push({ row: rowNumber, message: "שם פרטי חסר" });
-      return;
-    }
     if (!lastName) {
       errors.push({ row: rowNumber, message: "שם משפחה חסר" });
+      return;
+    }
+    if (!firstName) {
+      errors.push({ row: rowNumber, message: "שם פרטי חסר" });
       return;
     }
 
