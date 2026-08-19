@@ -173,9 +173,15 @@ function LoginForm() {
         setError(data.error ?? "שגיאה. נסה שוב.");
         return;
       }
+      if (!data.eligible) {
+        setError(
+          "מספר הטלפון אינו מופיע ברשימת התושבים ואינו זכאי להרשמה. אנא הזן מספר אחר, או פנה למזכירה של משרד הקהילה לקבלת משתמש."
+        );
+        return;
+      }
       setNormalizedPhone(phone);
       setStep("verify-code");
-      setNotice("אם המספר רשום ברשימת התושבים, נשלח אליו קוד אימות ב-SMS.");
+      setNotice("נשלח קוד אימות ב-SMS למספר הטלפון.");
     } catch {
       setError("שגיאת רשת. נסה שוב.");
     } finally {

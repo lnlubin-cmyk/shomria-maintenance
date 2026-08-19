@@ -8,9 +8,10 @@ import { sendSms019 } from "@/lib/sms019";
  * Registration by SMS — step 1: send a code.
  *
  * Gated on the residents table: a code is generated and sent only if the phone
- * belongs to a resident. Deliberately returns the same response either way, so
- * an unauthenticated caller can't enumerate residents' phone numbers or burn
- * SMS credits on arbitrary numbers.
+ * belongs to a resident. The response reports `eligible` so the UI can tell the
+ * user their number isn't on the resident list (instead of leaving them waiting
+ * for an SMS that never comes). This does let a caller probe whether a given
+ * number is a resident; accepted here for usability in a small community.
  */
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
@@ -68,6 +69,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // Same response whether or not the number is a resident.
-  return NextResponse.json({ ok: true });
+  // `eligible` lets the UI show a clear "not on the resident list" message.
+  return NextResponse.json({ ok: true, eligible: !!resident });
 }
