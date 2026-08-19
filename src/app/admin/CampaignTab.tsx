@@ -23,6 +23,7 @@ export default function CampaignTab({ items }: { items: (Campaign & { previewUrl
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
+  const [frequency, setFrequency] = useState<"once" | "daily">("once");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function run(p: Promise<any>): Promise<boolean> {
@@ -60,11 +61,12 @@ export default function CampaignTab({ items }: { items: (Campaign & { previewUrl
         .from(CAMPAIGN_BUCKET)
         .uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type });
       if (upErr) return setError("העלאת התמונה נכשלה");
-      const res = await createCampaign(signed.path, file.name, title, link);
+      const res = await createCampaign(signed.path, file.name, title, link, frequency);
       if ("error" in res) return setError(res.error);
       setAdding(false);
       setTitle("");
       setLink("");
+      setFrequency("once");
       if (fileRef.current) fileRef.current.value = "";
       router.refresh();
     } catch {
@@ -81,8 +83,9 @@ export default function CampaignTab({ items }: { items: (Campaign & { previewUrl
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
-        הקמפיין הפעיל מוצג בכניסה הראשונה לאתר (פעם אחת לכל מכשיר). קמפיין אחד יכול להיות פעיל בכל רגע.
-        קישור אופציונלי מוצג כ„לפרטים הקש כאן” — קישור פנימי (מתחיל ב-/) נפתח למשתמשים רשומים בלבד.
+        הקמפיין הפעיל מוצג בכניסה לאתר — פעם אחת לכל מכשיר, או פעם ביום לכל מכשיר, לפי „תדירות הצגה”.
+        קמפיין אחד יכול להיות פעיל בכל רגע. קישור אופציונלי מוצג כ„לפרטים הקש כאן” — קישור פנימי (מתחיל ב-/)
+        נפתח למשתמשים רשומים בלבד.
       </div>
 
       <div className="flex items-center justify-between">
@@ -103,6 +106,13 @@ export default function CampaignTab({ items }: { items: (Campaign & { previewUrl
             <label className="label">קישור לפרטים (אופציונלי)</label>
             <input className="field" dir="ltr" value={link} onChange={(e) => setLink(e.target.value)} placeholder="/votes/…  או  https://example.com" />
             <p className="mt-1 text-xs text-gray-500">קישור פנימי מתחיל ב-/ (נפתח למשתמשים רשומים). קישור חיצוני — כתובת מלאה.</p>
+          </div>
+          <div>
+            <label className="label">תדירות הצגה</label>
+            <select className="field max-w-xs" value={frequency} onChange={(e) => setFrequency(e.target.value as "once" | "daily")}>
+              <option value="once">פעם אחת לכל מכשיר</option>
+              <option value="daily">פעם ביום לכל מכשיר</option>
+            </select>
           </div>
           <div>
             <label className="label">תמונת הקמפיין *</label>
@@ -151,6 +161,13 @@ export default function CampaignTab({ items }: { items: (Campaign & { previewUrl
                   <div>
                     <label className="label">קישור</label>
                     <input name="link_url" className="field" dir="ltr" defaultValue={c.link_url ?? ""} placeholder="/…  או  https://…" />
+                  </div>
+                  <div>
+                    <label className="label">תדירות הצגה</label>
+                    <select name="frequency" className="field" defaultValue={c.frequency}>
+                      <option value="once">פעם אחת לכל מכשיר</option>
+                      <option value="daily">פעם ביום לכל מכשיר</option>
+                    </select>
                   </div>
                   <div className="sm:col-span-2">
                     <button className="btn-secondary" disabled={busy}>שמירת פרטים</button>

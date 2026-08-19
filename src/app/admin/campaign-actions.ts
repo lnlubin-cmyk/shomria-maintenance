@@ -52,7 +52,8 @@ export async function createCampaign(
   path: string,
   fileName: string,
   title: string,
-  linkUrl: string
+  linkUrl: string,
+  frequency: string
 ): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -67,6 +68,7 @@ export async function createCampaign(
     file_path: path,
     file_name: fileName,
     link_url: normalizeLink(linkUrl),
+    frequency: frequency === "daily" ? "daily" : "once",
     is_active: false,
   });
   if (error) {
@@ -77,7 +79,7 @@ export async function createCampaign(
   return { ok: true };
 }
 
-/** Update a campaign's title and link. */
+/** Update a campaign's title, link and display frequency. */
 export async function updateCampaign(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -88,9 +90,13 @@ export async function updateCampaign(formData: FormData): Promise<ActionResult> 
   if (!id) return { error: "קמפיין חסר" };
   const title = String(formData.get("title") ?? "").trim();
   const linkUrl = normalizeLink(String(formData.get("link_url") ?? ""));
+  const frequency = String(formData.get("frequency") ?? "") === "daily" ? "daily" : "once";
 
   const admin = createAdminClient();
-  const { error } = await admin.from("campaigns").update({ title, link_url: linkUrl }).eq("id", id);
+  const { error } = await admin
+    .from("campaigns")
+    .update({ title, link_url: linkUrl, frequency })
+    .eq("id", id);
   if (error) return { error: "עדכון הקמפיין נכשל" };
   revalidate();
   return { ok: true };

@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import type { ActiveCampaign } from "@/lib/types";
 
 /**
- * Shows the active campaign poster once, on first entry to the home page.
- * "Seen" is remembered per device (localStorage), keyed by the campaign id — so
- * a new campaign shows again once. Optional "לפרטים הקש כאן" link: internal
- * paths ("/…") route logged-out users through login first; external links open
- * in a new tab.
+ * Shows the active campaign poster on entry to the home page. How often it
+ * re-shows is remembered per device (localStorage), keyed by the campaign id:
+ *  - "once"  → shown a single time (until a new campaign replaces it);
+ *  - "daily" → shown again once each new day.
+ * Optional "לפרטים הקש כאן" link: internal paths ("/…") route logged-out users
+ * through login first; external links open in a new tab.
  */
+
+/** Today's date as a local YYYY-M-D string, used as the per-day "seen" marker. */
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
 export default function CampaignModal({
   campaign,
   loggedIn,
@@ -19,18 +27,20 @@ export default function CampaignModal({
 }) {
   const [open, setOpen] = useState(false);
   const key = `campaign-seen-${campaign.id}`;
+  // "once" stores "1"; "daily" stores today's date and re-shows on a new day.
+  const marker = campaign.frequency === "daily" ? todayKey() : "1";
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(key)) setOpen(true);
+      if (localStorage.getItem(key) !== marker) setOpen(true);
     } catch {
       setOpen(true); // storage blocked — still show it
     }
-  }, [key]);
+  }, [key, marker]);
 
   function dismiss() {
     try {
-      localStorage.setItem(key, "1");
+      localStorage.setItem(key, marker);
     } catch {
       /* ignore */
     }

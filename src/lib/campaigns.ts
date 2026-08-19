@@ -12,7 +12,7 @@ export async function getActiveCampaign(): Promise<ActiveCampaign | null> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("campaigns")
-    .select("id, title, file_path, link_url")
+    .select("id, title, file_path, link_url, frequency")
     .eq("is_active", true)
     .not("file_path", "is", null)
     .order("created_at", { ascending: false })
@@ -25,6 +25,7 @@ export async function getActiveCampaign(): Promise<ActiveCampaign | null> {
     title: data.title ?? "",
     imageUrl: publicUrl(admin, data.file_path),
     linkUrl: data.link_url ?? null,
+    frequency: data.frequency === "daily" ? "daily" : "once",
   };
 }
 

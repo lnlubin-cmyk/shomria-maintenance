@@ -272,6 +272,7 @@ export interface Campaign {
   file_path: string | null;
   file_name: string | null;
   link_url: string | null; // "/path" (internal, login-gated) or "https://…" (external)
+  frequency: "once" | "daily"; // per device: show once, or once per day
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -284,6 +285,7 @@ export interface ActiveCampaign {
   title: string;
   imageUrl: string;
   linkUrl: string | null;
+  frequency: "once" | "daily";
 }
 
 /** צור קשר — a kibbutz unit (e.g. משרד) with an optional email/phone. */
