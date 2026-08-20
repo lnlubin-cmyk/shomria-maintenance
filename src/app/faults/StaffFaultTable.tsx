@@ -33,7 +33,6 @@ const EMPTY_FILTERS = {
   building: "",
   building_plot: "",
   description: "",
-  status: "",
   priority: "",
   assignee: "",
   treatment_description: "",
@@ -58,6 +57,14 @@ export default function StaffFaultTable({
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Multi-status filter: check the statuses to show. Empty = show all statuses.
+  const [statusFilter, setStatusFilter] = useState<Set<FaultStatus>>(new Set());
+  const toggleStatus = (s: FaultStatus) =>
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      next.has(s) ? next.delete(s) : next.add(s);
+      return next;
+    });
   // Spec asks for descending by date; the header toggles to ascending.
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -81,7 +88,7 @@ export default function StaffFaultTable({
         has(f.building ? buildingLabel(f.building) : "", filters.building) &&
         has(f.building_plot_number, filters.building_plot) &&
         has(f.fault_description, filters.description) &&
-        (!filters.status || f.status === filters.status) &&
+        (statusFilter.size === 0 || statusFilter.has(f.status)) &&
         (!filters.priority || f.priority === filters.priority) &&
         has(staffName(f.assignee), filters.assignee) &&
         has(f.treatment_description, filters.treatment_description) &&
@@ -94,10 +101,10 @@ export default function StaffFaultTable({
       const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       return sortDir === "asc" ? diff : -diff;
     });
-  }, [faults, filters, sortDir]);
+  }, [faults, filters, statusFilter, sortDir]);
 
   // Reset to the first page when the filtered set or page size changes.
-  useEffect(() => setPage(0), [filters, sortDir, pageSize]);
+  useEffect(() => setPage(0), [filters, statusFilter, sortDir, pageSize]);
 
   const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, totalPages - 1);
@@ -233,7 +240,7 @@ export default function StaffFaultTable({
     XLSX.writeFile(wb, `תקלות-${date}.xlsx`);
   }
 
-  const filtersActive = Object.values(filters).some(Boolean);
+  const filtersActive = Object.values(filters).some(Boolean) || statusFilter.size > 0;
 
   return (
     <div className="space-y-4">
@@ -271,7 +278,13 @@ export default function StaffFaultTable({
         )}
 
         {filtersActive && (
-          <button className="btn-secondary" onClick={() => setFilters(EMPTY_FILTERS)}>
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setFilters(EMPTY_FILTERS);
+              setStatusFilter(new Set());
+            }}
+          >
             ניקוי סינון
           </button>
         )}
@@ -286,6 +299,27 @@ export default function StaffFaultTable({
             הוסף מידע שימושי על בית
           </button>
         </div>
+      </div>
+
+      {/* Multi-status filter — check the statuses to show (none = all). */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-white p-3">
+        <span className="text-sm font-medium text-gray-700">סינון לפי סטטוס:</span>
+        {STATUS_ORDER.map((s) => (
+          <label key={s} className="flex items-center gap-1.5 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={statusFilter.has(s)}
+              onChange={() => toggleStatus(s)}
+            />
+            {STATUS_LABELS[s]}
+          </label>
+        ))}
+        {statusFilter.size > 0 && (
+          <button className="text-sm text-brand-600 hover:underline" onClick={() => setStatusFilter(new Set())}>
+            נקה
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -360,20 +394,8 @@ export default function StaffFaultTable({
                   onChange={(v) => setFilters({ ...filters, description: v })}
                 />
               </th>
-              <th className="px-2 pb-2">
-                <select
-                  className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-normal"
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                >
-                  <option value="">הכל</option>
-                  {STATUS_ORDER.map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-              </th>
+              {/* Status filters live in the checkbox bar above the table. */}
+              <th className="px-2 pb-2" />
               <th className="px-2 pb-2">
                 <select
                   className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-normal"
