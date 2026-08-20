@@ -367,14 +367,52 @@ export async function deleteBuildingFact(id: string, plotNumber: string): Promis
   return { ok: true };
 }
 
-/** Fetch a house's facts (for the add-info dialog). Staff only. */
+/** Fetch a house's facts + its current water-heater type. Staff only. */
 export async function fetchBuildingFacts(
   plotNumber: string
-): Promise<{ facts: BuildingFact[] } | { error: string }> {
+): Promise<{ facts: BuildingFact[]; waterHeater: string | null } | { error: string }> {
   const session = await getSession();
   if (!session) return { error: "לא מחובר" };
   if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
-  return { facts: await getBuildingFacts(plotNumber) };
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("buildings")
+    .select("water_heater_type")
+    .eq("plot_number", plotNumber)
+    .maybeSingle();
+  return { facts: await getBuildingFacts(plotNumber), waterHeater: data?.water_heater_type ?? null };
+}
+
+/**
+ * Update just a house's water-heater type (סוג הדוד) — the only building field
+ * maintenance staff may edit. Everything else about a building stays admin-only.
+ */
+export async function updateWaterHeaterType(plotNumber: string, value: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { error: "לא מחובר" };
+  if (!isStaff(session.user.role)) return { error: "אין לך הרשאה" };
+
+  const plot = String(plotNumber ?? "").trim();
+  if (!plot) return { error: "יש לבחור בית" };
+  const v = String(value ?? "").trim();
+
+  const admin = createAdminClient();
+  const { data: building } = await admin
+    .from("buildings")
+    .select("plot_number")
+    .eq("plot_number", plot)
+    .maybeSingle();
+  if (!building) return { error: "מספר הבית אינו קיים" };
+
+  const { error } = await admin
+    .from("buildings")
+    .update({ water_heater_type: v || null })
+    .eq("plot_number", plot);
+  if (error) return { error: "שמירת סוג הדוד נכשלה" };
+
+  revalidatePath("/faults");
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { addBuildingFact, deleteBuildingFact, fetchBuildingFacts } from "./actions";
+import { addBuildingFact, deleteBuildingFact, fetchBuildingFacts, updateWaterHeaterType } from "./actions";
 import type { BuildingFact } from "@/lib/types";
 
 export interface HouseOption {
@@ -27,6 +27,8 @@ export default function HouseInfoDialog({
   const [facts, setFacts] = useState<BuildingFact[]>([]);
   const [factKey, setFactKey] = useState("");
   const [factValue, setFactValue] = useState("");
+  const [waterHeater, setWaterHeater] = useState("");
+  const [whSaved, setWhSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -50,13 +52,26 @@ export default function HouseInfoDialog({
   }, [buildings, query]);
 
   async function loadFacts(plot: string) {
+    setWhSaved(false);
     const res = await fetchBuildingFacts(plot);
     if ("error" in res) {
       setError(res.error);
       setFacts([]);
+      setWaterHeater("");
     } else {
       setFacts(res.facts);
+      setWaterHeater(res.waterHeater ?? "");
     }
+  }
+
+  async function saveWaterHeater() {
+    if (!selected) return;
+    setError(null);
+    setBusy(true);
+    const res = await updateWaterHeaterType(selected.plot_number, waterHeater);
+    if ("error" in res) setError(res.error);
+    else setWhSaved(true);
+    setBusy(false);
   }
 
   async function choose(b: HouseOption) {
@@ -152,7 +167,27 @@ export default function HouseInfoDialog({
         </div>
 
         {selected && (
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-4">
+            {/* סוג הדוד — the one building field maintenance staff may edit. */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <label className="label">סוג הדוד</label>
+              <div className="flex items-end gap-2">
+                <input
+                  className="field flex-1"
+                  placeholder="לדוגמה: דוד שמש"
+                  value={waterHeater}
+                  onChange={(e) => {
+                    setWaterHeater(e.target.value);
+                    setWhSaved(false);
+                  }}
+                />
+                <button className="btn-secondary" disabled={busy} onClick={saveWaterHeater}>
+                  שמירה
+                </button>
+              </div>
+              {whSaved && <p className="mt-1 text-xs text-emerald-700">סוג הדוד נשמר.</p>}
+            </div>
+
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
               {facts.length === 0 && (
                 <li className="px-3 py-2.5 text-sm text-gray-500">לא נשמר מידע על הבית.</li>
