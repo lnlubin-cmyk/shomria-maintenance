@@ -1,6 +1,13 @@
 export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager" | "gabbai";
 export type FaultStatus = "received" | "in_treatment" | "on_hold" | "fixed" | "duplicate";
-export type TreatmentType = "electricity" | "plumbing" | "other";
+export type TreatmentType =
+  | "electricity"
+  | "plumbing"
+  | "doors"
+  | "windows_shutters"
+  | "carpentry"
+  | "water_heater"
+  | "other";
 export type FaultPriority = "very_urgent" | "normal" | "can_wait";
 
 /** Hebrew labels — the single source of truth for how each enum renders. */
@@ -32,6 +39,10 @@ export const STATUS_SHORT_LABELS: Record<FaultStatus, string> = {
 export const TREATMENT_TYPE_LABELS: Record<TreatmentType, string> = {
   electricity: "חשמל",
   plumbing: "אינסטלציה",
+  doors: "דלתות",
+  windows_shutters: "חלונות ותריסים",
+  carpentry: "נגרות",
+  water_heater: "תיקון דוד",
   other: "אחר",
 };
 
@@ -53,7 +64,15 @@ export const STATUS_ORDER: FaultStatus[] = [
 // The linear progression shown in the resident status tracker. "בהמתנה" and
 // "כפול" are non-linear outcomes and are shown separately, not as steps.
 export const STATUS_STEPPER: FaultStatus[] = ["received", "in_treatment", "fixed"];
-export const TREATMENT_TYPE_ORDER: TreatmentType[] = ["electricity", "plumbing", "other"];
+export const TREATMENT_TYPE_ORDER: TreatmentType[] = [
+  "electricity",
+  "plumbing",
+  "doors",
+  "windows_shutters",
+  "carpentry",
+  "water_heater",
+  "other",
+];
 // Most urgent first.
 export const PRIORITY_ORDER: FaultPriority[] = ["very_urgent", "normal", "can_wait"];
 
