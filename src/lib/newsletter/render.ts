@@ -11,7 +11,9 @@ import * as mupdf from "mupdf";
  * construction.
  */
 
-const PREVIEW_DPI = 110; // for the review images shown in the admin UI
+const PREVIEW_DPI = 130; // review images (admin UI) + what the AI sees — near the
+// vision models' usable image size, so small blocks (e.g. the events calendar)
+// stay legible.
 const CROP_DPI = 150; // for the final published crops
 
 /** A rectangle in page points (top-left origin, y increasing downward). */
