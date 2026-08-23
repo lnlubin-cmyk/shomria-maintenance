@@ -75,7 +75,9 @@ export async function getFaultAdvice(input: {
 
   // Build the technical context (no personal details).
   const lines: string[] = ["היסטוריית תיקונים בבית (ללא פרטים אישיים):"];
-  const rows = (history ?? []) as HistoryRow[];
+  // Exclude the current call — it's presented separately below, so listing it in
+  // the history too would duplicate it in the prompt.
+  const rows = ((history ?? []) as HistoryRow[]).filter((h) => h.fault_number !== fault.fault_number);
   if (rows.length === 0) {
     lines.push("- (אין תקלות קודמות מתועדות)");
   } else {

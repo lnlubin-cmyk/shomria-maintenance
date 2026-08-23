@@ -50,6 +50,12 @@ const SSO_ERRORS: Record<string, string> = {
 
 const MIN_PASSWORD = 8;
 
+/** Only allow same-origin relative redirects (blocks //evil.com and /\evil.com). */
+function safeNext(raw: string | null): string {
+  const n = raw ?? "/";
+  return /^\/(?![/\\])/.test(n) ? n : "/";
+}
+
 /** A forced מאשר / לא מאשר choice for one consent statement. */
 function ConsentChoice({
   statement,
@@ -80,7 +86,7 @@ function ConsentChoice({
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/";
+  const next = safeNext(params.get("next"));
 
   const [step, setStep] = useState<Step>("login");
   const [email, setEmail] = useState(""); // login identifier: email or phone

@@ -22,7 +22,10 @@ function revalidate() {
 function normalizeLink(raw: string): string | null {
   const s = (raw ?? "").trim();
   if (!s) return null;
-  if (s.startsWith("/")) return s; // internal path
+  // A same-origin internal path — but reject "//host" / "/\host" which browsers
+  // treat as protocol-relative and would navigate off-site.
+  if (/^\/(?![/\\])/.test(s)) return s;
+  if (s.startsWith("/")) return null; // "//…" or "/\…" — not a valid internal link
   if (/^https?:\/\//i.test(s)) return s; // external URL
   return `https://${s}`; // bare domain → external
 }

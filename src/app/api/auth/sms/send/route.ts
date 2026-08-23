@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { normalizeIsraeliPhone } from "@/lib/phone";
 import { sendSms019 } from "@/lib/sms019";
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       existing && Date.now() - new Date(existing.created_at).getTime() < RESEND_COOLDOWN_MS;
 
     if (!recentlySent) {
-      const code = String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+      const code = String(randomInt(100000, 1000000)); // 6 digits, CSPRNG
       await admin.from("sms_otps").upsert(
         {
           phone: normalized,

@@ -54,7 +54,7 @@ function sanitizePrayers(prayers: unknown): Prayer[] {
                 : {}),
             } as Minyan;
           })
-          .filter((m) => m.name !== "" || m.time !== "" || m.mode === "relative") // drop fully-empty rows
+          .filter((m) => m.name !== "" || m.time !== "") // drop unnamed/empty rows (incl. relative)
       : [];
     return { title, custom_title: String(pr.custom_title ?? "").trim(), minyanim };
   });

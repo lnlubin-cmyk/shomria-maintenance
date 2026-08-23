@@ -94,7 +94,8 @@ export async function suggestSections(pages: { index: number; jpeg: Uint8Array }
   try {
     const obj = await askAIObject({ system: SYSTEM, messages, schema, maxTokens: 3000 });
     const out: SectionSuggestion[] = obj.sections
-      .filter((s) => s.x1 > s.x0 && s.y1 > s.y0 && s.title.trim() !== "")
+      // Clamp BEFORE filtering, so out-of-range boxes that collapse to zero width
+      // are dropped rather than reaching the review UI as invisible rectangles.
       .map((s) => ({
         page: s.page,
         x0: clamp(s.x0),
@@ -103,20 +104,16 @@ export async function suggestSections(pages: { index: number; jpeg: Uint8Array }
         y1: clamp(s.y1),
         title: s.title.trim(),
         section: s.section,
-      }));
+      }))
+      .filter((s) => s.x1 > s.x0 && s.y1 > s.y0 && s.title !== "");
 
     // The events calendar comes back in its own field; add it as a קהילה section.
     const e = obj.eventsCalendar;
-    if (e && e.x1 > e.x0 && e.y1 > e.y0) {
-      out.push({
-        page: e.page,
-        x0: clamp(e.x0),
-        y0: clamp(e.y0),
-        x1: clamp(e.x1),
-        y1: clamp(e.y1),
-        title: "לוח אירועים",
-        section: "community",
-      });
+    if (e) {
+      const box = { x0: clamp(e.x0), y0: clamp(e.y0), x1: clamp(e.x1), y1: clamp(e.y1) };
+      if (box.x1 > box.x0 && box.y1 > box.y0) {
+        out.push({ page: e.page, ...box, title: "לוח אירועים", section: "community" });
+      }
     }
     return out;
   } catch {

@@ -77,9 +77,8 @@ export async function analyzeNewsletter(formData: FormData): Promise<{ error: st
     return { error: "עיבוד קובץ הידיעון נכשל (ודא שזהו PDF תקין)" };
   }
 
-  // Previews are returned inline as data URLs. They're only needed during the
-  // review session, and the 'community' bucket permits application/pdf only —
-  // so there's nothing to store (or clean up) for them.
+  // Previews are returned inline as data URLs — they're only needed during the
+  // review session, so there's nothing to store (or clean up) for them.
   const analyzed: AnalyzedPage[] = pages.map((p) => ({
     index: p.index,
     url: `data:image/jpeg;base64,${Buffer.from(p.jpeg).toString("base64")}`,
@@ -113,10 +112,11 @@ export interface PublishInput {
 }
 
 /**
- * Step 2 — crop each approved section from the stored PDF, wrap it as a
- * single-page PDF, and add it as a (visible) community document in the chosen
- * menu section. Optionally also publish the whole newsletter as one document.
- * The temp work dir is removed afterwards.
+ * Step 2 — crop each approved section from the stored PDF (as a PNG image, or a
+ * vector PDF when the admin chose that format so links stay clickable) and
+ * publish it: a community document in the chosen menu section, or the מרפאה
+ * panel file for the "clinic" target. Optionally also publish the whole
+ * newsletter as one document. The temp work dir is removed afterwards.
  */
 export async function publishNewsletter(input: PublishInput): Promise<{ error: string } | { ok: true; count: number }> {
   try {

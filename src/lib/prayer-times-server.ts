@@ -25,8 +25,9 @@ function findBaseTime(times: HalachicTimeEntry[], base: RelBase): string | null 
       find((l) => l.includes("שקיעה") && l.includes("גובה")) ??
       find((l) => l.includes("שקיעה") && !l.includes("לחומרא") && !l.includes("במישור"))
     );
-  // tzeit at 4.9°, with a bare צה"כ fallback for layouts that lack the degrees.
-  return find((l) => l.includes("צה") && (l.includes("4.9") || l.includes("מעלו"))) ?? find((l) => l.includes("צה"));
+  // tzeit at 4.9° specifically, with a bare צה"כ fallback for layouts (תשרי–שבט)
+  // that have only a single, non-degree tzeit column.
+  return find((l) => l.includes("צה") && l.includes("4.9")) ?? find((l) => l.includes("צה") && !l.includes("מעל"));
 }
 
 /**
