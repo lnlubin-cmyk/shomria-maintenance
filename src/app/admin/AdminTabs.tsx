@@ -34,8 +34,7 @@ type Tab =
   | "store"
   | "media"
   | "halachic"
-  | "prayers"
-  | "torah"
+  | "religion"
   | "contacts"
   | "campaigns"
   | "moves"
@@ -65,8 +64,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "store", label: "מכולת" },
   { key: "media", label: "מדיה בדף הבית" },
   { key: "halachic", label: "זמנים הלכתיים" },
-  { key: "prayers", label: "זמני תפילות" },
-  { key: "torah", label: "שיעורי תורה" },
+  { key: "religion", label: "תורה ותפילה" },
   { key: "contacts", label: "צור קשר" },
   { key: "campaigns", label: "קמפיין" },
   { key: "votes", label: "הצבעות" },
@@ -109,6 +107,8 @@ export default function AdminTabs({
 }) {
   const panelBySlug = (slug: string) => panels.find((p) => p.slug === slug);
   const [tab, setTab] = useState<Tab>("users");
+  // Sub-tab inside the "תורה ותפילה" group.
+  const [religionSub, setReligionSub] = useState<"prayers" | "torah">("prayers");
 
   return (
     <div>
@@ -117,7 +117,7 @@ export default function AdminTabs({
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-bold transition ${
               tab === t.key
                 ? "border-brand-500 text-brand-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"
@@ -143,8 +143,30 @@ export default function AdminTabs({
       {tab === "store" && panelBySlug("store") && <PanelTab panel={panelBySlug("store")!} />}
       {tab === "media" && <HomeMediaTab items={homeMedia} />}
       {tab === "halachic" && <HalachicTab years={halachicYears} />}
-      {tab === "prayers" && <PrayerTimesTab schedules={schedules} />}
-      {tab === "torah" && <TorahLessonsTab lessons={lessons} />}
+      {tab === "religion" && (
+        <div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {([
+              { k: "prayers", label: "זמני תפילות" },
+              { k: "torah", label: "שיעורי תורה" },
+            ] as const).map((s) => (
+              <button
+                key={s.k}
+                onClick={() => setReligionSub(s.k)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+                  religionSub === s.k
+                    ? "bg-brand-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {religionSub === "prayers" && <PrayerTimesTab schedules={schedules} />}
+          {religionSub === "torah" && <TorahLessonsTab lessons={lessons} />}
+        </div>
+      )}
       {tab === "contacts" && <ContactsTab contacts={contacts} />}
       {tab === "campaigns" && <CampaignTab items={campaigns} />}
       {tab === "votes" && <VotesTab votes={votes} residents={residents} />}
