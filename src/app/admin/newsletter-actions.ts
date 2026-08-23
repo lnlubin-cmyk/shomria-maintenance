@@ -6,7 +6,7 @@ import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { isAIConfigured } from "@/lib/ai";
 import { renderNewsletter, cropSection } from "@/lib/newsletter/render";
-import { imageToPdf } from "@/lib/newsletter/wrap-pdf";
+import { cropSectionToPdf } from "@/lib/newsletter/crop-pdf";
 import { suggestSections, type SectionSuggestion } from "@/lib/newsletter/ai";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // matches the 'community' bucket size limit
@@ -143,18 +143,28 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
   for (const s of wanted) {
     if (!TARGETS.includes(s.section)) continue;
     if (!(s.x1 > s.x0 && s.y1 > s.y0)) continue;
-    let filePng: Uint8Array;
+
+    // Save the snapshot as the admin chose:
+    //  - PDF: a VECTOR crop of the original page — links stay clickable and text
+    //    selectable (the region's real content + link annotations are kept).
+    //  - PNG: a rasterized image of the region (no links).
+    const box = { x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 };
+    let bytes: Buffer;
+    let ext: string;
+    let contentType: string;
     try {
-      filePng = cropSection(pdf, s.page, { x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 });
+      if (s.format === "pdf") {
+        bytes = Buffer.from(await cropSectionToPdf(pdf, s.page, box));
+        ext = "pdf";
+        contentType = "application/pdf";
+      } else {
+        bytes = Buffer.from(cropSection(pdf, s.page, box));
+        ext = "png";
+        contentType = "image/png";
+      }
     } catch {
       continue; // skip a bad crop rather than fail the whole batch
     }
-
-    // Save the snapshot as the admin chose: a raw PNG image or a single-page PDF.
-    const asPdf = s.format === "pdf";
-    const bytes = asPdf ? Buffer.from(await imageToPdf(filePng)) : Buffer.from(filePng);
-    const ext = asPdf ? "pdf" : "png";
-    const contentType = asPdf ? "application/pdf" : "image/png";
     const path = `${randomUUID()}.${ext}`;
 
     // "מרפאה" → update the clinic info-panel's file (rather than creating a doc).

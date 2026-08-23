@@ -103,6 +103,12 @@ function detectContentBoxPx(pix: mupdf.Pixmap): ContentBox {
   return { left, top, right, bottom };
 }
 
+/** The frame-free content box of a page, in page points (top-left origin). */
+export function getPageContent(pdf: Uint8Array, pageIndex: number): ContentBox {
+  const doc = mupdf.Document.openDocument(pdf, "application/pdf");
+  return pageContentBox(doc.loadPage(pageIndex));
+}
+
 /** Compute the frame-free content box of one page, in page points. */
 function pageContentBox(page: mupdf.Page): ContentBox {
   const scale = PREVIEW_DPI / 72;
