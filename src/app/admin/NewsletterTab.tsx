@@ -10,11 +10,18 @@ import {
 } from "./newsletter-actions";
 
 type SectionKey = "community" | "info" | "torah";
+// A per-section target may also be "clinic" (updates the מרפאה panel file).
+type TargetKey = SectionKey | "clinic";
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   community: "קהילה",
   info: "מידע לתושב",
   torah: "תורה ותפילה",
+};
+
+const TARGET_LABELS: Record<TargetKey, string> = {
+  ...SECTION_LABELS,
+  clinic: "מרפאה (עדכון הפאנל)",
 };
 
 // A crop box the admin is reviewing. Coords are 0..1 within the page preview.
@@ -26,7 +33,7 @@ interface Sec {
   x1: number;
   y1: number;
   title: string;
-  section: SectionKey;
+  section: TargetKey;
   include: boolean;
 }
 
@@ -439,13 +446,13 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
                           <div className="mt-2 flex items-center gap-2">
                             <label className="text-xs text-gray-600">מדור:</label>
                             <select
-                              className="field max-w-[10rem] py-1 text-sm"
+                              className="field max-w-[11rem] py-1 text-sm"
                               value={s.section}
-                              onChange={(e) => updateSec(s.id, { section: e.target.value as SectionKey })}
+                              onChange={(e) => updateSec(s.id, { section: e.target.value as TargetKey })}
                             >
-                              {(Object.keys(SECTION_LABELS) as SectionKey[]).map((k) => (
+                              {(Object.keys(TARGET_LABELS) as TargetKey[]).map((k) => (
                                 <option key={k} value={k}>
-                                  {SECTION_LABELS[k]}
+                                  {TARGET_LABELS[k]}
                                 </option>
                               ))}
                             </select>

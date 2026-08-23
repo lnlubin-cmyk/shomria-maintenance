@@ -13,6 +13,10 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024; // matches the 'community' bucket size 
 const WORK_PREFIX = "newsletter-work"; // temp working files, cleaned up on publish
 const SECTIONS = ["community", "info", "torah"] as const;
 type SectionKey = (typeof SECTIONS)[number];
+// A per-section target may also be "clinic": it updates the מרפאה info-panel's
+// file instead of creating a community document.
+const TARGETS = ["community", "info", "torah", "clinic"] as const;
+type TargetKey = (typeof TARGETS)[number];
 
 async function requireAdmin() {
   const session = await getSession();
@@ -96,7 +100,7 @@ export interface PublishSection {
   x1: number;
   y1: number;
   title: string;
-  section: SectionKey;
+  section: TargetKey;
 }
 
 export interface PublishInput {
@@ -134,8 +138,9 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
   const pdf = new Uint8Array(await blob.arrayBuffer());
 
   let count = 0;
+  let clinicUpdated = false;
   for (const s of wanted) {
-    if (!SECTIONS.includes(s.section)) continue;
+    if (!TARGETS.includes(s.section)) continue;
     if (!(s.x1 > s.x0 && s.y1 > s.y0)) continue;
     let filePng: Uint8Array;
     try {
@@ -143,6 +148,39 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
     } catch {
       continue; // skip a bad crop rather than fail the whole batch
     }
+
+    // "מרפאה" → update the clinic info-panel's file with the cropped image
+    // (rather than creating a community document).
+    if (s.section === "clinic") {
+      const path = `${randomUUID()}.png`;
+      const up = await admin.storage
+        .from(COMMUNITY_BUCKET)
+        .upload(path, Buffer.from(filePng), { contentType: "image/png", upsert: false });
+      if (up.error) continue;
+      const { data: cur } = await admin
+        .from("info_panels")
+        .select("file_path")
+        .eq("slug", "clinic")
+        .maybeSingle();
+      const { error } = await admin
+        .from("info_panels")
+        .update({
+          mode: "pdf", // "file" mode
+          file_path: path,
+          file_name: `${s.title.trim() || "מרפאה"}.png`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("slug", "clinic");
+      if (error) {
+        await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+        continue;
+      }
+      if (cur?.file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([cur.file_path]);
+      clinicUpdated = true;
+      count++;
+      continue;
+    }
+
     const pdfBytes = await imageToPdf(filePng);
     const path = `${randomUUID()}.pdf`;
     const up = await admin.storage
@@ -186,6 +224,7 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
 
   revalidatePath("/admin");
   revalidatePath("/", "layout");
+  if (clinicUpdated) revalidatePath("/info/clinic");
 
   if (count === 0) return { error: "לא פורסם אף מקטע" };
   return { ok: true, count };
