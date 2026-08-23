@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 
-export type MoveMode = "existing" | "new" | "left";
-export type MoveRow = { source: string; mode: MoveMode; target: string | null };
+export type MoveMode = "existing" | "new" | "left" | "arrive";
+export type MoveRow = { source: string; mode: MoveMode; target: string | null; newName?: string | null };
 export type ActionResult = { error: string } | { ok: true };
 
 async function requireAdmin() {
@@ -40,7 +40,7 @@ export async function applyMoves(rows: MoveRow[]): Promise<ActionResult> {
     return { error: (e as Error).message };
   }
 
-  const clean = (rows ?? []).filter((r) => r?.source);
+  const clean = (rows ?? []).filter((r) => r && (r.source || r.mode === "arrive"));
   if (clean.length === 0) return { error: "לא הוגדרו מעברים" };
 
   const admin = createAdminClient();
@@ -49,10 +49,13 @@ export async function applyMoves(rows: MoveRow[]): Promise<ActionResult> {
     .select("plot_number, building_name, street_name, layer_id, resident_1, resident_2, resident_3, resident_4");
   const byPlot = new Map<string, B>((all ?? []).map((b: B) => [String(b.plot_number), b]));
 
-  // ---- validate ----
-  const sources = clean.map((r) => r.source);
+  const sourceRows = clean.filter((r) => r.mode !== "arrive");
+  const arriveRows = clean.filter((r) => r.mode === "arrive");
+
+  // ---- validate source rows ----
+  const sources = sourceRows.map((r) => r.source);
   if (new Set(sources).size !== sources.length) return { error: "אותו בית מקור מופיע ביותר משורה אחת" };
-  for (const r of clean) {
+  for (const r of sourceRows) {
     if (!byPlot.has(r.source)) return { error: "בית מקור לא נמצא" };
     if (r.mode === "existing") {
       if (!r.target) return { error: "יש לבחור בית יעד" };
@@ -60,13 +63,21 @@ export async function applyMoves(rows: MoveRow[]): Promise<ActionResult> {
       if (r.target === r.source) return { error: "בית מקור ויעד זהים" };
     }
   }
-  const existingTargets = clean.filter((r) => r.mode === "existing").map((r) => r.target!);
-  if (new Set(existingTargets).size !== existingTargets.length)
-    return { error: "אותו בית יעד מופיע ביותר משורה אחת" };
+
+  // ---- validate arriving (new) families ----
+  for (const r of arriveRows) {
+    if (!r.newName || !r.newName.trim()) return { error: "יש להזין שם למשפחה החדשה" };
+    if (!r.target) return { error: "יש לבחור בית יעד למשפחה החדשה" };
+    if (!byPlot.has(r.target)) return { error: "בית יעד לא נמצא" };
+  }
+
+  // ---- one family per target house (existing moves + arrivals) ----
+  const allTargets = clean.filter((r) => r.mode === "existing" || r.mode === "arrive").map((r) => r.target!);
+  if (new Set(allTargets).size !== allTargets.length) return { error: "אותו בית יעד מופיע ביותר משורה אחת" };
 
   // ---- snapshot every source family BEFORE any writes ----
   const familyOf = new Map<string, { name: string; residents: (string | null)[] }>();
-  for (const r of clean) {
+  for (const r of sourceRows) {
     const b = byPlot.get(r.source)!;
     familyOf.set(r.source, { name: b.building_name ?? "", residents: residentsOf(b) });
   }
@@ -82,6 +93,13 @@ export async function applyMoves(rows: MoveRow[]): Promise<ActionResult> {
   const targeted = new Set<string>();
 
   for (const r of clean) {
+    if (r.mode === "arrive") {
+      // A brand-new family: just set the target house's name; residents are added
+      // later via the residents/buildings screens.
+      targeted.add(r.target!);
+      updates.push({ plot: r.target!, name: r.newName!.trim(), residents: [null, null, null, null] });
+      continue;
+    }
     const fam = familyOf.get(r.source)!;
     if (r.mode === "existing") {
       targeted.add(r.target!);
@@ -95,7 +113,7 @@ export async function applyMoves(rows: MoveRow[]): Promise<ActionResult> {
   }
 
   // ---- vacated sources (no family moved in) → "ריק (<name> לשעבר)" ----
-  for (const r of clean) {
+  for (const r of sourceRows) {
     if (targeted.has(r.source)) continue; // someone moved in here
     const orig = familyOf.get(r.source)!.name;
     const vacantName = orig.startsWith("ריק ") ? orig : `ריק (${orig} לשעבר)`;
