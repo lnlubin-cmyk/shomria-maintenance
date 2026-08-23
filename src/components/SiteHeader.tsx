@@ -39,6 +39,7 @@ function Chevron({ open }: { open: boolean }) {
 export default function SiteHeader({
   session,
   community = [],
+  hasMoments = false,
   infoDocs = [],
   torahDocs = [],
   infoPanels = [],
@@ -47,6 +48,7 @@ export default function SiteHeader({
 }: {
   session: Session | null;
   community?: CommunityMenuItem[];
+  hasMoments?: boolean;
   infoDocs?: CommunityMenuItem[];
   torahDocs?: CommunityMenuItem[];
   infoPanels?: { label: string; href: string }[];
@@ -111,14 +113,18 @@ export default function SiteHeader({
         ...infoDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],
     },
-    // "קהילה" — dynamic, admin-managed. Only rendered when it has items (each
-    // already filtered to visible + has subject + has file).
-    ...(community.length > 0
+    // "קהילה" — dynamic, admin-managed: the "רגעים שזוכרים" gallery (when any
+    // moment exists) plus document items (each already filtered to visible +
+    // has subject + has file). Rendered only when it has something to show.
+    ...(community.length > 0 || hasMoments
       ? [
           {
             key: "community",
             label: "קהילה",
-            items: community.map((c) => ({ label: c.subject, href: `/community/${c.id}` })),
+            items: [
+              ...(hasMoments ? [{ label: "רגעים שזוכרים", href: "/moments" }] : []),
+              ...community.map((c) => ({ label: c.subject, href: `/community/${c.id}` })),
+            ],
           } as MenuSection,
         ]
       : []),
