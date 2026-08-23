@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { getTodayHalachicTimes } from "@/lib/halachic";
 import type { HalachicTimeEntry } from "@/lib/halachic-parse";
-import { toSchedule, relRuleText, type Minyan, type PrayerSchedule, type RelBase } from "@/lib/prayer-times";
+import { toSchedule, type Minyan, type PrayerSchedule, type RelBase } from "@/lib/prayer-times";
 
 function parseHHMM(s: string): number | null {
   const m = s.trim().match(/^(\d{1,2}):(\d{2})/);
@@ -29,16 +29,18 @@ function findBaseTime(times: HalachicTimeEntry[], base: RelBase): string | null 
   return find((l) => l.includes("צה") && (l.includes("4.9") || l.includes("מעלו"))) ?? find((l) => l.includes("צה"));
 }
 
-/** Resolve a minyan's displayed time (concrete for relative ones) + a rule note. */
+/**
+ * Resolve a relative minyan to a concrete time for today. Only the time is
+ * shown to residents — the underlying rule (offset + base) is intentionally not
+ * surfaced.
+ */
 function resolveMinyan(m: Minyan, times: HalachicTimeEntry[] | null): Minyan {
   if (m.mode !== "relative" || !m.rel_base) return m;
-  const rule = relRuleText(m);
   const base = times ? findBaseTime(times, m.rel_base) : null;
   const baseMin = base ? parseHHMM(base) : null;
   const off = Math.abs(m.rel_offset ?? 0);
   const time = baseMin == null ? "—" : fmtHHMM(baseMin + (m.rel_dir === "after" ? off : -off));
-  const notes = [m.notes, rule].filter(Boolean).join(" · ");
-  return { ...m, time, notes };
+  return { ...m, time };
 }
 
 /** All schedules (visible + hidden), for the admin tab. */
