@@ -74,14 +74,20 @@ const SYSTEM = `אתה עוזר שמנתח ידיעון קהילתי שבועי 
 export async function suggestSections(pages: { index: number; jpeg: Uint8Array }[]): Promise<SectionSuggestion[]> {
   if (!isAIConfigured() || pages.length === 0) return [];
 
-  const content: Array<{ type: "text"; text: string } | { type: "image"; image: Uint8Array }> = [
+  type Part =
+    | { type: "text"; text: string }
+    | { type: "image"; image: Uint8Array; providerOptions?: Record<string, Record<string, unknown>> };
+  const content: Part[] = [
     { type: "text", text: "להלן עמודי הידיעון, כל אחד עם מספר העמוד שלו. זהה את המקטעים בכל עמוד." },
   ];
   for (const p of pages) {
     content.push({ type: "text", text: `עמוד ${p.index}:` });
-    content.push({ type: "image", image: p.jpeg });
+    // imageDetail:"high" → OpenAI reads the page at full resolution instead of a
+    // downscaled version, so small/stylized Hebrew (e.g. the events calendar) is
+    // legible. The `openai` namespace is ignored by other providers.
+    content.push({ type: "image", image: p.jpeg, providerOptions: { openai: { imageDetail: "high" } } });
   }
-  const messages: AiMessage[] = [{ role: "user", content }];
+  const messages = [{ role: "user", content }] as unknown as AiMessage[];
 
   const clamp = (v: number) => Math.max(0, Math.min(1, v));
 
