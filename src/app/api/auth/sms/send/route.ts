@@ -16,9 +16,20 @@ import { sendSms019 } from "@/lib/sms019";
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
 
+// Daily caps (per calendar day, UTC) on top of the 30s per-phone cooldown, to
+// bound SMS cost, block bombing one resident, and stop mass enumeration via the
+// `eligible` flag. Generous enough not to hit a real user (even a shared/NAT IP).
+const IP_DAILY_CAP = 50;
+const PHONE_DAILY_CAP = 8;
+
 function hashCode(code: string): string {
   const pepper = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   return createHash("sha256").update(`${code}:${pepper}`).digest("hex");
+}
+
+function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "";
+  return fwd.split(",")[0].trim() || "unknown";
 }
 
 export async function POST(request: Request) {
@@ -33,6 +44,21 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+
+  // Rate-limit before the resident lookup so a number sweep still hits the IP
+  // cap regardless of which numbers are residents. `bump_sms_rate` atomically
+  // increments the day counter and returns the new value; it fails open (returns
+  // 0 on error) so a transient DB issue can't lock everyone out.
+  const day = new Date().toISOString().slice(0, 10);
+  const bump = async (bucket: string): Promise<number> => {
+    const { data, error } = await admin.rpc("bump_sms_rate", { p_bucket: bucket, p_day: day });
+    return error ? 0 : Number(data ?? 0);
+  };
+  const overIp = (await bump(`ip:${clientIp(request)}`)) > IP_DAILY_CAP;
+  const overPhone = overIp || (await bump(`phone:${normalized}`)) > PHONE_DAILY_CAP;
+  if (overIp || overPhone) {
+    return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב מאוחר יותר." }, { status: 429 });
+  }
 
   const { data: resident } = await admin
     .from("residents")

@@ -106,6 +106,11 @@ export default function StaffFaultTable({
   // Reset to the first page when the filtered set or page size changes.
   useEffect(() => setPage(0), [filters, statusFilter, sortDir, pageSize]);
 
+  // Clear the selection whenever the filter changes: otherwise a bulk action
+  // (e.g. "מחיקת תקלות") could act on rows the filter now hides, which the
+  // confirm dialog — showing only a count — wouldn't reveal.
+  useEffect(() => setSelected(new Set()), [filters, statusFilter]);
+
   const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, totalPages - 1);
   const pagedRows =
