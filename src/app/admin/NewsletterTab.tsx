@@ -34,6 +34,7 @@ interface Sec {
   y1: number;
   title: string;
   section: TargetKey;
+  format: "png" | "pdf"; // how the cropped snapshot is saved
   include: boolean;
 }
 
@@ -90,6 +91,7 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
         y1: s.y1,
         title: s.title,
         section: s.section,
+        format: "png",
         include: true,
       }))
     );
@@ -188,7 +190,7 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
     const id = newId();
     setSecs((prev) => [
       ...prev,
-      { id, page, x0: fx, y0: fy, x1: fx, y1: fy, title: "", section: "community", include: true },
+      { id, page, x0: fx, y0: fy, x1: fx, y1: fy, title: "", section: "community", format: "png", include: true },
     ]);
     setSelected(id);
     beginDrag({ mode: "draw", page, sx: fx, sy: fy, id }, pageEl);
@@ -237,6 +239,7 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
       y1: s.y1,
       title: s.title.trim(),
       section: s.section,
+      format: s.format,
     }));
     const res = await publishNewsletter({
       token,
@@ -455,6 +458,15 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
                                   {TARGET_LABELS[k]}
                                 </option>
                               ))}
+                            </select>
+                            <label className="text-xs text-gray-600">פורמט:</label>
+                            <select
+                              className="field max-w-[6rem] py-1 text-sm"
+                              value={s.format}
+                              onChange={(e) => updateSec(s.id, { format: e.target.value as "png" | "pdf" })}
+                            >
+                              <option value="png">PNG</option>
+                              <option value="pdf">PDF</option>
                             </select>
                             <button
                               className="mr-auto text-sm text-red-600 hover:underline"

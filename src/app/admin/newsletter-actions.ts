@@ -101,6 +101,7 @@ export interface PublishSection {
   y1: number;
   title: string;
   section: TargetKey;
+  format: "png" | "pdf";
 }
 
 export interface PublishInput {
@@ -149,13 +150,16 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
       continue; // skip a bad crop rather than fail the whole batch
     }
 
-    // "מרפאה" → update the clinic info-panel's file with the cropped image
-    // (rather than creating a community document).
+    // Save the snapshot as the admin chose: a raw PNG image or a single-page PDF.
+    const asPdf = s.format === "pdf";
+    const bytes = asPdf ? Buffer.from(await imageToPdf(filePng)) : Buffer.from(filePng);
+    const ext = asPdf ? "pdf" : "png";
+    const contentType = asPdf ? "application/pdf" : "image/png";
+    const path = `${randomUUID()}.${ext}`;
+
+    // "מרפאה" → update the clinic info-panel's file (rather than creating a doc).
     if (s.section === "clinic") {
-      const path = `${randomUUID()}.png`;
-      const up = await admin.storage
-        .from(COMMUNITY_BUCKET)
-        .upload(path, Buffer.from(filePng), { contentType: "image/png", upsert: false });
+      const up = await admin.storage.from(COMMUNITY_BUCKET).upload(path, bytes, { contentType, upsert: false });
       if (up.error) continue;
       const { data: cur } = await admin
         .from("info_panels")
@@ -167,7 +171,7 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
         .update({
           mode: "pdf", // "file" mode
           file_path: path,
-          file_name: `${s.title.trim() || "מרפאה"}.png`,
+          file_name: `${s.title.trim() || "מרפאה"}.${ext}`,
           updated_at: new Date().toISOString(),
         })
         .eq("slug", "clinic");
@@ -181,17 +185,13 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
       continue;
     }
 
-    const pdfBytes = await imageToPdf(filePng);
-    const path = `${randomUUID()}.pdf`;
-    const up = await admin.storage
-      .from(COMMUNITY_BUCKET)
-      .upload(path, Buffer.from(pdfBytes), { contentType: "application/pdf", upsert: false });
+    const up = await admin.storage.from(COMMUNITY_BUCKET).upload(path, bytes, { contentType, upsert: false });
     if (up.error) continue;
     const { error } = await admin.from("community_items").insert({
       subject: s.title.trim(),
       section: s.section,
       file_path: path,
-      file_name: `${s.title.trim()}.pdf`,
+      file_name: `${s.title.trim()}.${ext}`,
       is_visible: true,
     });
     if (error) {
