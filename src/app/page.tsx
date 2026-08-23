@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
+import { momentsExist } from "@/lib/moments";
 import { getInfoPanels, isPanelConfigured, panelHref } from "@/lib/info-panels";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import { getActiveCampaign } from "@/lib/campaigns";
@@ -151,8 +152,9 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   // Fetch the independent data concurrently rather than one round trip at a time.
-  const [{ community, info, torah }, media, campaign, panels] = await Promise.all([
+  const [{ community, info, torah }, hasMoments, media, campaign, panels] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
+    session ? momentsExist() : Promise.resolve(false),
     getActiveHomeMedia(),
     getActiveCampaign(),
     getInfoPanels(),
@@ -268,11 +270,21 @@ export default async function HomePage() {
             </div>
           </section>
 
-          {/* קהילה — dynamic, admin-managed items (shown only when there are any) */}
-          {community.length > 0 && (
+          {/* קהילה — dynamic, admin-managed items + the "רגעים שזוכרים" gallery
+              (shown only when there's something to show) */}
+          {(community.length > 0 || hasMoments) && (
             <section className="mt-12">
               <SectionTitle>קהילה</SectionTitle>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {hasMoments && (
+                  <Tile
+                    href="/moments"
+                    tone="accent"
+                    icon="🎬"
+                    title="רגעים שזוכרים"
+                    desc="רגעים ואירועים היסטוריים מחיי הקהילה."
+                  />
+                )}
                 {community.map((c) => (
                   <Tile
                     key={c.id}

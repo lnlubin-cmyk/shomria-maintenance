@@ -8,6 +8,7 @@ import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
+import MomentsTab from "./MomentsTab";
 import NewsletterTab from "./NewsletterTab";
 import PanelTab from "./PanelTab";
 import HomeMediaTab from "./HomeMediaTab";
@@ -19,7 +20,7 @@ import CampaignTab from "./CampaignTab";
 import MoveTab from "./MoveTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
-import type { TorahLesson } from "@/lib/types";
+import type { Moment, TorahLesson } from "@/lib/types";
 import type { InfoPanel } from "@/lib/info-panels-shared";
 import type { AdminVote } from "@/lib/votes";
 
@@ -29,6 +30,7 @@ type Tab =
   | "buildings"
   | "map"
   | "community"
+  | "moments"
   | "newsletter"
   | "clinic"
   | "store"
@@ -59,6 +61,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "map", label: "מפה" },
   { key: "moves", label: "מעבר דירות" },
   { key: "community", label: "קהילה/מידע לתושב" },
+  { key: "moments", label: "רגעים שזוכרים" },
   { key: "newsletter", label: "פיצול ידיעון" },
   { key: "clinic", label: "מרפאה" },
   { key: "store", label: "מכולת" },
@@ -76,6 +79,7 @@ export default function AdminTabs({
   users,
   layers,
   community,
+  moments,
   homeMedia,
   halachicYears,
   schedules,
@@ -93,6 +97,7 @@ export default function AdminTabs({
   users: AdminUserRow[];
   layers: BuildingLayer[];
   community: CommunityItem[];
+  moments: Moment[];
   homeMedia: (HomeMedia & { previewUrl: string })[];
   halachicYears: { year: number; days: number }[];
   schedules: PrayerSchedule[];
@@ -138,6 +143,7 @@ export default function AdminTabs({
       {tab === "map" && <BuildingsMapTab buildings={buildings} />}
       {tab === "moves" && <MoveTab houses={moveHouses} />}
       {tab === "community" && <CommunityTab items={community} />}
+      {tab === "moments" && <MomentsTab moments={moments} />}
       {tab === "newsletter" && <NewsletterTab aiConfigured={aiConfigured} />}
       {tab === "clinic" && panelBySlug("clinic") && <PanelTab panel={panelBySlug("clinic")!} />}
       {tab === "store" && panelBySlug("store") && <PanelTab panel={panelBySlug("store")!} />}

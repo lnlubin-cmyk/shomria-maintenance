@@ -272,6 +272,34 @@ export interface HomeMediaItem {
   youtubeId?: string; // youtube: the video id
 }
 
+export type MomentProvider = "youtube" | "drive" | "bunny" | "link";
+
+/** A "רגעים שזוכרים" item — a link to a historic-event video/media, admin-managed. */
+export interface Moment {
+  id: string;
+  title: string;
+  description: string;
+  provider: MomentProvider;
+  ref: string; // youtube id | drive file id | bunny guid | full URL (link)
+  event_date: string | null; // "YYYY-MM-DD" or null
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A moment resolved for display: embed / thumbnail / external URLs computed. */
+export interface MomentView {
+  id: string;
+  title: string;
+  description: string;
+  provider: MomentProvider;
+  eventDate: string | null;
+  embedUrl: string | null; // iframe src for youtube/drive/bunny; null for a plain link
+  thumb: string | null; // preview image; null for a plain link
+  href: string; // external "open" URL
+}
+
 /** A Torah lesson (שיעור תורה), admin-managed. */
 export interface TorahLesson {
   id: string;
