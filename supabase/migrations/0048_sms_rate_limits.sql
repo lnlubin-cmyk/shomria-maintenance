@@ -1,6 +1,8 @@
--- Per-IP and per-phone daily caps for the SMS-send route, to block SMS-bombing,
--- runaway SMS cost, and mass resident-enumeration via the `eligible` flag.
--- A simple (bucket, day) counter; the route bumps "ip:<addr>" and "phone:<num>".
+-- Daily caps for the SMS-send route, to block SMS-bombing, runaway SMS cost,
+-- and mass resident-enumeration via the `eligible` flag.
+-- A simple (bucket, day) counter; the route bumps "phone:<num>" (codes actually
+-- sent to a resident) and "ipmiss:<addr>" (failed probes of a non-resident, to
+-- cut off enumeration without penalising many real logins behind a shared IP).
 create table if not exists sms_rate_limits (
   bucket text not null,
   day    date not null,

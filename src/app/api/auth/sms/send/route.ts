@@ -16,11 +16,17 @@ import { sendSms019 } from "@/lib/sms019";
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
 
-// Daily caps (per calendar day, UTC) on top of the 30s per-phone cooldown, to
-// bound SMS cost, block bombing one resident, and stop mass enumeration via the
-// `eligible` flag. Generous enough not to hit a real user (even a shared/NAT IP).
-const IP_DAILY_CAP = 50;
+// Daily caps (per calendar day, UTC) on top of the 30s per-phone cooldown.
+//   PHONE_DAILY_CAP — actual codes sent to one number: bounds SMS cost and
+//     blocks bombing one resident. Global (any source IP), so cost is capped at
+//     (residents x cap) even under attack.
+//   IP_MISS_CAP — *failed* probes (a number that isn't a resident) from one IP.
+//     No SMS is sent for a miss, so the only harm is enumeration via `eligible`;
+//     this caps how many numbers one IP can probe. Crucially it counts only
+//     misses, so many residents behind one shared/CGNAT IP (the launch-day case)
+//     never trip it — their logins are hits.
 const PHONE_DAILY_CAP = 8;
+const IP_MISS_CAP = 25;
 
 function hashCode(code: string): string {
   const pepper = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -45,20 +51,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Rate-limit before the resident lookup so a number sweep still hits the IP
-  // cap regardless of which numbers are residents. `bump_sms_rate` atomically
-  // increments the day counter and returns the new value; it fails open (returns
-  // 0 on error) so a transient DB issue can't lock everyone out.
+  // `bump_sms_rate` atomically increments the day counter for a bucket and
+  // returns the new value; it fails open (returns 0 on error) so a transient DB
+  // issue can't lock everyone out.
   const day = new Date().toISOString().slice(0, 10);
   const bump = async (bucket: string): Promise<number> => {
     const { data, error } = await admin.rpc("bump_sms_rate", { p_bucket: bucket, p_day: day });
     return error ? 0 : Number(data ?? 0);
   };
-  const overIp = (await bump(`ip:${clientIp(request)}`)) > IP_DAILY_CAP;
-  const overPhone = overIp || (await bump(`phone:${normalized}`)) > PHONE_DAILY_CAP;
-  if (overIp || overPhone) {
-    return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב מאוחר יותר." }, { status: 429 });
-  }
 
   const { data: resident } = await admin
     .from("residents")
@@ -66,35 +66,48 @@ export async function POST(request: Request) {
     .eq("phone", normalized)
     .maybeSingle();
 
-  // Send to any resident with this phone (email no longer required).
-  if (resident) {
-    // Cooldown: don't resend within 30s of the last code.
-    const { data: existing } = await admin
-      .from("sms_otps")
-      .select("created_at")
-      .eq("phone", normalized)
-      .maybeSingle();
-
-    const recentlySent =
-      existing && Date.now() - new Date(existing.created_at).getTime() < RESEND_COOLDOWN_MS;
-
-    if (!recentlySent) {
-      const code = String(randomInt(100000, 1000000)); // 6 digits, CSPRNG
-      await admin.from("sms_otps").upsert(
-        {
-          phone: normalized,
-          code_hash: hashCode(code),
-          expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
-          attempts: 0,
-          created_at: new Date().toISOString(),
-        },
-        { onConflict: "phone" }
-      );
-      // Short Hebrew message = one UCS-2 segment.
-      await sendSms019(normalized, `קוד כניסה לאתר שומריה: ${code}`);
+  if (!resident) {
+    // Miss: no SMS is sent, so the only concern is enumeration. Count misses
+    // per IP and cut off a sweep. Legitimate residents are hits and never land
+    // here, so a shared/CGNAT IP with many real logins isn't affected.
+    const misses = await bump(`ipmiss:${clientIp(request)}`);
+    if (misses > IP_MISS_CAP) {
+      return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב מאוחר יותר." }, { status: 429 });
     }
+    return NextResponse.json({ ok: true, eligible: false });
+  }
+
+  // Hit: send to this resident. Cooldown: don't resend within 30s of the last code.
+  const { data: existing } = await admin
+    .from("sms_otps")
+    .select("created_at")
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  const recentlySent =
+    existing && Date.now() - new Date(existing.created_at).getTime() < RESEND_COOLDOWN_MS;
+
+  if (!recentlySent) {
+    // Per-phone daily cap on codes actually sent — bounds cost and bombing.
+    const sends = await bump(`phone:${normalized}`);
+    if (sends > PHONE_DAILY_CAP) {
+      return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב מאוחר יותר." }, { status: 429 });
+    }
+    const code = String(randomInt(100000, 1000000)); // 6 digits, CSPRNG
+    await admin.from("sms_otps").upsert(
+      {
+        phone: normalized,
+        code_hash: hashCode(code),
+        expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
+        attempts: 0,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "phone" }
+    );
+    // Short Hebrew message = one UCS-2 segment.
+    await sendSms019(normalized, `קוד כניסה לאתר שומריה: ${code}`);
   }
 
   // `eligible` lets the UI show a clear "not on the resident list" message.
-  return NextResponse.json({ ok: true, eligible: !!resident });
+  return NextResponse.json({ ok: true, eligible: true });
 }
