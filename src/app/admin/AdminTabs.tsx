@@ -112,7 +112,7 @@ export default function AdminTabs({
 
   return (
     <div>
-      <div className="mb-6 flex gap-1 border-b border-gray-200">
+      <div className="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
         {TABS.map((t) => (
           <button
             key={t.key}
