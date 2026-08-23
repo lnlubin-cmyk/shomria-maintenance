@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { canEditReligious } from "@/lib/types";
-import { PRAYER_TITLES, type Minyan, type Prayer, type PrayerTitle } from "@/lib/prayer-times";
+import { PRAYER_TITLES, REL_BASES, type Minyan, type Prayer, type PrayerTitle, type RelBase } from "@/lib/prayer-times";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -37,14 +37,24 @@ function sanitizePrayers(prayers: unknown): Prayer[] {
       ? pr.minyanim
           .map((m) => {
             const mm = (m ?? {}) as Partial<Minyan>;
+            const relative =
+              mm.mode === "relative" && (REL_BASES as readonly string[]).includes(mm.rel_base as string);
             return {
               name: String(mm.name ?? "").trim(),
-              time: String(mm.time ?? "").trim(),
+              time: relative ? "" : String(mm.time ?? "").trim(),
               notes: String(mm.notes ?? "").trim(),
               is_visible: mm.is_visible !== false,
-            };
+              mode: relative ? "relative" : "fixed",
+              ...(relative
+                ? {
+                    rel_base: mm.rel_base as RelBase,
+                    rel_offset: Number.isFinite(Number(mm.rel_offset)) ? Math.max(0, Math.round(Number(mm.rel_offset))) : 0,
+                    rel_dir: mm.rel_dir === "after" ? "after" : "before",
+                  }
+                : {}),
+            } as Minyan;
           })
-          .filter((m) => m.name !== "" || m.time !== "") // drop fully-empty rows
+          .filter((m) => m.name !== "" || m.time !== "" || m.mode === "relative") // drop fully-empty rows
       : [];
     return { title, custom_title: String(pr.custom_title ?? "").trim(), minyanim };
   });

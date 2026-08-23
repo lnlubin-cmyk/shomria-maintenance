@@ -12,6 +12,9 @@ const LABEL_OVERRIDES: Record<string, string> = {
   "שקיעה בגובה": "שקיעה",
 };
 
+/** Clean a stored label for display (overrides + the „מעלו”→„מעלות” typo fix). */
+const fixLabel = (l: string) => (LABEL_OVERRIDES[l] ?? l).replace(/מעלו(?!ת)/g, "מעלות");
+
 export default async function HalachicTimesPage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/halachic-times");
@@ -54,7 +57,7 @@ export default async function HalachicTimesPage() {
           <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
             {t.times.map((item, i) => (
               <li key={i} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-                <span className="text-gray-700">{LABEL_OVERRIDES[item.label] ?? item.label}</span>
+                <span className="text-gray-700">{fixLabel(item.label)}</span>
                 <span className="font-semibold tabular-nums text-gray-900" dir="ltr">
                   {item.time}
                 </span>

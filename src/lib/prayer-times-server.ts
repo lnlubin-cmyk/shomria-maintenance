@@ -1,5 +1,45 @@
 import { createAdminClient } from "@/lib/supabase/server";
-import { toSchedule, type PrayerSchedule } from "@/lib/prayer-times";
+import { getTodayHalachicTimes } from "@/lib/halachic";
+import type { HalachicTimeEntry } from "@/lib/halachic-parse";
+import { toSchedule, relRuleText, type Minyan, type PrayerSchedule, type RelBase } from "@/lib/prayer-times";
+
+function parseHHMM(s: string): number | null {
+  const m = s.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const h = +m[1];
+  const mi = +m[2];
+  return h > 23 || mi > 59 ? null : h * 60 + mi;
+}
+function fmtHHMM(mins: number): string {
+  const t = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** Find today's HH:MM for a chosen halachic base, matching stored label variants. */
+function findBaseTime(times: HalachicTimeEntry[], base: RelBase): string | null {
+  const find = (pred: (l: string) => boolean) => times.find((t) => pred(t.label))?.time ?? null;
+  if (base === "sunrise") return find((l) => l.includes("נץ"));
+  if (base === "sunset")
+    return (
+      find((l) => l === "שקיעה") ??
+      find((l) => l.includes("שקיעה") && l.includes("גובה")) ??
+      find((l) => l.includes("שקיעה") && !l.includes("לחומרא") && !l.includes("במישור"))
+    );
+  // tzeit at 4.9°, with a bare צה"כ fallback for layouts that lack the degrees.
+  return find((l) => l.includes("צה") && (l.includes("4.9") || l.includes("מעלו"))) ?? find((l) => l.includes("צה"));
+}
+
+/** Resolve a minyan's displayed time (concrete for relative ones) + a rule note. */
+function resolveMinyan(m: Minyan, times: HalachicTimeEntry[] | null): Minyan {
+  if (m.mode !== "relative" || !m.rel_base) return m;
+  const rule = relRuleText(m);
+  const base = times ? findBaseTime(times, m.rel_base) : null;
+  const baseMin = base ? parseHHMM(base) : null;
+  const off = Math.abs(m.rel_offset ?? 0);
+  const time = baseMin == null ? "—" : fmtHHMM(baseMin + (m.rel_dir === "after" ? off : -off));
+  const notes = [m.notes, rule].filter(Boolean).join(" · ");
+  return { ...m, time, notes };
+}
 
 /** All schedules (visible + hidden), for the admin tab. */
 export async function getAllSchedules(): Promise<PrayerSchedule[]> {
@@ -33,9 +73,16 @@ export async function getScheduleForView(id: string): Promise<PrayerSchedule | n
   const { data } = await admin.from("prayer_schedules").select("*").eq("id", id).maybeSingle();
   if (!data || data.is_visible === false) return null;
 
+  // Today's halachic times, to resolve any relative minyan times to a concrete
+  // value for today.
+  const today = await getTodayHalachicTimes();
+
   const schedule = toSchedule(data);
   schedule.prayers = schedule.prayers
-    .map((p) => ({ ...p, minyanim: p.minyanim.filter((m) => m.is_visible) }))
+    .map((p) => ({
+      ...p,
+      minyanim: p.minyanim.filter((m) => m.is_visible).map((m) => resolveMinyan(m, today.times)),
+    }))
     .filter((p) => p.minyanim.length > 0);
   return schedule;
 }

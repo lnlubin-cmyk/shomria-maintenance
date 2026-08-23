@@ -50,6 +50,7 @@ export function expandAbbrev(label: string): string {
     .replace(/סזק["״]ש/g, "סוף זמן קריאת שמע")
     .replace(/סז["״]ת/g, "סוף זמן תפילה")
     .replace(/הד["״]נ/g, "הדלקת נרות")
+    .replace(/מעלו(?!ת)/g, "מעלות") // "צה\"כ 4.9 מעלו" → "…מעלות"
     .replace(/\s+/g, " ")
     .trim();
 }

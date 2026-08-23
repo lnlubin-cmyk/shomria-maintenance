@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PRAYER_TITLES,
+  REL_BASES,
+  REL_BASE_LABELS,
   type Minyan,
   type Prayer,
   type PrayerSchedule,
   type PrayerTitle,
+  type RelBase,
 } from "@/lib/prayer-times";
 import { saveSchedule } from "./prayer-actions";
 
@@ -18,7 +21,7 @@ interface Draft {
   prayers: Prayer[];
 }
 
-const emptyMinyan = (): Minyan => ({ name: "", time: "", notes: "", is_visible: true });
+const emptyMinyan = (): Minyan => ({ name: "", time: "", notes: "", is_visible: true, mode: "fixed" });
 const emptyPrayer = (): Prayer => ({ title: "שחרית", custom_title: "", minyanim: [emptyMinyan()] });
 
 export default function ScheduleEditor({
@@ -139,14 +142,52 @@ export default function ScheduleEditor({
             <div className="mt-3 space-y-2">
               <div className="text-xs font-semibold uppercase text-gray-500">מניינים</div>
               {p.minyanim.map((m, mi) => (
-                <div key={mi} className="grid items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 sm:grid-cols-[1fr_100px_1fr_auto]">
-                  <input className="field" placeholder="שם המניין (למשל: מניין ראשון)" value={m.name}
-                    onChange={(e) => patchMinyan(pi, mi, { name: e.target.value })} />
-                  <input className="field" placeholder="שעה" dir="ltr" value={m.time}
-                    onChange={(e) => patchMinyan(pi, mi, { time: e.target.value })} />
-                  <input className="field" placeholder="הערות" value={m.notes}
-                    onChange={(e) => patchMinyan(pi, mi, { notes: e.target.value })} />
-                  <div className="flex items-center gap-2 text-sm">
+                <div key={mi} className="space-y-2 rounded-lg border border-gray-200 bg-white p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input className="field min-w-[10rem] flex-1" placeholder="שם המניין (למשל: מניין ראשון)" value={m.name}
+                      onChange={(e) => patchMinyan(pi, mi, { name: e.target.value })} />
+                    <select
+                      className="field w-40"
+                      value={m.mode ?? "fixed"}
+                      onChange={(e) => {
+                        const mode = e.target.value as "fixed" | "relative";
+                        patchMinyan(
+                          pi,
+                          mi,
+                          mode === "relative"
+                            ? { mode, rel_base: m.rel_base ?? "sunrise", rel_dir: m.rel_dir ?? "before", rel_offset: m.rel_offset ?? 20 }
+                            : { mode }
+                        );
+                      }}
+                    >
+                      <option value="fixed">שעה קבועה</option>
+                      <option value="relative">תלוי בזמן הלכתי</option>
+                    </select>
+                    {(m.mode ?? "fixed") === "fixed" ? (
+                      <input className="field w-24" placeholder="שעה" dir="ltr" value={m.time}
+                        onChange={(e) => patchMinyan(pi, mi, { time: e.target.value })} />
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <input type="number" min={0} className="field w-16" dir="ltr" value={m.rel_offset ?? 0}
+                          onChange={(e) => patchMinyan(pi, mi, { rel_offset: Math.max(0, parseInt(e.target.value) || 0) })} />
+                        <span className="text-sm text-gray-600">דק׳</span>
+                        <select className="field w-20" value={m.rel_dir ?? "before"}
+                          onChange={(e) => patchMinyan(pi, mi, { rel_dir: e.target.value as "before" | "after" })}>
+                          <option value="before">לפני</option>
+                          <option value="after">אחרי</option>
+                        </select>
+                        <select className="field w-44" value={m.rel_base ?? "sunrise"}
+                          onChange={(e) => patchMinyan(pi, mi, { rel_base: e.target.value as RelBase })}>
+                          {REL_BASES.map((b) => (
+                            <option key={b} value={b}>{REL_BASE_LABELS[b]}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input className="field min-w-[8rem] flex-1" placeholder="הערות" value={m.notes}
+                      onChange={(e) => patchMinyan(pi, mi, { notes: e.target.value })} />
                     <label className="flex items-center gap-1 text-xs text-gray-600" title="מוצג">
                       <input type="checkbox" className="h-4 w-4" checked={m.is_visible}
                         onChange={(e) => patchMinyan(pi, mi, { is_visible: e.target.checked })} />
