@@ -1,5 +1,4 @@
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
@@ -40,16 +39,15 @@ export const getInfoPanel = cache(async (slug: string): Promise<InfoPanel | null
   return (data as InfoPanel | null) ?? null;
 });
 
-// Signed URL for the file (cached an hour; valid for two), same as elsewhere.
-const getCachedSignedUrl = unstable_cache(
-  async (path: string): Promise<string | null> => {
-    const admin = createAdminClient();
-    const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, 60 * 60 * 2);
-    return data?.signedUrl ?? null;
-  },
-  ["info-panel-signed-url"],
-  { revalidate: 60 * 60 }
-);
+// Freshly-signed URL per request (NOT cached): a cached signed URL is served
+// stale-while-revalidate and can be handed out after it has expired, failing
+// with Supabase "InvalidJWT / exp claim". The /info/[slug] page is dynamic, so
+// this runs per visit.
+async function getSignedUrl(path: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, 60 * 60 * 2);
+  return data?.signedUrl ?? null;
+}
 
 /** Everything the /info/[slug] page needs, or null if the panel doesn't exist. */
 export async function getPanelView(slug: string): Promise<
@@ -58,7 +56,7 @@ export async function getPanelView(slug: string): Promise<
 > {
   const p = await getInfoPanel(slug);
   if (!p) return null;
-  const url = p.mode === "pdf" && p.file_path ? await getCachedSignedUrl(p.file_path) : null;
+  const url = p.mode === "pdf" && p.file_path ? await getSignedUrl(p.file_path) : null;
   return {
     label: p.menu_label,
     mode: p.mode,
