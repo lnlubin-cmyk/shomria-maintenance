@@ -165,7 +165,7 @@ export default function ResidentsTab({ residents }: { residents: Resident[] }) {
               type="checkbox"
               name="is_member"
               className="h-4 w-4 accent-brand-500"
-              defaultChecked={editing ? editing.is_member : true}
+              defaultChecked={editing ? editing.is_member : false}
             />
             <span className="font-medium">חבר קיבוץ</span>
             <span className="text-xs text-gray-500">— רק חברי קיבוץ רשאים להצביע.</span>
