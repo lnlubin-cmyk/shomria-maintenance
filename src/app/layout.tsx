@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ScrollReveal from "@/components/ScrollReveal";
+
+// Mark the root ready for scroll-reveal BEFORE first paint, but only when the
+// viewer allows motion — so reveal-hidden elements never flash, and no-JS /
+// reduced-motion users always see the content.
+const REVEAL_READY = `try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('reveal-ready')}}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "קהילת עצמונה-שומריה — מידע ושירות לתושב",
@@ -36,9 +42,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             especially on mobile. */}
         <link rel="preconnect" href="https://www.govmap.gov.il" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.govmap.gov.il" />
+        <script dangerouslySetInnerHTML={{ __html: REVEAL_READY }} />
       </head>
       <body className="min-h-screen">
         {children}
+        <ScrollReveal />
         <ServiceWorkerRegister />
       </body>
     </html>

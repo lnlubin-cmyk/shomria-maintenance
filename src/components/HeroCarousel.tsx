@@ -153,7 +153,7 @@ export default function HeroCarousel({
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={cur.id} src={cur.url} alt="" className="h-full w-full object-cover" />
+        <img key={cur.id} src={cur.url} alt="" className="animate-kenburns h-full w-full object-cover" />
       )}
 
       {count > 1 && (

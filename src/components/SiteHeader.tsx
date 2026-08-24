@@ -180,7 +180,7 @@ export default function SiteHeader({
                 </button>
 
                 {openMenu === s.key && (
-                  <div className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg">
+                  <div className="animate-menu absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg">
                     {s.items.map((it) =>
                       it.children ? (
                         <div key={it.label} className="py-1">

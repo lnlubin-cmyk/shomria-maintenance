@@ -14,7 +14,7 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
     @apply btn bg-brand-500 text-white hover:bg-brand-600;
@@ -33,5 +33,103 @@
   }
   .card {
     @apply rounded-xl border border-gray-200 bg-white p-6 shadow-sm;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion & polish. All entrance/looping animation is opt-in via classes or the
+   [data-reveal] hooks, and the reduced-motion block at the bottom neutralises
+   every one of them for users who ask for less motion.
+   --------------------------------------------------------------------------- */
+@layer utilities {
+  /* Slow "Ken Burns" zoom for hero imagery. */
+  .animate-kenburns {
+    animation: kenburns 16s ease-out both;
+  }
+  /* Dropdown menu entrance. */
+  .animate-menu {
+    animation: menu-in 0.16s ease-out both;
+  }
+  /* Gentle bob for the hero scroll cue. */
+  .animate-bob {
+    animation: bob 1.9s ease-in-out infinite;
+  }
+  /* Per-route content fade (used by app/template.tsx). */
+  .page-enter {
+    animation: page-enter 0.35s ease both;
+  }
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Scroll reveal — hidden only once the inline head script marks the root
+   `reveal-ready`, so if JS never runs the content stays fully visible. The
+   ScrollReveal component adds `.is-visible` (with a small per-item stagger for
+   grid children) as elements scroll into view. */
+html.reveal-ready [data-reveal],
+html.reveal-ready [data-reveal-group] > * {
+  opacity: 0;
+  transform: translateY(14px);
+}
+html.reveal-ready [data-reveal].is-visible,
+html.reveal-ready [data-reveal-group] > .is-visible {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Honour "reduce motion": drop every animation/transition and reveal all
+   content immediately. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  html.reveal-ready [data-reveal],
+  html.reveal-ready [data-reveal-group] > * {
+    opacity: 1;
+    transform: none;
   }
 }

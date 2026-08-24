@@ -102,13 +102,17 @@ function Tile({
 
   const inner = (
     <div
-      className={`card flex h-full items-start gap-4 transition duration-200 ${
+      className={`card flex h-full items-start gap-4 transition-all duration-200 ${
         soon
           ? "opacity-60"
-          : "hover:-translate-y-1 hover:border-brand-200 hover:shadow-md"
+          : "group-hover:-translate-y-1 group-hover:border-brand-200 group-hover:shadow-lg group-hover:ring-1 group-hover:ring-brand-100"
       }`}
     >
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl ${iconTone}`}>
+      <div
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl transition-transform duration-200 ${iconTone} ${
+          soon ? "" : "group-hover:scale-110 group-hover:-rotate-3"
+        }`}
+      >
         {icon}
       </div>
       <div className="min-w-0">
@@ -127,13 +131,13 @@ function Tile({
 
   if (soon || !href) {
     return (
-      <div aria-disabled="true" className="cursor-default">
+      <div aria-disabled="true" className="group cursor-default">
         {inner}
       </div>
     );
   }
   return (
-    <Link href={href} className="block">
+    <Link href={href} className="group block">
       {inner}
     </Link>
   );
@@ -141,7 +145,7 @@ function Tile({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-5 flex items-center gap-3">
+    <div data-reveal className="mb-5 flex items-center gap-3">
       <span className="h-6 w-1.5 rounded-full bg-brown-600" />
       <h2 className="text-xl font-bold text-gray-900">{children}</h2>
     </div>
@@ -168,7 +172,7 @@ export default async function HomePage() {
 
       <main>
         {/* Hero band — full-bleed media with the heading laid over a dark scrim. */}
-        <section className="relative w-full bg-black">
+        <section className="relative w-full overflow-hidden bg-black">
           {/* Admin-managed media carousel, or a static image if none. */}
           {media.length > 0 ? (
             <HeroCarousel items={media} bare heightClass="h-[380px] sm:h-[480px] lg:h-[560px]" />
@@ -179,7 +183,7 @@ export default async function HomePage() {
                 alt="איור של מבני הקיבוץ"
                 fill
                 priority
-                className="object-cover"
+                className="animate-kenburns object-cover"
               />
             </div>
           )}
@@ -192,7 +196,10 @@ export default async function HomePage() {
               its own clicks. */}
           <div className="pointer-events-none absolute inset-0">
             <div className="mx-auto flex h-full max-w-6xl flex-col items-start justify-end px-4 pb-6 sm:pb-8">
-              <h1 className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl">
+              <h1
+                data-reveal
+                className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl"
+              >
                 מידע ושירות לתושב
               </h1>
 
@@ -208,13 +215,31 @@ export default async function HomePage() {
               )}
             </div>
           </div>
+
+          {/* Scroll cue — hints there's more below the fold. */}
+          {session && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+              <svg
+                className="animate-bob h-6 w-6 text-white/70"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+          )}
         </section>
 
         <div className="mx-auto max-w-6xl px-4 py-12">
           {/* תורה ותפילה — shown first */}
           <section>
             <SectionTitle>תורה ותפילה</SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/prayer-times" tone="accent" icon={<ClockIcon />} title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
               <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
               <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
@@ -244,7 +269,7 @@ export default async function HomePage() {
           {/* מידע לתושב */}
           <section className="mt-12">
             <SectionTitle>מידע לתושב</SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
               <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
               {infoPanels.map((p) => (
@@ -275,7 +300,7 @@ export default async function HomePage() {
           {(community.length > 0 || hasMoments) && (
             <section className="mt-12">
               <SectionTitle>קהילה</SectionTitle>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {hasMoments && (
                   <Tile
                     href="/moments"
@@ -302,7 +327,7 @@ export default async function HomePage() {
           {/* פנייה לצוות חצר — the existing maintenance features */}
           <section className="mt-12">
             <SectionTitle>פנייה לצוות חצר</SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Tile
                 href="/faults/new"
                 icon="🔧"
