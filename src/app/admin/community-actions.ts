@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
+import { sanitizeRichText } from "@/lib/rich-text";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
 
@@ -55,9 +56,9 @@ function revalidate() {
 }
 
 /**
- * Add an item. If a PDF is attached, the item defaults to VISIBLE so it appears
- * in the menu right away (admins can hide it later). Without a file it's hidden
- * (it can't be shown until a file is added anyway).
+ * Add an item, either as free rich text or an uploaded file. A text item (with
+ * content) or a file item (with a file attached) defaults to VISIBLE so it shows
+ * right away; a file item without a file yet stays hidden until one is added.
  */
 export async function createCommunityItem(formData: FormData): Promise<ActionResult> {
   try {
@@ -72,6 +73,23 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const section = String(formData.get("section") ?? "community");
   if (section !== "community" && section !== "info" && section !== "torah") return { error: "מדור לא חוקי" };
 
+  const mode = String(formData.get("mode") ?? "file");
+  if (mode !== "file" && mode !== "text") return { error: "מצב תצוגה לא חוקי" };
+
+  const admin = createAdminClient();
+
+  if (mode === "text") {
+    const body = sanitizeRichText(String(formData.get("body") ?? ""));
+    if (!body.trim()) return { error: "יש להזין תוכן טקסט" };
+    const { error } = await admin
+      .from("community_items")
+      .insert({ subject, section, mode: "text", body, file_path: null, file_name: null, is_visible: true });
+    if (error) return { error: "יצירת הפריט נכשלה" };
+    revalidate();
+    return { ok: true };
+  }
+
+  // File mode — the file is optional (it can be added later).
   const { file, ext, error: fileErr } = readDoc(formData);
   if (fileErr) return { error: fileErr };
 
@@ -84,10 +102,9 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
     file_name = file.name;
   }
 
-  const admin = createAdminClient();
   const { error } = await admin
     .from("community_items")
-    .insert({ subject, section, file_path, file_name, is_visible: !!file });
+    .insert({ subject, section, mode: "file", body: "", file_path, file_name, is_visible: !!file });
   if (error) {
     await removeFile(file_path); // don't leave the just-uploaded file orphaned
     return { error: "יצירת הפריט נכשלה" };
@@ -138,8 +155,12 @@ export async function updateCommunitySection(formData: FormData): Promise<Action
   return { ok: true };
 }
 
-/** Replace (or add) the item's file: upload the new one, then drop the old file. */
-export async function replaceCommunityFile(formData: FormData): Promise<ActionResult> {
+/**
+ * Update an item's content: its display mode (file / text), the rich text, and
+ * optionally a new/removed file. Both text and file are kept, so the admin can
+ * toggle between them without re-entering — mirrors the info-panel editor.
+ */
+export async function updateCommunityContent(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
   } catch (e) {
@@ -149,59 +170,49 @@ export async function replaceCommunityFile(formData: FormData): Promise<ActionRe
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return { error: "פריט חסר" };
 
+  const mode = String(formData.get("mode") ?? "file");
+  if (mode !== "file" && mode !== "text") return { error: "מצב תצוגה לא חוקי" };
+  const body = sanitizeRichText(String(formData.get("body") ?? ""));
+
+  const admin = createAdminClient();
+  const { data: cur } = await admin
+    .from("community_items")
+    .select("file_path, file_name")
+    .eq("id", id)
+    .maybeSingle();
+
+  let file_path: string | null = cur?.file_path ?? null;
+  let file_name: string | null = cur?.file_name ?? null;
+
+  const removeExisting = String(formData.get("remove_file") ?? "") === "1";
   const { file, ext, error: fileErr } = readDoc(formData);
   if (fileErr) return { error: fileErr };
-  if (!file || !ext) return { error: "לא נבחר קובץ" };
 
-  const admin = createAdminClient();
-  const { data: existing } = await admin
-    .from("community_items")
-    .select("file_path")
-    .eq("id", id)
-    .maybeSingle();
+  if (file && ext) {
+    const { path, error } = await uploadDoc(file, ext);
+    if (error || !path) return { error: "העלאת הקובץ נכשלה" };
+    if (file_path) await removeFile(file_path); // drop the old file
+    file_path = path;
+    file_name = file.name;
+  } else if (removeExisting && file_path) {
+    await removeFile(file_path);
+    file_path = null;
+    file_name = null;
+  }
 
-  const { path, error: upErr } = await uploadDoc(file, ext);
-  if (upErr || !path) return { error: "העלאת הקובץ נכשלה" };
+  if (mode === "file" && !file_path) {
+    return { error: "במצב „קובץ” יש להעלות קובץ (PDF או תמונה), או לעבור לטקסט חופשי." };
+  }
+  if (mode === "text" && !body.trim()) {
+    return { error: "במצב „טקסט חופשי” יש להזין תוכן." };
+  }
 
   const { error } = await admin
     .from("community_items")
-    .update({ file_path: path, file_name: file.name })
+    .update({ mode, body, file_path, file_name })
     .eq("id", id);
-  if (error) {
-    await removeFile(path);
-    return { error: "עדכון הפריט נכשל" };
-  }
+  if (error) return { error: "עדכון הפריט נכשל" };
 
-  await removeFile(existing?.file_path); // old file no longer referenced
-  revalidate();
-  return { ok: true };
-}
-
-/** Remove just the file, keeping the item (it won't show in the menu without one). */
-export async function removeCommunityFile(formData: FormData): Promise<ActionResult> {
-  try {
-    await requireAdmin();
-  } catch (e) {
-    return { error: (e as Error).message };
-  }
-
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) return { error: "פריט חסר" };
-
-  const admin = createAdminClient();
-  const { data: existing } = await admin
-    .from("community_items")
-    .select("file_path")
-    .eq("id", id)
-    .maybeSingle();
-
-  const { error } = await admin
-    .from("community_items")
-    .update({ file_path: null, file_name: null, is_visible: false })
-    .eq("id", id);
-  if (error) return { error: "הסרת הקובץ נכשלה" };
-
-  await removeFile(existing?.file_path);
   revalidate();
   return { ok: true };
 }

@@ -3,28 +3,53 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { CommunityItem } from "@/lib/types";
+import type { CommunityItem, DocMode } from "@/lib/types";
 import { DOC_ACCEPT } from "@/lib/doc-files";
+import RichTextEditor from "@/components/RichTextEditor";
 import {
   createCommunityItem,
   updateCommunitySubject,
   updateCommunitySection,
-  replaceCommunityFile,
-  removeCommunityFile,
+  updateCommunityContent,
   toggleCommunityVisibility,
   deleteCommunityItem,
 } from "./community-actions";
 
 const SECTION_LABELS = { community: "קהילה", info: "מידע לתושב", torah: "תורה ותפילה" } as const;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Run = (action: (fd: FormData) => Promise<any>, fd: FormData) => Promise<boolean>;
+
+const fileInputClass =
+  "block text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600";
+
+/** File / free-text mode picker (shared by the add form and each item). */
+function ModePicker({ mode, onChange }: { mode: DocMode; onChange: (m: DocMode) => void }) {
+  return (
+    <div>
+      <span className="label">מצב תצוגה</span>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="radio" name="mode" value="file" checked={mode === "file"} onChange={() => onChange("file")} />
+          קובץ (PDF או תמונה)
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="radio" name="mode" value="text" checked={mode === "text"} onChange={() => onChange("text")} />
+          טקסט חופשי
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export default function CommunityTab({ items }: { items: CommunityItem[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [addMode, setAddMode] = useState<DocMode>("file");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function run(action: (fd: FormData) => Promise<any>, fd: FormData): Promise<boolean> {
+  const run: Run = async (action, fd) => {
     setError(null);
     setBusy(true);
     const result = await action(fd);
@@ -35,7 +60,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
     }
     router.refresh();
     return true;
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -47,7 +72,7 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
 
       <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
         פריט מופיע בתפריט (במדור „קהילה”, „מידע לתושב” או „תורה ותפילה” לפי הבחירה) רק כאשר יש לו נושא,
-        קובץ (PDF או תמונה), והוא מוגדר „מוצג”.
+        תוכן — קובץ (PDF או תמונה) או טקסט חופשי — והוא מוגדר „מוצג”.
       </div>
 
       <div className="flex items-center justify-between">
@@ -67,7 +92,10 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
         <form
           className="card space-y-4"
           action={async (fd) => {
-            if (await run(createCommunityItem, fd)) setAdding(false);
+            if (await run(createCommunityItem, fd)) {
+              setAdding(false);
+              setAddMode("file");
+            }
           }}
         >
           <h2 className="font-semibold">פריט חדש</h2>
@@ -87,19 +115,27 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
               <option value="torah">תורה ותפילה</option>
             </select>
           </div>
-          <div>
+
+          <ModePicker mode={addMode} onChange={setAddMode} />
+
+          {/* Free text */}
+          <div className={addMode === "text" ? "" : "opacity-50"}>
+            <label className="label">
+              טקסט חופשי {addMode === "text" && <span className="text-red-600">*</span>}
+            </label>
+            <RichTextEditor name="body" />
+            <p className="mt-1 text-xs text-gray-500">אפשר להדגיש טקסט (מודגש / נטוי / קו תחתון). כל שורה תוצג כשורה נפרדת.</p>
+          </div>
+
+          {/* File */}
+          <div className={addMode === "file" ? "" : "opacity-50"}>
             <label className="label" htmlFor="new-file">
               קובץ (PDF או תמונה)
             </label>
-            <input
-              id="new-file"
-              name="file"
-              type="file"
-              accept={DOC_ACCEPT}
-              className="block w-full text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
-            />
+            <input id="new-file" name="file" type="file" accept={DOC_ACCEPT} className={fileInputClass} />
             <p className="mt-1 text-xs text-gray-500">PDF או תמונה (JPG/PNG/WEBP). אפשר להוסיף עכשיו או מאוחר יותר. עד 20MB.</p>
           </div>
+
           <button type="submit" className="btn-primary" disabled={busy}>
             {busy ? "שומר..." : "יצירה"}
           </button>
@@ -111,116 +147,127 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
           <div className="card text-center text-sm text-gray-500">עדיין אין פריטים.</div>
         )}
 
-        {items.map((item) => {
-          const hasFile = !!item.file_path;
-          const shown = item.is_visible && hasFile && item.subject.trim() !== "";
-          return (
-            <div key={item.id} className="card space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {shown ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                    מוצג בתפריט
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
-                    לא מוצג בתפריט
-                    {item.is_visible && !hasFile ? " — חסר קובץ" : ""}
-                  </span>
-                )}
-
-                <div className="flex items-center gap-3">
-                  {/* Visibility toggle */}
-                  <form action={async (fd) => { await run(toggleCommunityVisibility, fd); }}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <input type="hidden" name="is_visible" value={item.is_visible ? "false" : "true"} />
-                    <button type="submit" className="text-sm text-brand-600 hover:underline" disabled={busy}>
-                      {item.is_visible ? "הסתר" : "הצג"}
-                    </button>
-                  </form>
-
-                  {/* Delete */}
-                  <form
-                    action={async (fd) => { await run(deleteCommunityItem, fd); }}
-                    onSubmit={(e) => {
-                      if (!confirm(`למחוק את הפריט „${item.subject}”?`)) e.preventDefault();
-                    }}
-                  >
-                    <input type="hidden" name="id" value={item.id} />
-                    <button type="submit" className="text-sm text-red-600 hover:underline" disabled={busy}>
-                      מחיקה
-                    </button>
-                  </form>
-                </div>
-              </div>
-
-              {/* Subject (editable) */}
-              <form className="flex items-end gap-2" action={async (fd) => { await run(updateCommunitySubject, fd); }}>
-                <input type="hidden" name="id" value={item.id} />
-                <div className="flex-1">
-                  <label className="label">נושא</label>
-                  <input name="subject" className="field" defaultValue={item.subject} required />
-                </div>
-                <button type="submit" className="btn-secondary" disabled={busy}>
-                  שמור נושא
-                </button>
-              </form>
-
-              {/* Section (changes which menu it appears under) */}
-              <form action={async (fd) => { await run(updateCommunitySection, fd); }}>
-                <input type="hidden" name="id" value={item.id} />
-                <label className="label">מדור בתפריט</label>
-                <select
-                  name="section"
-                  className="field max-w-xs"
-                  defaultValue={item.section}
-                  disabled={busy}
-                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                >
-                  <option value="community">{SECTION_LABELS.community}</option>
-                  <option value="info">{SECTION_LABELS.info}</option>
-                  <option value="torah">{SECTION_LABELS.torah}</option>
-                </select>
-              </form>
-
-              {/* File */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
-                  {hasFile ? (
-                    <>
-                      <span className="font-medium text-gray-700">קובץ: {item.file_name ?? "PDF"}</span>
-                      <Link href={`/community/${item.id}`} target="_blank" className="text-brand-600 hover:underline">
-                        צפייה
-                      </Link>
-                      <form action={async (fd) => { await run(removeCommunityFile, fd); }}>
-                        <input type="hidden" name="id" value={item.id} />
-                        <button type="submit" className="text-red-600 hover:underline" disabled={busy}>
-                          הסרת קובץ
-                        </button>
-                      </form>
-                    </>
-                  ) : (
-                    <span className="text-gray-500">אין קובץ מצורף.</span>
-                  )}
-                </div>
-
-                <form className="flex flex-wrap items-center gap-2" action={async (fd) => { await run(replaceCommunityFile, fd); }}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <input
-                    name="file"
-                    type="file"
-                    accept={DOC_ACCEPT}
-                    required
-                    className="block text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
-                  />
-                  <button type="submit" className="btn-secondary" disabled={busy}>
-                    {hasFile ? "החלפת קובץ" : "העלאת קובץ"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          );
-        })}
+        {items.map((item) => (
+          <ItemCard key={item.id} item={item} run={run} busy={busy} />
+        ))}
       </div>
+    </div>
+  );
+}
+
+function ItemCard({ item, run, busy }: { item: CommunityItem; run: Run; busy: boolean }) {
+  const [mode, setMode] = useState<DocMode>(item.mode);
+  const hasFile = !!item.file_path;
+  const hasContent = item.mode === "text" ? item.body.trim() !== "" : hasFile;
+  const shown = item.is_visible && hasContent && item.subject.trim() !== "";
+
+  return (
+    <div className="card space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {shown ? (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+            מוצג בתפריט
+          </span>
+        ) : (
+          <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+            לא מוצג בתפריט
+            {item.is_visible && !hasContent ? " — חסר תוכן" : ""}
+          </span>
+        )}
+
+        <div className="flex items-center gap-3">
+          <form action={async (fd) => { await run(toggleCommunityVisibility, fd); }}>
+            <input type="hidden" name="id" value={item.id} />
+            <input type="hidden" name="is_visible" value={item.is_visible ? "false" : "true"} />
+            <button type="submit" className="text-sm text-brand-600 hover:underline" disabled={busy}>
+              {item.is_visible ? "הסתר" : "הצג"}
+            </button>
+          </form>
+
+          <form
+            action={async (fd) => { await run(deleteCommunityItem, fd); }}
+            onSubmit={(e) => {
+              if (!confirm(`למחוק את הפריט „${item.subject}”?`)) e.preventDefault();
+            }}
+          >
+            <input type="hidden" name="id" value={item.id} />
+            <button type="submit" className="text-sm text-red-600 hover:underline" disabled={busy}>
+              מחיקה
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Subject (editable) */}
+      <form className="flex items-end gap-2" action={async (fd) => { await run(updateCommunitySubject, fd); }}>
+        <input type="hidden" name="id" value={item.id} />
+        <div className="flex-1">
+          <label className="label">נושא</label>
+          <input name="subject" className="field" defaultValue={item.subject} required />
+        </div>
+        <button type="submit" className="btn-secondary" disabled={busy}>
+          שמור נושא
+        </button>
+      </form>
+
+      {/* Section (changes which menu it appears under) */}
+      <form action={async (fd) => { await run(updateCommunitySection, fd); }}>
+        <input type="hidden" name="id" value={item.id} />
+        <label className="label">מדור בתפריט</label>
+        <select
+          name="section"
+          className="field max-w-xs"
+          defaultValue={item.section}
+          disabled={busy}
+          onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        >
+          <option value="community">{SECTION_LABELS.community}</option>
+          <option value="info">{SECTION_LABELS.info}</option>
+          <option value="torah">{SECTION_LABELS.torah}</option>
+        </select>
+      </form>
+
+      {/* Content — mode + rich text + file, saved together */}
+      <form
+        className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
+        action={async (fd) => { await run(updateCommunityContent, fd); }}
+      >
+        <input type="hidden" name="id" value={item.id} />
+
+        <ModePicker mode={mode} onChange={setMode} />
+
+        {/* Free text */}
+        <div className={mode === "text" ? "" : "opacity-50"}>
+          <label className="label">טקסט חופשי</label>
+          <RichTextEditor name="body" defaultValue={item.body} />
+          <p className="mt-1 text-xs text-gray-500">מודגש / נטוי / קו תחתון. כל שורה תוצג כשורה נפרדת.</p>
+        </div>
+
+        {/* File */}
+        <div className={mode === "file" ? "" : "opacity-50"}>
+          <label className="label">קובץ (PDF או תמונה)</label>
+          {hasFile ? (
+            <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+              <span className="font-medium text-gray-700">קובץ נוכחי: {item.file_name ?? "קובץ"}</span>
+              <Link href={`/community/${item.id}`} target="_blank" className="text-brand-600 hover:underline">
+                צפייה
+              </Link>
+              <label className="flex items-center gap-2 text-gray-600">
+                <input type="checkbox" name="remove_file" value="1" />
+                הסר את הקובץ
+              </label>
+            </div>
+          ) : (
+            <p className="mb-2 text-sm text-gray-500">אין קובץ מצורף.</p>
+          )}
+          <input name="file" type="file" accept={DOC_ACCEPT} className={fileInputClass} />
+          <p className="mt-1 text-xs text-gray-500">העלאת קובץ חדש תחליף את הקיים. עד 20MB.</p>
+        </div>
+
+        <button type="submit" className="btn-secondary" disabled={busy}>
+          שמירת תוכן
+        </button>
+      </form>
     </div>
   );
 }

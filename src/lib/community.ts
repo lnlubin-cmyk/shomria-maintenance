@@ -21,9 +21,9 @@ async function getSignedUrl(path: string): Promise<string | null> {
 }
 
 /**
- * The document items to show in the menu, split by section. An item shows only
- * when it's visible and has both a subject and a file — the exact condition the
- * menu must satisfy, in one place.
+ * The menu items to show, split by section. An item shows only when it's visible,
+ * has a subject, AND has content — a file (file mode) or non-empty body (text
+ * mode) — the exact condition the menu must satisfy, in one place.
  */
 export const getMenuDocs = cache(async (): Promise<{
   community: CommunityMenuItem[];
@@ -33,12 +33,16 @@ export const getMenuDocs = cache(async (): Promise<{
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_items")
-    .select("id, subject, file_path, section")
+    .select("id, subject, file_path, section, mode, body")
     .eq("is_visible", true)
     .order("sort_order")
     .order("created_at");
 
-  const rows = (data ?? []).filter((r) => r.subject.trim() !== "" && !!r.file_path);
+  const rows = (data ?? []).filter(
+    (r) =>
+      r.subject.trim() !== "" &&
+      (r.mode === "text" ? (r.body ?? "").trim() !== "" : !!r.file_path)
+  );
   const inSection = (s: string) => rows.filter((r) => r.section === s).map((r) => ({ id: r.id, subject: r.subject }));
   return {
     // Legacy rows default to 'community', so anything not info/torah counts as community.
@@ -60,20 +64,24 @@ export async function getAllCommunityItems(): Promise<CommunityItem[]> {
 }
 
 /**
- * A single item plus a short-lived signed URL to its PDF, for the view page.
- * Returns null if the item is missing, hidden, or has no file — residents may
- * only reach complete, visible items.
+ * A single item for the view page, plus a fresh signed URL when it's a file
+ * item (`url` is null for a text item). Returns null if the item is missing,
+ * hidden, or has no content — residents may only reach complete, visible items.
  */
 export async function getCommunityItemForView(
   id: string
-): Promise<{ item: CommunityItem; url: string } | null> {
+): Promise<{ item: CommunityItem; url: string | null } | null> {
   const admin = createAdminClient();
   const { data } = await admin.from("community_items").select("*").eq("id", id).maybeSingle();
   const item = data as CommunityItem | null;
-  if (!item || !item.is_visible || !item.file_path) return null;
+  if (!item || !item.is_visible) return null;
 
+  if (item.mode === "text") {
+    return item.body.trim() !== "" ? { item, url: null } : null;
+  }
+
+  if (!item.file_path) return null;
   const url = await getSignedUrl(item.file_path);
   if (!url) return null;
-
   return { item, url };
 }

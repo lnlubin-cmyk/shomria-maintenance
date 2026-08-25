@@ -4,10 +4,12 @@ import { getCommunityItemForView } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
 import AppHeader from "@/components/AppHeader";
 import DocViewer from "@/components/DocViewer";
+import RichText from "@/components/RichText";
 
 /**
- * View a "קהילה" item: its PDF rendered inline (PDF.js). Login-gated, and only
- * complete + visible items are reachable (getCommunityItemForView enforces it).
+ * View a "קהילה" item: free rich text, or an uploaded file rendered inline
+ * (PDF.js / <img>). Login-gated, and only complete + visible items are reachable
+ * (getCommunityItemForView enforces it).
  */
 export default async function CommunityItemPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -21,6 +23,13 @@ export default async function CommunityItemPage({ params }: { params: { id: stri
       <main className="mx-auto max-w-4xl px-4 py-8">
         {!data ? (
           <div className="card text-center text-gray-600">הפריט אינו זמין.</div>
+        ) : data.item.mode === "text" ? (
+          <>
+            <h1 className="mb-5 text-2xl font-bold text-gray-900">{data.item.subject}</h1>
+            <div className="card text-base leading-relaxed text-gray-800">
+              <RichText value={data.item.body} />
+            </div>
+          </>
         ) : (
           <>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -34,7 +43,7 @@ export default async function CommunityItemPage({ params }: { params: { id: stri
                 {docKind(data.item.file_path) === "image" ? "פתח / הורד תמונה" : "פתח / הורד PDF"}
               </a>
             </div>
-            <DocViewer url={data.url} kind={docKind(data.item.file_path)} />
+            <DocViewer url={data.url!} kind={docKind(data.item.file_path)} />
           </>
         )}
       </main>

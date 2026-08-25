@@ -226,12 +226,16 @@ export interface FaultRow extends Fault {
 
 /** Which menu section a document item appears under. */
 export type DocSection = "community" | "info" | "torah";
+/** How a menu item presents its content: an uploaded file, or free rich text. */
+export type DocMode = "file" | "text";
 
-/** An admin-managed menu entry with an attached PDF (in "קהילה" or "מידע לתושב"). */
+/** An admin-managed menu entry: either an attached PDF/image or free rich text. */
 export interface CommunityItem {
   id: string;
   subject: string;
   section: DocSection;
+  mode: DocMode;
+  body: string; // sanitized rich-text HTML, shown when mode === "text"
   file_path: string | null;
   file_name: string | null;
   is_visible: boolean;

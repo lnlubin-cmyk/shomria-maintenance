@@ -15,8 +15,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 
   const data = await getCommunityItemForView(params.id);
-  if (!data) {
-    // Missing / hidden / no file — send back to the item page, which explains it.
+  if (!data || !data.url) {
+    // Missing / hidden / no file (or a text item) — send back to the item page.
     return NextResponse.redirect(new URL(`/community/${params.id}`, request.url));
   }
 
