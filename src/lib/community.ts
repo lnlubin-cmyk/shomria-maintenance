@@ -33,7 +33,7 @@ export const getMenuDocs = cache(async (): Promise<{
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_items")
-    .select("id, subject, file_path, section, mode, body")
+    .select("id, subject, file_path, section, mode, body, icon, description")
     .eq("is_visible", true)
     .order("sort_order")
     .order("created_at");
@@ -43,10 +43,16 @@ export const getMenuDocs = cache(async (): Promise<{
       r.subject.trim() !== "" &&
       (r.mode === "text" ? (r.body ?? "").trim() !== "" : !!r.file_path)
   );
-  const inSection = (s: string) => rows.filter((r) => r.section === s).map((r) => ({ id: r.id, subject: r.subject }));
+  const toMenu = (r: (typeof rows)[number]): CommunityMenuItem => ({
+    id: r.id,
+    subject: r.subject,
+    icon: r.icon ?? "",
+    description: r.description ?? "",
+  });
+  const inSection = (s: string) => rows.filter((r) => r.section === s).map(toMenu);
   return {
     // Legacy rows default to 'community', so anything not info/torah counts as community.
-    community: rows.filter((r) => r.section !== "info" && r.section !== "torah").map((r) => ({ id: r.id, subject: r.subject })),
+    community: rows.filter((r) => r.section !== "info" && r.section !== "torah").map(toMenu),
     info: inSection("info"),
     torah: inSection("torah"),
   };

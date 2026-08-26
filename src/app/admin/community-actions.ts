@@ -18,6 +18,16 @@ async function requireAdmin() {
   return session;
 }
 
+/** The tile emoji, trimmed and length-capped (plain text — rendered escaped). */
+function readIcon(formData: FormData): string {
+  return String(formData.get("icon") ?? "").trim().slice(0, 16);
+}
+
+/** The optional one-line tile description, trimmed and length-capped. */
+function readDescription(formData: FormData): string {
+  return String(formData.get("description") ?? "").trim().slice(0, 160);
+}
+
 function readDoc(formData: FormData): { file: File | null; ext?: string; error?: string } {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { file: null };
@@ -76,6 +86,9 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   const mode = String(formData.get("mode") ?? "file");
   if (mode !== "file" && mode !== "text") return { error: "מצב תצוגה לא חוקי" };
 
+  const icon = readIcon(formData);
+  const description = readDescription(formData);
+
   const admin = createAdminClient();
 
   if (mode === "text") {
@@ -83,7 +96,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
     if (!body.trim()) return { error: "יש להזין תוכן טקסט" };
     const { error } = await admin
       .from("community_items")
-      .insert({ subject, section, mode: "text", body, file_path: null, file_name: null, is_visible: true });
+      .insert({ subject, section, mode: "text", body, icon, description, file_path: null, file_name: null, is_visible: true });
     if (error) return { error: "יצירת הפריט נכשלה" };
     revalidate();
     return { ok: true };
@@ -104,7 +117,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
 
   const { error } = await admin
     .from("community_items")
-    .insert({ subject, section, mode: "file", body: "", file_path, file_name, is_visible: !!file });
+    .insert({ subject, section, mode: "file", body: "", icon, description, file_path, file_name, is_visible: !!file });
   if (error) {
     await removeFile(file_path); // don't leave the just-uploaded file orphaned
     return { error: "יצירת הפריט נכשלה" };
@@ -114,7 +127,8 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
   return { ok: true };
 }
 
-export async function updateCommunitySubject(formData: FormData): Promise<ActionResult> {
+/** Update an item's tile details: subject, icon (emoji) and short description. */
+export async function updateCommunityDetails(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
   } catch (e) {
@@ -127,8 +141,11 @@ export async function updateCommunitySubject(formData: FormData): Promise<Action
   if (!subject) return { error: "יש להזין נושא" };
 
   const admin = createAdminClient();
-  const { error } = await admin.from("community_items").update({ subject }).eq("id", id);
-  if (error) return { error: "עדכון הנושא נכשל" };
+  const { error } = await admin
+    .from("community_items")
+    .update({ subject, icon: readIcon(formData), description: readDescription(formData) })
+    .eq("id", id);
+  if (error) return { error: "עדכון הפרטים נכשל" };
 
   revalidate();
   return { ok: true };

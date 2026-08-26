@@ -236,6 +236,8 @@ export interface CommunityItem {
   section: DocSection;
   mode: DocMode;
   body: string; // sanitized rich-text HTML, shown when mode === "text"
+  icon: string; // emoji for the home-page tile ("" → 📄)
+  description: string; // optional one-line tile description
   file_path: string | null;
   file_name: string | null;
   is_visible: boolean;
@@ -244,10 +246,12 @@ export interface CommunityItem {
   updated_at: string;
 }
 
-/** A community item reduced to what the nav needs (only visible + complete ones). */
+/** A community item reduced to what the menu/tiles need (only visible + complete). */
 export interface CommunityMenuItem {
   id: string;
   subject: string;
+  icon: string;
+  description: string;
 }
 
 export type HomeMediaKind = "image" | "video" | "youtube" | "bunny";

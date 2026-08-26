@@ -249,9 +249,9 @@ export default async function HomePage() {
                   key={d.id}
                   href={`/community/${d.id}`}
                   tone="accent"
-                  icon="📄"
+                  icon={d.icon || "📄"}
                   title={d.subject}
-                  desc="לחצו לצפייה במסמך."
+                  desc={d.description || "לחצו לצפייה."}
                 />
               ))}
               {session?.user.role === "gabbai" && (
@@ -287,9 +287,9 @@ export default async function HomePage() {
                   key={d.id}
                   href={`/community/${d.id}`}
                   tone="accent"
-                  icon="📄"
+                  icon={d.icon || "📄"}
                   title={d.subject}
-                  desc="לחצו לצפייה במסמך."
+                  desc={d.description || "לחצו לצפייה."}
                 />
               ))}
             </div>
@@ -315,9 +315,9 @@ export default async function HomePage() {
                     key={c.id}
                     href={`/community/${c.id}`}
                     tone="accent"
-                    icon="📄"
+                    icon={c.icon || "📄"}
                     title={c.subject}
-                    desc="לחצו לצפייה במסמך."
+                    desc={c.description || "לחצו לצפייה."}
                   />
                 ))}
               </div>

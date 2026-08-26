@@ -8,7 +8,7 @@ import { DOC_ACCEPT } from "@/lib/doc-files";
 import RichTextEditor from "@/components/RichTextEditor";
 import {
   createCommunityItem,
-  updateCommunitySubject,
+  updateCommunityDetails,
   updateCommunitySection,
   updateCommunityContent,
   toggleCommunityVisibility,
@@ -16,6 +16,38 @@ import {
 } from "./community-actions";
 
 const SECTION_LABELS = { community: "קהילה", info: "מידע לתושב", torah: "תורה ותפילה" } as const;
+
+const ICON_SUGGESTIONS = ["📄", "📅", "📰", "🎉", "🏠", "📢", "🕯️", "🌳", "⚽", "🎵", "🍞", "📚"];
+
+/** Emoji field with clickable suggestions (so a non-technical admin needn't type one). */
+function EmojiField({ defaultValue = "" }: { defaultValue?: string }) {
+  const [val, setVal] = useState(defaultValue);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        name="icon"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        maxLength={8}
+        className="field w-16 text-center text-xl"
+        placeholder="📄"
+        aria-label="אייקון"
+      />
+      <div className="flex flex-wrap gap-1">
+        {ICON_SUGGESTIONS.map((e) => (
+          <button
+            key={e}
+            type="button"
+            onClick={() => setVal(e)}
+            className="rounded p-1 text-xl leading-none hover:bg-gray-100"
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Run = (action: (fd: FormData) => Promise<any>, fd: FormData) => Promise<boolean>;
@@ -104,6 +136,18 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
               נושא (הטקסט שיוצג בתפריט) *
             </label>
             <input id="new-subject" name="subject" className="field" placeholder="לדוגמה: הידיעון האחרון" required />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">אייקון (מוצג בכרטיס בדף הבית)</label>
+              <EmojiField />
+            </div>
+            <div>
+              <label className="label" htmlFor="new-desc">
+                תיאור קצר (לא חובה)
+              </label>
+              <input id="new-desc" name="description" className="field" placeholder="מוצג מתחת לכותרת בכרטיס" />
+            </div>
           </div>
           <div>
             <label className="label" htmlFor="new-section">
@@ -198,15 +242,25 @@ function ItemCard({ item, run, busy }: { item: CommunityItem; run: Run; busy: bo
         </div>
       </div>
 
-      {/* Subject (editable) */}
-      <form className="flex items-end gap-2" action={async (fd) => { await run(updateCommunitySubject, fd); }}>
+      {/* Tile details: subject, icon, description */}
+      <form className="space-y-2" action={async (fd) => { await run(updateCommunityDetails, fd); }}>
         <input type="hidden" name="id" value={item.id} />
-        <div className="flex-1">
+        <div>
           <label className="label">נושא</label>
           <input name="subject" className="field" defaultValue={item.subject} required />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">אייקון</label>
+            <EmojiField defaultValue={item.icon} />
+          </div>
+          <div>
+            <label className="label">תיאור קצר (לא חובה)</label>
+            <input name="description" className="field" defaultValue={item.description} placeholder="מוצג מתחת לכותרת בכרטיס" />
+          </div>
+        </div>
         <button type="submit" className="btn-secondary" disabled={busy}>
-          שמור נושא
+          שמור פרטים
         </button>
       </form>
 
