@@ -54,23 +54,52 @@ export interface AdminUserRow {
   resident: { first_name: string; last_name: string; is_member: boolean } | null;
 }
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "users", label: "משתמשים" },
-  { key: "residents", label: "תושבים" },
-  { key: "buildings", label: "מבנים" },
-  { key: "map", label: "מפה" },
-  { key: "moves", label: "מעבר דירות" },
-  { key: "community", label: "קהילה/מידע לתושב" },
-  { key: "moments", label: "רגעים שזוכרים" },
-  { key: "newsletter", label: "פיצול ידיעון" },
-  { key: "clinic", label: "מרפאה" },
-  { key: "store", label: "מכולת" },
-  { key: "media", label: "מדיה בדף הבית" },
-  { key: "halachic", label: "זמנים הלכתיים" },
-  { key: "religion", label: "תורה ותפילה" },
-  { key: "contacts", label: "צור קשר" },
-  { key: "campaigns", label: "קמפיין" },
-  { key: "votes", label: "הצבעות" },
+// Human labels per leaf tab (used by the sub-tab bars).
+const LEAF_LABELS: Record<Tab, string> = {
+  users: "משתמשים",
+  residents: "תושבים",
+  buildings: "מבנים",
+  map: "מפה",
+  moves: "מעבר דירות",
+  community: "קהילה/מידע לתושב",
+  moments: "רגעים שזוכרים",
+  clinic: "מרפאה",
+  store: "מכולת",
+  newsletter: "פיצול ידיעון",
+  media: "מדיה בדף הבית",
+  halachic: "זמנים הלכתיים",
+  religion: "תורה ותפילה",
+  contacts: "צור קשר",
+  campaigns: "קמפיין",
+  votes: "הצבעות",
+};
+
+// Top-level navigation: two grouping tabs (each with sub-tabs) followed by the
+// remaining standalone tabs.
+type TopEntry =
+  | { kind: "group"; key: "people" | "display"; label: string; tabs: Tab[] }
+  | { kind: "leaf"; key: Tab; label: string };
+
+const TOP: TopEntry[] = [
+  {
+    kind: "group",
+    key: "people",
+    label: "ניהול משתמשים ומבנים",
+    tabs: ["users", "residents", "buildings", "map", "moves"],
+  },
+  {
+    kind: "group",
+    key: "display",
+    label: "ניהול פריטי תצוגה",
+    tabs: ["community", "moments", "clinic", "store"],
+  },
+  { kind: "leaf", key: "newsletter", label: LEAF_LABELS.newsletter },
+  { kind: "leaf", key: "media", label: LEAF_LABELS.media },
+  { kind: "leaf", key: "halachic", label: LEAF_LABELS.halachic },
+  { kind: "leaf", key: "religion", label: LEAF_LABELS.religion },
+  { kind: "leaf", key: "contacts", label: LEAF_LABELS.contacts },
+  { kind: "leaf", key: "campaigns", label: LEAF_LABELS.campaigns },
+  { kind: "leaf", key: "votes", label: LEAF_LABELS.votes },
 ];
 
 export default function AdminTabs({
@@ -111,71 +140,119 @@ export default function AdminTabs({
   panels: InfoPanel[];
 }) {
   const panelBySlug = (slug: string) => panels.find((p) => p.slug === slug);
-  const [tab, setTab] = useState<Tab>("users");
-  // Sub-tab inside the "תורה ותפילה" group.
+  // Which top-level entry is open (a group key or a standalone leaf key)...
+  const [top, setTop] = useState<string>("people");
+  // ...and which leaf is selected inside each group (remembered per group).
+  const [sub, setSub] = useState<Record<string, Tab>>({ people: "users", display: "community" });
+  // Sub-tab inside the "תורה ותפילה" leaf.
   const [religionSub, setReligionSub] = useState<"prayers" | "torah">("prayers");
+
+  const activeGroup = TOP.find((e) => e.kind === "group" && e.key === top) as
+    | Extract<TopEntry, { kind: "group" }>
+    | undefined;
+  const activeLeaf: Tab = activeGroup ? sub[top] ?? activeGroup.tabs[0] : (top as Tab);
+
+  function renderLeaf(tab: Tab) {
+    switch (tab) {
+      case "users":
+        return <UsersTab users={users} residents={residents} currentUserId={currentUserId} />;
+      case "residents":
+        return <ResidentsTab residents={residents} />;
+      case "buildings":
+        return <BuildingsTab buildings={buildings} residents={residents} layers={layers} />;
+      case "map":
+        return <BuildingsMapTab buildings={buildings} />;
+      case "moves":
+        return <MoveTab houses={moveHouses} />;
+      case "community":
+        return <CommunityTab items={community} />;
+      case "moments":
+        return <MomentsTab moments={moments} />;
+      case "clinic":
+        return panelBySlug("clinic") ? <PanelTab panel={panelBySlug("clinic")!} /> : null;
+      case "store":
+        return panelBySlug("store") ? <PanelTab panel={panelBySlug("store")!} /> : null;
+      case "newsletter":
+        return <NewsletterTab aiConfigured={aiConfigured} />;
+      case "media":
+        return <HomeMediaTab items={homeMedia} />;
+      case "halachic":
+        return <HalachicTab years={halachicYears} />;
+      case "religion":
+        return (
+          <div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {([
+                { k: "prayers", label: "זמני תפילות" },
+                { k: "torah", label: "שיעורי תורה" },
+              ] as const).map((s) => (
+                <button
+                  key={s.k}
+                  onClick={() => setReligionSub(s.k)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+                    religionSub === s.k
+                      ? "bg-brand-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            {religionSub === "prayers" && <PrayerTimesTab schedules={schedules} />}
+            {religionSub === "torah" && <TorahLessonsTab lessons={lessons} />}
+          </div>
+        );
+      case "contacts":
+        return <ContactsTab contacts={contacts} />;
+      case "campaigns":
+        return <CampaignTab items={campaigns} />;
+      case "votes":
+        return <VotesTab votes={votes} residents={residents} />;
+      default:
+        return null;
+    }
+  }
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
+      {/* Top-level tabs */}
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-gray-200">
+        {TOP.map((e) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={e.key}
+            onClick={() => setTop(e.key)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-bold transition ${
-              tab === t.key
+              top === e.key
                 ? "border-brand-500 text-brand-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"
             }`}
           >
-            {t.label}
+            {e.label}
           </button>
         ))}
       </div>
 
-      {tab === "users" && (
-        <UsersTab users={users} residents={residents} currentUserId={currentUserId} />
-      )}
-      {tab === "residents" && <ResidentsTab residents={residents} />}
-      {tab === "buildings" && (
-        <BuildingsTab buildings={buildings} residents={residents} layers={layers} />
-      )}
-      {tab === "map" && <BuildingsMapTab buildings={buildings} />}
-      {tab === "moves" && <MoveTab houses={moveHouses} />}
-      {tab === "community" && <CommunityTab items={community} />}
-      {tab === "moments" && <MomentsTab moments={moments} />}
-      {tab === "newsletter" && <NewsletterTab aiConfigured={aiConfigured} />}
-      {tab === "clinic" && panelBySlug("clinic") && <PanelTab panel={panelBySlug("clinic")!} />}
-      {tab === "store" && panelBySlug("store") && <PanelTab panel={panelBySlug("store")!} />}
-      {tab === "media" && <HomeMediaTab items={homeMedia} />}
-      {tab === "halachic" && <HalachicTab years={halachicYears} />}
-      {tab === "religion" && (
-        <div>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {([
-              { k: "prayers", label: "זמני תפילות" },
-              { k: "torah", label: "שיעורי תורה" },
-            ] as const).map((s) => (
-              <button
-                key={s.k}
-                onClick={() => setReligionSub(s.k)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${
-                  religionSub === s.k
-                    ? "bg-brand-500 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          {religionSub === "prayers" && <PrayerTimesTab schedules={schedules} />}
-          {religionSub === "torah" && <TorahLessonsTab lessons={lessons} />}
+      {/* Sub-tabs for the active group */}
+      {activeGroup && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {activeGroup.tabs.map((t) => (
+            <button
+              key={t}
+              onClick={() => setSub((prev) => ({ ...prev, [top]: t }))}
+              className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+                activeLeaf === t
+                  ? "bg-brand-500 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {LEAF_LABELS[t]}
+            </button>
+          ))}
         </div>
       )}
-      {tab === "contacts" && <ContactsTab contacts={contacts} />}
-      {tab === "campaigns" && <CampaignTab items={campaigns} />}
-      {tab === "votes" && <VotesTab votes={votes} residents={residents} />}
+
+      {renderLeaf(activeLeaf)}
     </div>
   );
 }
