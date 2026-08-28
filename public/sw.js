@@ -15,7 +15,7 @@
  *   - govmap tiles/assets: cache-first, in a size-bounded cache.
  *   - Everything else (Supabase API, auth, uploads): straight to network.
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const PRECACHE_NAME = `shomria-precache-${VERSION}`;
 const STATIC_NAME = `shomria-static-${VERSION}`;
 const MAP_NAME = `shomria-map-${VERSION}`;
@@ -89,6 +89,11 @@ self.addEventListener("fetch", (event) => {
 
   // Authenticated HTML — always fresh, offline page when unreachable.
   if (req.mode === "navigate") {
+    // The "open file" routes 307-redirect to a signed URL. Let the browser
+    // handle those navigations itself: a service-worker-returned redirect blanks
+    // the page (black screen) on some Android browsers. Bypassing = don't call
+    // respondWith, so the browser follows the redirect natively.
+    if (url.pathname.endsWith("/file")) return;
     event.respondWith(fetch(req).catch(() => caches.match(OFFLINE_URL)));
     return;
   }
