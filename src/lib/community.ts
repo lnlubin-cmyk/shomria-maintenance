@@ -1,24 +1,27 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 
 export const COMMUNITY_BUCKET = "community";
 
-/**
- * A freshly-signed URL for a document, minted per request. It is deliberately
- * NOT cached: a cached signed URL is served stale-while-revalidate, so an
- * infrequently-opened file (e.g. the weekly ידיעון) can be handed out after its
- * signature has already expired — which fails with Supabase "InvalidJWT / exp
- * claim" when opened. The view page is dynamic, so this runs once per visit and
- * the inline viewer + the "open" button share one fresh, valid URL.
- */
-async function getSignedUrl(path: string): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data } = await admin.storage
-    .from(COMMUNITY_BUCKET)
-    .createSignedUrl(path, 60 * 60 * 2); // 2 hours — ample to view/open
-  return data?.signedUrl ?? null;
-}
+// The signed URL is valid for 30 days but cached (reused) for only an hour. The
+// long validity is the fix for the old "InvalidJWT / exp claim" bug: even when
+// the cache serves a stale entry, a 30-day signature is effectively never
+// expired (it would take a document nobody opened for a month, and a refresh
+// then re-mints it). Reusing the same URL for an hour lets the browser cache the
+// file instead of re-downloading it on every open. Uploading a new file changes
+// file_path → a new cache key, so a replaced document is never served stale.
+const SIGNED_URL_TTL = 60 * 60 * 24 * 30; // 30 days
+const getSignedUrl = unstable_cache(
+  async (path: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
+    return data?.signedUrl ?? null;
+  },
+  ["community-doc-signed-url-30d"],
+  { revalidate: 60 * 60 } // reuse the same URL for an hour
+);
 
 /**
  * The menu items to show, split by section. An item shows only when it's visible,

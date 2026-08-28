@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
@@ -39,15 +40,18 @@ export const getInfoPanel = cache(async (slug: string): Promise<InfoPanel | null
   return (data as InfoPanel | null) ?? null;
 });
 
-// Freshly-signed URL per request (NOT cached): a cached signed URL is served
-// stale-while-revalidate and can be handed out after it has expired, failing
-// with Supabase "InvalidJWT / exp claim". The /info/[slug] page is dynamic, so
-// this runs per visit.
-async function getSignedUrl(path: string): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, 60 * 60 * 2);
-  return data?.signedUrl ?? null;
-}
+// Signed URL valid for 30 days but reused (cached) for an hour — same rationale
+// as community.ts: the long validity means a stale-served URL is effectively
+// never expired, while a stable URL lets the browser cache the file.
+const getSignedUrl = unstable_cache(
+  async (path: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 30);
+    return data?.signedUrl ?? null;
+  },
+  ["info-panel-signed-url-30d"],
+  { revalidate: 60 * 60 }
+);
 
 /** Everything the /info/[slug] page needs, or null if the panel doesn't exist. */
 export async function getPanelView(slug: string): Promise<
