@@ -38,8 +38,8 @@ export default async function InfoPanelPage({ params }: { params: { slug: string
         ) : panel.mode === "pdf" && panel.url ? (
           <>
             <div className="mb-4 flex justify-end">
-              <a href={panel.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                {panel.kind === "image" ? "פתח / הורד תמונה" : "פתח / הורד PDF"}
+              <a href={panel.downloadUrl ?? panel.url} rel="noopener noreferrer" className="btn-secondary">
+                הורד קובץ
               </a>
             </div>
             <DocViewer url={panel.url} kind={panel.kind} />

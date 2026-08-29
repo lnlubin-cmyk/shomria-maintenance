@@ -23,6 +23,21 @@ const getSignedUrl = unstable_cache(
   { revalidate: 60 * 60 } // reuse the same URL for an hour
 );
 
+// A signed URL that serves the file with Content-Disposition: attachment, so the
+// "הורד קובץ" button hands the file to the device (triggering the phone's own
+// "open with" chooser + native viewer) instead of rendering it in the browser.
+const getSignedDownloadUrl = unstable_cache(
+  async (path: string, filename: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage
+      .from(COMMUNITY_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL, { download: filename || true });
+    return data?.signedUrl ?? null;
+  },
+  ["community-doc-download-url-30d"],
+  { revalidate: 60 * 60 }
+);
+
 /**
  * The menu items to show, split by section. An item shows only when it's visible,
  * has a subject, AND has content — a file (file mode) or non-empty body (text
@@ -79,18 +94,19 @@ export async function getAllCommunityItems(): Promise<CommunityItem[]> {
  */
 export async function getCommunityItemForView(
   id: string
-): Promise<{ item: CommunityItem; url: string | null } | null> {
+): Promise<{ item: CommunityItem; url: string | null; downloadUrl: string | null } | null> {
   const admin = createAdminClient();
   const { data } = await admin.from("community_items").select("*").eq("id", id).maybeSingle();
   const item = data as CommunityItem | null;
   if (!item || !item.is_visible) return null;
 
   if (item.mode === "text") {
-    return item.body.trim() !== "" ? { item, url: null } : null;
+    return item.body.trim() !== "" ? { item, url: null, downloadUrl: null } : null;
   }
 
   if (!item.file_path) return null;
   const url = await getSignedUrl(item.file_path);
   if (!url) return null;
-  return { item, url };
+  const downloadUrl = await getSignedDownloadUrl(item.file_path, item.file_name ?? "");
+  return { item, url, downloadUrl };
 }

@@ -34,8 +34,8 @@ export default async function CommunityItemPage({ params }: { params: { id: stri
           <>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <h1 className="text-2xl font-bold text-gray-900">{data.item.subject}</h1>
-              <a href={data.url!} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                {docKind(data.item.file_path) === "image" ? "פתח / הורד תמונה" : "פתח / הורד PDF"}
+              <a href={data.downloadUrl ?? data.url!} rel="noopener noreferrer" className="btn-secondary">
+                הורד קובץ
               </a>
             </div>
             <DocViewer url={data.url!} kind={docKind(data.item.file_path)} />

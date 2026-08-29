@@ -53,19 +53,44 @@ const getSignedUrl = unstable_cache(
   { revalidate: 60 * 60 }
 );
 
+// Attachment-disposition URL for the "הורד קובץ" button (hands the file to the
+// device's own viewer). See community.ts for the rationale.
+const getSignedDownloadUrl = unstable_cache(
+  async (path: string, filename: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage
+      .from(COMMUNITY_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 30, { download: filename || true });
+    return data?.signedUrl ?? null;
+  },
+  ["info-panel-download-url-30d"],
+  { revalidate: 60 * 60 }
+);
+
 /** Everything the /info/[slug] page needs, or null if the panel doesn't exist. */
 export async function getPanelView(slug: string): Promise<
-  | { label: string; mode: "text" | "pdf"; body: string; url: string | null; kind: "pdf" | "image"; configured: boolean }
+  | {
+      label: string;
+      mode: "text" | "pdf";
+      body: string;
+      url: string | null;
+      downloadUrl: string | null;
+      kind: "pdf" | "image";
+      configured: boolean;
+    }
   | null
 > {
   const p = await getInfoPanel(slug);
   if (!p) return null;
-  const url = p.mode === "pdf" && p.file_path ? await getSignedUrl(p.file_path) : null;
+  const hasFile = p.mode === "pdf" && !!p.file_path;
+  const url = hasFile ? await getSignedUrl(p.file_path!) : null;
+  const downloadUrl = hasFile ? await getSignedDownloadUrl(p.file_path!, p.file_name ?? "") : null;
   return {
     label: p.menu_label,
     mode: p.mode,
     body: p.body,
     url,
+    downloadUrl,
     kind: docKind(p.file_path),
     configured: isPanelConfigured(p),
   };
