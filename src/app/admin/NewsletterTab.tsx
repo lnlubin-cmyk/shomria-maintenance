@@ -453,12 +453,7 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
                             <select
                               className="field max-w-[11rem] py-1 text-sm"
                               value={s.section}
-                              onChange={(e) => {
-                                const section = e.target.value as TargetKey;
-                                // Events are always saved as an image (shown in the
-                                // carousel), so lock the format to PNG.
-                                updateSec(s.id, section === "events" ? { section, format: "png" } : { section });
-                              }}
+                              onChange={(e) => updateSec(s.id, { section: e.target.value as TargetKey })}
                             >
                               {(Object.keys(TARGET_LABELS) as TargetKey[]).map((k) => (
                                 <option key={k} value={k}>
@@ -467,22 +462,18 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
                               ))}
                             </select>
                             <label className="text-xs text-gray-600">פורמט:</label>
-                            {s.section === "events" ? (
-                              <span
-                                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-500"
-                                title="אירוע נשמר תמיד כתמונה (מוצג בקרוסלה)"
-                              >
-                                תמונה
+                            <select
+                              className="field max-w-[6rem] py-1 text-sm"
+                              value={s.format}
+                              onChange={(e) => updateSec(s.id, { format: e.target.value as "png" | "pdf" })}
+                            >
+                              <option value="png">PNG</option>
+                              <option value="pdf">PDF</option>
+                            </select>
+                            {s.section === "events" && (
+                              <span className="text-[11px] text-gray-400">
+                                {s.format === "pdf" ? "תמונה בכרטיס + PDF בעמוד" : "תמונה בלבד"}
                               </span>
-                            ) : (
-                              <select
-                                className="field max-w-[6rem] py-1 text-sm"
-                                value={s.format}
-                                onChange={(e) => updateSec(s.id, { format: e.target.value as "png" | "pdf" })}
-                              >
-                                <option value="png">PNG</option>
-                                <option value="pdf">PDF</option>
-                              </select>
                             )}
                             <button
                               className="mr-auto text-sm text-red-600 hover:underline"
