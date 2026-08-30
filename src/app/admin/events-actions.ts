@@ -62,10 +62,31 @@ async function uploadImage(file: File, ext: string): Promise<{ path?: string; er
   return { path };
 }
 
-async function removeImage(path: string | null | undefined) {
+async function removeFile(path: string | null | undefined) {
   if (!path) return;
   const admin = createAdminClient();
   await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+}
+const removeImage = removeFile;
+
+/** The optional PDF for the event's full page. */
+function readEventDoc(formData: FormData): { file: File | null; error?: string } {
+  const file = formData.get("doc");
+  if (!(file instanceof File) || file.size === 0) return { file: null };
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) return { file: null, error: "יש להעלות קובץ PDF" };
+  if (file.size > MAX_FILE_BYTES) return { file: null, error: "הקובץ גדול מ-20MB" };
+  return { file };
+}
+
+async function uploadEventDoc(file: File): Promise<{ path?: string; error?: string }> {
+  const admin = createAdminClient();
+  const path = `${randomUUID()}.pdf`;
+  const { error } = await admin.storage
+    .from(COMMUNITY_BUCKET)
+    .upload(path, await file.arrayBuffer(), { contentType: "application/pdf", upsert: false });
+  if (error) return { error: error.message };
+  return { path };
 }
 
 /** Add an event. Visible by default so it appears in the carousel right away. */
@@ -91,6 +112,23 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
     image_name = file.name;
   }
 
+  const { file: docFile, error: docErr } = readEventDoc(formData);
+  if (docErr) {
+    await removeImage(image_path);
+    return { error: docErr };
+  }
+  let doc_path: string | null = null;
+  let doc_name: string | null = null;
+  if (docFile) {
+    const { path, error } = await uploadEventDoc(docFile);
+    if (error || !path) {
+      await removeImage(image_path);
+      return { error: "העלאת המסמך נכשלה" };
+    }
+    doc_path = path;
+    doc_name = docFile.name;
+  }
+
   const admin = createAdminClient();
   const { data: maxRow } = await admin
     .from("community_events")
@@ -107,11 +145,14 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
     expires_at: readDate(formData, "expires_at"),
     image_path,
     image_name,
+    doc_path,
+    doc_name,
     is_visible: true,
     sort_order,
   });
   if (error) {
-    await removeImage(image_path);
+    await removeFile(image_path);
+    await removeFile(doc_path);
     return { error: "שמירת האירוע נכשלה" };
   }
 
@@ -195,6 +236,53 @@ export async function updateEventImage(formData: FormData): Promise<ActionResult
   return { ok: true };
 }
 
+/** Replace or remove the event's PDF document (shown on its full page). */
+export async function updateEventDoc(formData: FormData): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "פריט חסר" };
+
+  const admin = createAdminClient();
+  const { data: cur } = await admin
+    .from("community_events")
+    .select("doc_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const removeExisting = String(formData.get("remove_doc") ?? "") === "1";
+  const { file, error: docErr } = readEventDoc(formData);
+  if (docErr) return { error: docErr };
+
+  let doc_path: string | null = cur?.doc_path ?? null;
+  let doc_name: string | null = null;
+  if (file) {
+    const { path, error } = await uploadEventDoc(file);
+    if (error || !path) return { error: "העלאת המסמך נכשלה" };
+    if (cur?.doc_path) await removeFile(cur.doc_path);
+    doc_path = path;
+    doc_name = file.name;
+  } else if (removeExisting && cur?.doc_path) {
+    await removeFile(cur.doc_path);
+    doc_path = null;
+  } else {
+    return { ok: true }; // nothing to do
+  }
+
+  const { error } = await admin
+    .from("community_events")
+    .update({ doc_path, doc_name })
+    .eq("id", id);
+  if (error) return { error: "עדכון המסמך נכשל" };
+
+  revalidate();
+  return { ok: true };
+}
+
 export async function toggleEventVisibility(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -227,14 +315,15 @@ export async function deleteEvent(formData: FormData): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: cur } = await admin
     .from("community_events")
-    .select("image_path")
+    .select("image_path, doc_path")
     .eq("id", id)
     .maybeSingle();
 
   const { error } = await admin.from("community_events").delete().eq("id", id);
   if (error) return { error: "מחיקת האירוע נכשלה" };
 
-  await removeImage(cur?.image_path);
+  await removeFile(cur?.image_path);
+  await removeFile(cur?.doc_path);
   revalidate();
   return { ok: true };
 }

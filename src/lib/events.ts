@@ -1,18 +1,32 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
+import { docKind } from "@/lib/doc-files";
 import { notExpired, israelToday } from "@/lib/expiry";
 import type { CommunityEvent, EventView } from "@/lib/types";
 
-// Cached signed URL for an event image (same approach as community docs: valid
-// 30 days, reused for an hour so the browser caches the image).
-const getSignedImageUrl = unstable_cache(
+// Cached signed URL for an event asset (image or PDF): valid 30 days, reused for
+// an hour so the browser caches it — same approach as community docs.
+const getSignedUrl = unstable_cache(
   async (path: string): Promise<string | null> => {
     const admin = createAdminClient();
     const { data } = await admin.storage.from(COMMUNITY_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 30);
     return data?.signedUrl ?? null;
   },
-  ["event-image-url-30d"],
+  ["event-asset-url-30d"],
+  { revalidate: 60 * 60 }
+);
+
+// Attachment-disposition URL for the "הורד קובץ" button on the event page.
+const getSignedDownloadUrl = unstable_cache(
+  async (path: string, filename: string): Promise<string | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin.storage
+      .from(COMMUNITY_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 30, { download: filename || true });
+    return data?.signedUrl ?? null;
+  },
+  ["event-download-url-30d"],
   { revalidate: 60 * 60 }
 );
 
@@ -22,7 +36,10 @@ async function resolveEvent(e: CommunityEvent): Promise<EventView> {
     title: e.title,
     body: e.body,
     eventDate: e.event_date,
-    imageUrl: e.image_path ? await getSignedImageUrl(e.image_path) : null,
+    imageUrl: e.image_path ? await getSignedUrl(e.image_path) : null,
+    docUrl: e.doc_path ? await getSignedUrl(e.doc_path) : null,
+    docKind: e.doc_path ? docKind(e.doc_path) : null,
+    docDownloadUrl: e.doc_path ? await getSignedDownloadUrl(e.doc_path, e.doc_name ?? "") : null,
   };
 }
 
@@ -80,10 +97,16 @@ export async function getAllEvents(): Promise<CommunityEvent[]> {
   return (data ?? []) as CommunityEvent[];
 }
 
-/** Admin list with each event's image resolved to a signed URL for preview. */
-export async function getAllEventsForAdmin(): Promise<(CommunityEvent & { imageUrl: string | null })[]> {
+/** Admin list with each event's image + document resolved to signed URLs. */
+export async function getAllEventsForAdmin(): Promise<
+  (CommunityEvent & { imageUrl: string | null; docUrl: string | null })[]
+> {
   const events = await getAllEvents();
   return Promise.all(
-    events.map(async (e) => ({ ...e, imageUrl: e.image_path ? await getSignedImageUrl(e.image_path) : null }))
+    events.map(async (e) => ({
+      ...e,
+      imageUrl: e.image_path ? await getSignedUrl(e.image_path) : null,
+      docUrl: e.doc_path ? await getSignedUrl(e.doc_path) : null,
+    }))
   );
 }

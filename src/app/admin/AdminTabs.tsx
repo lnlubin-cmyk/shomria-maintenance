@@ -131,7 +131,7 @@ export default function AdminTabs({
   layers: BuildingLayer[];
   community: CommunityItem[];
   moments: Moment[];
-  events: (CommunityEvent & { imageUrl: string | null })[];
+  events: (CommunityEvent & { imageUrl: string | null; docUrl: string | null })[];
   homeMedia: (HomeMedia & { previewUrl: string })[];
   halachicYears: { year: number; days: number }[];
   schedules: PrayerSchedule[];

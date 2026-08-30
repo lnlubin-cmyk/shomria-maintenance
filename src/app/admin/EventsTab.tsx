@@ -9,6 +9,7 @@ import {
   createEvent,
   updateEventDetails,
   updateEventImage,
+  updateEventDoc,
   toggleEventVisibility,
   deleteEvent,
   moveEvent,
@@ -16,7 +17,7 @@ import {
 
 const EVENT_IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp,.gif";
 
-type EventRow = CommunityEvent & { imageUrl: string | null };
+type EventRow = CommunityEvent & { imageUrl: string | null; docUrl: string | null };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Run = (action: (fd: FormData) => Promise<any>, fd: FormData) => Promise<boolean>;
@@ -103,10 +104,17 @@ export default function EventsTab({ events }: { events: EventRow[] }) {
           </div>
           <div>
             <label className="label" htmlFor="new-image">
-              תמונה (לא חובה)
+              תמונה — תצוגה מקדימה בכרטיס (לא חובה)
             </label>
             <input id="new-image" name="image" type="file" accept={EVENT_IMAGE_ACCEPT} className={fileInputClass} />
             <p className="mt-1 text-xs text-gray-500">תמונה (JPG/PNG/WEBP). עד 20MB.</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="new-doc">
+              מסמך PDF — לעמוד האירוע המלא (לא חובה)
+            </label>
+            <input id="new-doc" name="doc" type="file" accept=".pdf,application/pdf" className={fileInputClass} />
+            <p className="mt-1 text-xs text-gray-500">אם מצורף PDF, עמוד האירוע יציג אותו במקום התמונה.</p>
           </div>
           <button type="submit" className="btn-primary" disabled={busy}>
             {busy ? "שומר..." : "יצירה"}
@@ -228,6 +236,31 @@ export default function EventsTab({ events }: { events: EventRow[] }) {
                   </button>
                 </form>
               </div>
+
+              {/* Optional PDF shown on the event's full page (instead of the image) */}
+              <form
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm"
+                action={async (fd) => { await run(updateEventDoc, fd); }}
+              >
+                <input type="hidden" name="id" value={ev.id} />
+                <span className="text-gray-600">מסמך PDF (עמוד מלא):</span>
+                {ev.docUrl ? (
+                  <>
+                    <a href={ev.docUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                      צפייה
+                    </a>
+                    <label className="flex items-center gap-1 text-xs text-gray-600">
+                      <input type="checkbox" name="remove_doc" value="1" /> הסר
+                    </label>
+                  </>
+                ) : (
+                  <span className="text-gray-400">אין</span>
+                )}
+                <input name="doc" type="file" accept=".pdf,application/pdf" className={fileInputClass} />
+                <button type="submit" className="btn-secondary" disabled={busy}>
+                  שמור מסמך
+                </button>
+              </form>
             </div>
           );
         })}

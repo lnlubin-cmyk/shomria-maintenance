@@ -304,8 +304,10 @@ export interface CommunityEvent {
   title: string;
   body: string; // sanitized rich-text HTML (optional)
   event_date: string | null; // when the event happens
-  image_path: string | null;
+  image_path: string | null; // thumbnail image (carousel card)
   image_name: string | null;
+  doc_path: string | null; // optional PDF for the full event page
+  doc_name: string | null;
   is_visible: boolean;
   sort_order: number;
   expires_at: string | null;
@@ -313,13 +315,16 @@ export interface CommunityEvent {
   updated_at: string;
 }
 
-/** An event resolved for display: image signed URL computed. */
+/** An event resolved for display: signed URLs computed. */
 export interface EventView {
   id: string;
   title: string;
   body: string;
   eventDate: string | null;
-  imageUrl: string | null;
+  imageUrl: string | null; // thumbnail
+  docUrl: string | null; // full-page document (PDF) inline URL
+  docKind: "pdf" | "image" | null;
+  docDownloadUrl: string | null; // hands the document to the device
 }
 
 /** A moment resolved for display: embed / thumbnail / external URLs computed. */

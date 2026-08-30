@@ -198,18 +198,40 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
       continue;
     }
 
-    // "אירועים" → create an event carousel card from the cropped image.
+    // "אירועים" → an event: a PNG thumbnail for the carousel card, plus (when the
+    // admin chose PDF) a real PDF for the event's full page.
     if (s.section === "events") {
       const up = await admin.storage.from(COMMUNITY_BUCKET).upload(path, bytes, { contentType, upsert: false });
-      if (up.error) continue;
+      if (up.error) continue; // `path`/`bytes` are the PNG (format is forced to png above)
+
+      let doc_path: string | null = null;
+      let doc_name: string | null = null;
+      if (s.format === "pdf") {
+        try {
+          const pdfBytes = Buffer.from(await cropSectionToPdf(pdf, s.page, box));
+          const dPath = `${randomUUID()}.pdf`;
+          const upDoc = await admin.storage
+            .from(COMMUNITY_BUCKET)
+            .upload(dPath, pdfBytes, { contentType: "application/pdf", upsert: false });
+          if (!upDoc.error) {
+            doc_path = dPath;
+            doc_name = `${s.title.trim()}.pdf`;
+          }
+        } catch {
+          /* keep the image-only card if the PDF crop fails */
+        }
+      }
+
       const { error } = await admin.from("community_events").insert({
         title: s.title.trim(),
         image_path: path,
         image_name: `${s.title.trim()}.${ext}`,
+        doc_path,
+        doc_name,
         is_visible: true,
       });
       if (error) {
-        await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+        await admin.storage.from(COMMUNITY_BUCKET).remove(doc_path ? [path, doc_path] : [path]);
         continue;
       }
       count++;
