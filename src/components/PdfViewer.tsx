@@ -101,7 +101,14 @@ export default function PdfViewer({ url }: { url: string }) {
     (async () => {
       const container = containerRef.current;
       if (!container) return;
-      container.innerHTML = "";
+
+      // Preserve the reader's position across a zoom re-render — otherwise
+      // rebuilding the pages jumps back to the top. Capture the scroll as a
+      // fraction of the PDF's content height now, restore it after the rebuild.
+      const scroller = (document.scrollingElement || document.documentElement) as HTMLElement;
+      const containerTopDoc = container.getBoundingClientRect().top + scroller.scrollTop;
+      const prevHeight = container.getBoundingClientRect().height;
+      const ratio = prevHeight > 0 ? (scroller.scrollTop - containerTopDoc) / prevHeight : 0;
 
       // Fit-to-width is the baseline (zoom 1); higher zooms make pages wider than
       // the viewport, so the wrapper scrolls horizontally.
@@ -113,6 +120,10 @@ export default function PdfViewer({ url }: { url: string }) {
       if (token !== renderToken.current) return;
       const firstBase = first.getViewport({ scale: 1 });
       const estHeight = (cssWidth / firstBase.width) * firstBase.height;
+
+      // Clear only now (after the async work), so the page isn't blank while we
+      // wait — this keeps the rebuild+restore in one synchronous burst.
+      container.innerHTML = "";
 
       const rendered = new Set<number>();
 
@@ -199,9 +210,16 @@ export default function PdfViewer({ url }: { url: string }) {
         observer.observe(pageDiv);
       }
 
-      // Render the first page right away (don't wait for the observer).
-      const firstDiv = container.querySelector<HTMLDivElement>('[data-page="1"]');
-      if (firstDiv) renderPage(1, firstDiv);
+      // Restore the reader's position at the new zoom (skip the very first render,
+      // where there was no previous content). The IntersectionObserver then draws
+      // whichever pages are now on screen.
+      if (prevHeight > 0) {
+        scroller.scrollTop = containerTopDoc + ratio * container.getBoundingClientRect().height;
+      } else {
+        // First render: draw page 1 immediately for a fast first paint.
+        const firstDiv = container.querySelector<HTMLDivElement>('[data-page="1"]');
+        if (firstDiv) renderPage(1, firstDiv);
+      }
     })();
 
     return () => {
