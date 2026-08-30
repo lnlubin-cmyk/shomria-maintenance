@@ -44,6 +44,15 @@ export async function getActiveEvents(): Promise<EventView[]> {
   return Promise.all(rows.map(resolveEvent));
 }
 
+/** A single event for its detail page, or null if missing/hidden/expired. */
+export async function getEventForView(id: string): Promise<EventView | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("community_events").select("*").eq("id", id).maybeSingle();
+  const e = data as CommunityEvent | null;
+  if (!e || !e.is_visible || e.title.trim() === "" || !notExpired(e.expires_at)) return null;
+  return resolveEvent(e);
+}
+
 /** All events (visible + hidden + expired) for the admin tab, in display order. */
 export async function getAllEvents(): Promise<CommunityEvent[]> {
   const admin = createAdminClient();
