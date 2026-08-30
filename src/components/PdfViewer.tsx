@@ -34,6 +34,19 @@ export default function PdfViewer({ url }: { url: string }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
+  // The app header is itself sticky at the top, so the zoom bar must stick just
+  // below it — measure its height rather than hard-coding it.
+  const [stickyTop, setStickyTop] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const header = document.querySelector("header");
+      setStickyTop(header ? Math.round(header.getBoundingClientRect().height) : 0);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   // Load the document once per URL.
   useEffect(() => {
@@ -202,11 +215,14 @@ export default function PdfViewer({ url }: { url: string }) {
 
   return (
     <div>
-      {/* Zoom controls at the top (near the "הורד קובץ" button) — enlarge the
-          document without whole-page pinch. Kept out of the bottom edge so a
-          phone's on-screen nav bar doesn't cover them. */}
+      {/* Zoom controls — stick just below the app header so they stay reachable
+          while scrolling. At the top (not the bottom edge) so a phone's on-screen
+          nav bar can't cover them. Enlarge the document without whole-page pinch. */}
       {status === "ready" && (
-        <div className="mb-3 flex justify-end">
+        <div
+          className="sticky z-20 -mx-4 mb-3 flex justify-end border-b border-gray-200/70 bg-gray-50/95 px-4 py-2 backdrop-blur"
+          style={{ top: stickyTop }}
+        >
           <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-1.5 py-1 shadow-sm">
             <button
               type="button"
