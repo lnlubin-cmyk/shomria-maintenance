@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
@@ -31,20 +32,27 @@ const getSignedDownloadUrl = unstable_cache(
 );
 
 async function resolveEvent(e: CommunityEvent): Promise<EventView> {
+  // Sign the image + document URLs together rather than one after another.
+  const [imageUrl, docUrl, docDownloadUrl] = await Promise.all([
+    e.image_path ? getSignedUrl(e.image_path) : Promise.resolve(null),
+    e.doc_path ? getSignedUrl(e.doc_path) : Promise.resolve(null),
+    e.doc_path ? getSignedDownloadUrl(e.doc_path, e.doc_name ?? "") : Promise.resolve(null),
+  ]);
   return {
     id: e.id,
     title: e.title,
     body: e.body,
     eventDate: e.event_date,
-    imageUrl: e.image_path ? await getSignedUrl(e.image_path) : null,
-    docUrl: e.doc_path ? await getSignedUrl(e.doc_path) : null,
+    imageUrl,
+    docUrl,
     docKind: e.doc_path ? docKind(e.doc_path) : null,
-    docDownloadUrl: e.doc_path ? await getSignedDownloadUrl(e.doc_path, e.doc_name ?? "") : null,
+    docDownloadUrl,
   };
 }
 
-/** Active events for the home-page carousel: visible, titled, not expired. */
-export async function getActiveEvents(): Promise<EventView[]> {
+// Visible, titled, non-expired events in display order. React-cached so the
+// carousel and the nav menu share one query per request (both need this list).
+const getVisibleEventRows = cache(async (): Promise<CommunityEvent[]> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_events")
@@ -53,28 +61,22 @@ export async function getActiveEvents(): Promise<EventView[]> {
     .order("sort_order")
     .order("event_date")
     .order("created_at");
-
   const today = israelToday();
-  const rows = ((data ?? []) as CommunityEvent[]).filter(
+  return ((data ?? []) as CommunityEvent[]).filter(
     (e) => e.title.trim() !== "" && notExpired(e.expires_at, today)
   );
+});
+
+/** Active events for the home-page carousel: visible, titled, not expired. */
+export async function getActiveEvents(): Promise<EventView[]> {
+  const rows = await getVisibleEventRows();
   return Promise.all(rows.map(resolveEvent));
 }
 
 /** Active events reduced to what the nav menu needs (id + title). */
 export async function getEventsForMenu(): Promise<{ id: string; title: string }[]> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("community_events")
-    .select("id, title, expires_at")
-    .eq("is_visible", true)
-    .order("sort_order")
-    .order("event_date")
-    .order("created_at");
-  const today = israelToday();
-  return (data ?? [])
-    .filter((e) => e.title.trim() !== "" && notExpired(e.expires_at, today))
-    .map((e) => ({ id: e.id, title: e.title }));
+  const rows = await getVisibleEventRows();
+  return rows.map((e) => ({ id: e.id, title: e.title }));
 }
 
 /** A single event for its detail page, or null if missing/hidden/expired. */

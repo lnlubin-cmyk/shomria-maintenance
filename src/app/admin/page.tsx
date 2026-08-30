@@ -59,40 +59,54 @@ export default async function AdminPage() {
 
   const supabase = createClient();
 
-  const [{ data: residents }, { data: buildings }, { data: users }, { data: layers }] =
-    await Promise.all([
-      supabase
-        .from("residents")
-        .select("id, first_name, last_name, phone, email, share_phone, share_house, is_member")
-        .order("last_name"),
-      supabase
-        .from("buildings")
-        .select(
-          "plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4, water_heater_type, layer_id, latitude, longitude, itm_x, itm_y, layer:building_layers(name, prefix)"
-        )
-        .order("plot_number"),
-      supabase
-        .from("users")
-        .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name, is_member)")
-        .order("role"),
-      supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
-    ]);
-
-  const [community, moments, events, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes, panels] =
-    await Promise.all([
-      getAllCommunityItems(),
-      getAllMoments(),
-      getAllEventsForAdmin(),
-      getAllHomeMedia(),
-      getLoadedHalachicYears(),
-      getAllSchedules(),
-      getAllLessons(),
-      getAllContacts(),
-      getAllCampaigns(),
-      getHousesForMove(),
-      getAdminVotes(),
-      getInfoPanels(),
-    ]);
+  // All of the admin datasets are independent, so fetch them in one parallel
+  // batch rather than two sequential ones (one round trip instead of two).
+  const [
+    { data: residents },
+    { data: buildings },
+    { data: users },
+    { data: layers },
+    community,
+    moments,
+    events,
+    homeMedia,
+    halachicYears,
+    schedules,
+    lessons,
+    contacts,
+    campaigns,
+    moveHouses,
+    votes,
+    panels,
+  ] = await Promise.all([
+    supabase
+      .from("residents")
+      .select("id, first_name, last_name, phone, email, share_phone, share_house, is_member")
+      .order("last_name"),
+    supabase
+      .from("buildings")
+      .select(
+        "plot_number, street_name, house_number, building_name, resident_1, resident_2, resident_3, resident_4, water_heater_type, layer_id, latitude, longitude, itm_x, itm_y, layer:building_layers(name, prefix)"
+      )
+      .order("plot_number"),
+    supabase
+      .from("users")
+      .select("id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(first_name, last_name, is_member)")
+      .order("role"),
+    supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
+    getAllCommunityItems(),
+    getAllMoments(),
+    getAllEventsForAdmin(),
+    getAllHomeMedia(),
+    getLoadedHalachicYears(),
+    getAllSchedules(),
+    getAllLessons(),
+    getAllContacts(),
+    getAllCampaigns(),
+    getHousesForMove(),
+    getAdminVotes(),
+    getInfoPanels(),
+  ]);
 
   return (
     <div className="min-h-screen">

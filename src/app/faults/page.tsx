@@ -45,18 +45,37 @@ export default async function FaultsPage({
   const supabase = createClient();
   const staff = isStaff(session.user.role);
 
-  // RLS already narrows a resident to their own calls; this is not the security
-  // boundary, just the ordering the spec asks for (newest first).
-  const { data, error } = await supabase
-    .from("faults")
-    .select(SELECT)
-    .order("created_at", { ascending: false });
+  // The faults list, the assignable-worker list and the house list are all
+  // independent, so fetch them together instead of one after another. RLS already
+  // narrows a resident to their own calls; the ordering is just the spec's
+  // newest-first. The staff-only lists resolve to empty for a resident.
+  const [
+    { data, error },
+    { data: workers },
+    { data: buildingRows },
+  ] = await Promise.all([
+    supabase.from("faults").select(SELECT).order("created_at", { ascending: false }),
+    staff
+      ? supabase
+          .from("users")
+          .select("id, role, first_name, last_name, resident:residents(first_name, last_name)")
+          .in("role", ["maintenance", "maintenance_manager"])
+          .eq("is_active", true)
+      : Promise.resolve({ data: [] as unknown[] }),
+    staff
+      ? supabase
+          .from("buildings")
+          .select("plot_number, building_name, layer:building_layers(prefix)")
+          .order("building_name")
+      : Promise.resolve({ data: [] as unknown[] }),
+  ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawFaults = (data ?? []) as any[];
 
-  // Resident feedback ratings. RLS decides visibility: a resident sees their own,
-  // מנהל תחזוקה/admin see all, a plain איש תחזוקה sees none.
+  // Resident feedback ratings depend on which faults came back, so this one runs
+  // after. RLS decides visibility: a resident sees their own, מנהל תחזוקה/admin
+  // see all, a plain איש תחזוקה sees none.
   const faultNumbers = rawFaults.map((f) => f.fault_number);
   const { data: feedback } = faultNumbers.length
     ? await supabase.from("fault_feedback").select("fault_number, rating").in("fault_number", faultNumbers)
@@ -67,27 +86,10 @@ export default async function FaultsPage({
     ...f,
     feedback_rating: ratingByFault.get(f.fault_number) ?? null,
   })) as FaultRow[];
-
-  // Staff need the assignable-worker list for the אחריות dropdown.
-  const { data: workers } = staff
-    ? await supabase
-        .from("users")
-        .select("id, role, first_name, last_name, resident:residents(first_name, last_name)")
-        .in("role", ["maintenance", "maintenance_manager"])
-        .eq("is_active", true)
-    : { data: [] };
-
-  // Staff can attach useful [key,value] info to a house; the picker lists houses.
-  const { data: buildingRows } = staff
-    ? await supabase
-        .from("buildings")
-        .select("plot_number, building_name, layer:building_layers(prefix)")
-        .order("building_name")
-    : { data: [] };
-  const buildings = (buildingRows ?? []).map((b) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buildings = ((buildingRows ?? []) as any[]).map((b) => ({
     plot_number: b.plot_number,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    label: buildingLabel(b as any),
+    label: buildingLabel(b),
   }));
 
   return (

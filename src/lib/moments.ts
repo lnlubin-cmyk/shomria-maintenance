@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { resolveMoment } from "@/lib/moments-embed";
 import { notExpired, israelToday } from "@/lib/expiry";
@@ -28,7 +29,7 @@ export async function getAllMoments(): Promise<Moment[]> {
 }
 
 /** Whether any visible, non-expired moment exists — for the home-page tile. */
-export async function momentsExist(): Promise<boolean> {
+export const momentsExist = cache(async (): Promise<boolean> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_moments")
@@ -36,4 +37,4 @@ export async function momentsExist(): Promise<boolean> {
     .eq("is_visible", true);
   const today = israelToday();
   return (data ?? []).some((m) => notExpired(m.expires_at, today));
-}
+});

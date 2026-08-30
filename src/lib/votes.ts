@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   isVoteOpen,
@@ -19,7 +20,7 @@ export interface AdminVote extends Vote {
 }
 
 /** The open vote(s) shown in the nav. Usually zero or one. */
-export async function getActiveVotesForMenu(): Promise<{ id: string; title: string }[]> {
+export const getActiveVotesForMenu = cache(async (): Promise<{ id: string; title: string }[]> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("votes")
@@ -30,7 +31,7 @@ export async function getActiveVotesForMenu(): Promise<{ id: string; title: stri
   return (data ?? [])
     .filter((v) => isVoteOpen(v as Vote))
     .map((v) => ({ id: v.id, title: v.title }));
-}
+});
 
 /** Every vote, newest first — the /votes list and the admin tab. */
 export async function getAllVotes(): Promise<Vote[]> {
