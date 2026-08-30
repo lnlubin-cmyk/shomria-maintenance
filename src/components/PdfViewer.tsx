@@ -202,6 +202,35 @@ export default function PdfViewer({ url }: { url: string }) {
 
   return (
     <div>
+      {/* Zoom controls at the top (near the "הורד קובץ" button) — enlarge the
+          document without whole-page pinch. Kept out of the bottom edge so a
+          phone's on-screen nav bar doesn't cover them. */}
+      {status === "ready" && (
+        <div className="mb-3 flex justify-end">
+          <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white px-1.5 py-1 shadow-sm">
+            <button
+              type="button"
+              aria-label="הקטן"
+              onClick={() => changeZoom(-1)}
+              disabled={zoom <= ZOOM_MIN}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              −
+            </button>
+            <span className="w-12 text-center text-sm tabular-nums text-gray-600">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              aria-label="הגדל"
+              onClick={() => changeZoom(1)}
+              disabled={zoom >= ZOOM_MAX}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+
       {status === "loading" && (
         <p className="py-6 text-center text-sm text-gray-500">
           טוען מסמך{progress != null ? `… ${progress}%` : "…"}
@@ -216,31 +245,6 @@ export default function PdfViewer({ url }: { url: string }) {
       <div className="overflow-x-auto" dir="ltr">
         <div ref={containerRef} />
       </div>
-
-      {/* Floating zoom controls — enlarge the document without whole-page pinch. */}
-      {status === "ready" && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full bg-gray-900/85 px-1.5 py-1 text-white shadow-lg backdrop-blur">
-          <button
-            type="button"
-            aria-label="הקטן"
-            onClick={() => changeZoom(-1)}
-            disabled={zoom <= ZOOM_MIN}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-2xl leading-none hover:bg-white/15 disabled:opacity-40"
-          >
-            −
-          </button>
-          <span className="w-12 text-center text-sm tabular-nums">{Math.round(zoom * 100)}%</span>
-          <button
-            type="button"
-            aria-label="הגדל"
-            onClick={() => changeZoom(1)}
-            disabled={zoom >= ZOOM_MAX}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-2xl leading-none hover:bg-white/15 disabled:opacity-40"
-          >
-            +
-          </button>
-        </div>
-      )}
     </div>
   );
 }
