@@ -13,9 +13,9 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024; // matches the 'community' bucket size 
 const WORK_PREFIX = "newsletter-work"; // temp working files, cleaned up on publish
 const SECTIONS = ["community", "info", "torah"] as const;
 type SectionKey = (typeof SECTIONS)[number];
-// A per-section target may also be "clinic": it updates the מרפאה info-panel's
-// file instead of creating a community document.
-const TARGETS = ["community", "info", "torah", "clinic"] as const;
+// Beyond the menu SECTIONS, a crop may target "clinic" (updates the מרפאה
+// info-panel) or "events" (creates an אירועים carousel card from the image).
+const TARGETS = ["community", "info", "torah", "clinic", "events"] as const;
 type TargetKey = (typeof TARGETS)[number];
 
 async function requireAdmin() {
@@ -149,11 +149,14 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
     //    selectable (the region's real content + link annotations are kept).
     //  - PNG: a rasterized image of the region (no links).
     const box = { x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 };
+    // Events are shown as an <img> in the carousel, so they must be a PNG image
+    // regardless of the chosen format.
+    const format = s.section === "events" ? "png" : s.format;
     let bytes: Buffer;
     let ext: string;
     let contentType: string;
     try {
-      if (s.format === "pdf") {
+      if (format === "pdf") {
         bytes = Buffer.from(await cropSectionToPdf(pdf, s.page, box));
         ext = "pdf";
         contentType = "application/pdf";
@@ -191,6 +194,24 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
       }
       if (cur?.file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([cur.file_path]);
       clinicUpdated = true;
+      count++;
+      continue;
+    }
+
+    // "אירועים" → create an event carousel card from the cropped image.
+    if (s.section === "events") {
+      const up = await admin.storage.from(COMMUNITY_BUCKET).upload(path, bytes, { contentType, upsert: false });
+      if (up.error) continue;
+      const { error } = await admin.from("community_events").insert({
+        title: s.title.trim(),
+        image_path: path,
+        image_name: `${s.title.trim()}.${ext}`,
+        is_visible: true,
+      });
+      if (error) {
+        await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+        continue;
+      }
       count++;
       continue;
     }

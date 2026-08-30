@@ -13,8 +13,8 @@ export interface SectionSuggestion {
   x1: number;
   y1: number;
   title: string;
-  // "clinic" is a special target: publishing it updates the מרפאה info-panel.
-  section: "community" | "info" | "torah" | "clinic";
+  // "clinic" updates the מרפאה info-panel; "events" becomes an אירועים carousel card.
+  section: "community" | "info" | "torah" | "clinic" | "events";
 }
 
 const box = {
@@ -30,7 +30,7 @@ const schema = z.object({
     z.object({
       ...box,
       title: z.string().describe("short Hebrew heading for the section"),
-      section: z.enum(["community", "info", "torah", "clinic"]),
+      section: z.enum(["community", "info", "torah", "clinic", "events"]),
     })
   ),
   // A dedicated, REQUIRED slot so the model must actively decide about the
@@ -45,7 +45,8 @@ const SYSTEM = `אתה עוזר שמנתח ידיעון קהילתי שבועי 
 כל עמוד מחולק לרוב לכמה מקטעים, המופרדים בקווים מקווקווים או בכותרות מודגשות.
 עבור כל מקטע החזר תיבה תוחמת (bounding box) בקואורדינטות מנורמלות 0..1 ביחס לתמונת העמוד שהוצגה לך (x מהשמאל, y מלמעלה), כותרת קצרה בעברית, ומדור מוצע:
 - "clinic" = מקטע עדכוני המרפאה (למשל: „עדכוני מרפאה כללית”, שעות פתיחת המרפאה, ימי/שעות רופא ואחות). זהו מקטע מיוחד המשמש לעדכון פריט „מרפאה” בתפריט.
-- "community" = הודעות והתרחשויות קהילתיות (אירועים, מזל טוב, הודעות אישיות, מכתבי מזכירות).
+- "events" = אירוע קרוב יחיד או לוח אירועים (הזמנה לאירוע, פלייר, „מה קורה השבוע”). מוצג בקרוסלת „אירועים” בדף הבית.
+- "community" = הודעות והתרחשויות קהילתיות שאינן אירוע (מזל טוב, הודעות אישיות, מכתבי מזכירות).
 - "info" = מידע שימושי אחר לתושב (למשל: שעות ספריה, רשימות שמירה, דרושים).
 - "torah" = תורה ותפילה (זמני תפילות, שיעורי תורה, ענייני קדושה).
 
@@ -107,12 +108,12 @@ export async function suggestSections(pages: { index: number; jpeg: Uint8Array }
       }))
       .filter((s) => s.x1 > s.x0 && s.y1 > s.y0 && s.title !== "");
 
-    // The events calendar comes back in its own field; add it as a קהילה section.
+    // The events calendar comes back in its own field; add it as an אירועים section.
     const e = obj.eventsCalendar;
     if (e) {
       const box = { x0: clamp(e.x0), y0: clamp(e.y0), x1: clamp(e.x1), y1: clamp(e.y1) };
       if (box.x1 > box.x0 && box.y1 > box.y0) {
-        out.push({ page: e.page, ...box, title: "לוח אירועים", section: "community" });
+        out.push({ page: e.page, ...box, title: "לוח אירועים", section: "events" });
       }
     }
     return out;

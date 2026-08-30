@@ -10,8 +10,9 @@ import {
 } from "./newsletter-actions";
 
 type SectionKey = "community" | "info" | "torah";
-// A per-section target may also be "clinic" (updates the מרפאה panel file).
-type TargetKey = SectionKey | "clinic";
+// A per-section target may also be "clinic" (updates the מרפאה panel file) or
+// "events" (creates an אירועים carousel card from the crop image).
+type TargetKey = SectionKey | "clinic" | "events";
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   community: "קהילה",
@@ -21,6 +22,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 
 const TARGET_LABELS: Record<TargetKey, string> = {
   ...SECTION_LABELS,
+  events: "אירועים",
   clinic: "מרפאה (עדכון הפאנל)",
 };
 
