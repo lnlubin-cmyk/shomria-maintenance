@@ -44,6 +44,22 @@ export async function getActiveEvents(): Promise<EventView[]> {
   return Promise.all(rows.map(resolveEvent));
 }
 
+/** Active events reduced to what the nav menu needs (id + title). */
+export async function getEventsForMenu(): Promise<{ id: string; title: string }[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("community_events")
+    .select("id, title, expires_at")
+    .eq("is_visible", true)
+    .order("sort_order")
+    .order("event_date")
+    .order("created_at");
+  const today = israelToday();
+  return (data ?? [])
+    .filter((e) => e.title.trim() !== "" && notExpired(e.expires_at, today))
+    .map((e) => ({ id: e.id, title: e.title }));
+}
+
 /** A single event for its detail page, or null if missing/hidden/expired. */
 export async function getEventForView(id: string): Promise<EventView | null> {
   const admin = createAdminClient();

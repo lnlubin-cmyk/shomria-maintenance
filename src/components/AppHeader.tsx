@@ -1,6 +1,7 @@
 import SiteHeader from "@/components/SiteHeader";
 import { getMenuDocs } from "@/lib/community";
 import { momentsExist } from "@/lib/moments";
+import { getEventsForMenu } from "@/lib/events";
 import { getVisibleScheduleList } from "@/lib/prayer-times-server";
 import { getActiveVotesForMenu } from "@/lib/votes";
 import { getInfoPanels, isPanelConfigured, panelHref } from "@/lib/info-panels";
@@ -13,15 +14,16 @@ import type { Session } from "@/lib/types";
  * fetching it.
  */
 export default async function AppHeader({ session }: { session: Session | null }) {
-  const [docs, prayerSchedules, activeVotes, panels, hasMoments] = session
+  const [docs, prayerSchedules, activeVotes, panels, hasMoments, events] = session
     ? await Promise.all([
         getMenuDocs(),
         getVisibleScheduleList(),
         getActiveVotesForMenu(),
         getInfoPanels(),
         momentsExist(),
+        getEventsForMenu(),
       ])
-    : [{ community: [], info: [], torah: [] }, [], [], [], false];
+    : [{ community: [], info: [], torah: [] }, [], [], [], false, []];
   const infoPanels = panels
     .filter(isPanelConfigured)
     .map((p) => ({ label: p.menu_label, href: panelHref(p.slug) }));
@@ -30,6 +32,7 @@ export default async function AppHeader({ session }: { session: Session | null }
       session={session}
       community={docs.community}
       hasMoments={hasMoments}
+      events={events}
       infoDocs={docs.info}
       torahDocs={docs.torah}
       infoPanels={infoPanels}

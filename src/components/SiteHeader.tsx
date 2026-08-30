@@ -40,6 +40,7 @@ export default function SiteHeader({
   session,
   community = [],
   hasMoments = false,
+  events = [],
   infoDocs = [],
   torahDocs = [],
   infoPanels = [],
@@ -49,6 +50,7 @@ export default function SiteHeader({
   session: Session | null;
   community?: CommunityMenuItem[];
   hasMoments?: boolean;
+  events?: { id: string; title: string }[];
   infoDocs?: CommunityMenuItem[];
   torahDocs?: CommunityMenuItem[];
   infoPanels?: { label: string; href: string }[];
@@ -101,6 +103,16 @@ export default function SiteHeader({
         ...torahDocs.map((d) => ({ label: d.subject, href: `/community/${d.id}` })),
       ],
     },
+    // "אירועים" — the active events, right after תורה ותפילה. Only when there are any.
+    ...(events.length > 0
+      ? [
+          {
+            key: "events",
+            label: "אירועים",
+            items: events.map((e) => ({ label: e.title, href: `/events/${e.id}` })),
+          } as MenuSection,
+        ]
+      : []),
     {
       key: "info",
       label: "מידע לתושב",
