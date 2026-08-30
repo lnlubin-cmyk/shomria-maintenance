@@ -28,6 +28,12 @@ function readDescription(formData: FormData): string {
   return String(formData.get("description") ?? "").trim().slice(0, 160);
 }
 
+/** The optional expiration date as "YYYY-MM-DD" or null. */
+function readExpiry(formData: FormData): string | null {
+  const s = String(formData.get("expires_at") ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
 function readDoc(formData: FormData): { file: File | null; ext?: string; error?: string } {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { file: null };
@@ -88,6 +94,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
 
   const icon = readIcon(formData);
   const description = readDescription(formData);
+  const expires_at = readExpiry(formData);
 
   const admin = createAdminClient();
 
@@ -96,7 +103,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
     if (!body.trim()) return { error: "יש להזין תוכן טקסט" };
     const { error } = await admin
       .from("community_items")
-      .insert({ subject, section, mode: "text", body, icon, description, file_path: null, file_name: null, is_visible: true });
+      .insert({ subject, section, mode: "text", body, icon, description, expires_at, file_path: null, file_name: null, is_visible: true });
     if (error) return { error: "יצירת הפריט נכשלה" };
     revalidate();
     return { ok: true };
@@ -117,7 +124,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
 
   const { error } = await admin
     .from("community_items")
-    .insert({ subject, section, mode: "file", body: "", icon, description, file_path, file_name, is_visible: !!file });
+    .insert({ subject, section, mode: "file", body: "", icon, description, expires_at, file_path, file_name, is_visible: !!file });
   if (error) {
     await removeFile(file_path); // don't leave the just-uploaded file orphaned
     return { error: "יצירת הפריט נכשלה" };
@@ -143,7 +150,7 @@ export async function updateCommunityDetails(formData: FormData): Promise<Action
   const admin = createAdminClient();
   const { error } = await admin
     .from("community_items")
-    .update({ subject, icon: readIcon(formData), description: readDescription(formData) })
+    .update({ subject, icon: readIcon(formData), description: readDescription(formData), expires_at: readExpiry(formData) })
     .eq("id", id);
   if (error) return { error: "עדכון הפרטים נכשל" };
 

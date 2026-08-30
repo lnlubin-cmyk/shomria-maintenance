@@ -242,6 +242,7 @@ export interface CommunityItem {
   file_name: string | null;
   is_visible: boolean;
   sort_order: number;
+  expires_at: string | null; // "YYYY-MM-DD" or null — hidden after this date
   created_at: string;
   updated_at: string;
 }
@@ -292,8 +293,33 @@ export interface Moment {
   event_date: string | null; // "YYYY-MM-DD" or null
   is_visible: boolean;
   sort_order: number;
+  expires_at: string | null; // "YYYY-MM-DD" or null — hidden after this date
   created_at: string;
   updated_at: string;
+}
+
+/** An admin-managed upcoming event, shown in the home-page carousel. */
+export interface CommunityEvent {
+  id: string;
+  title: string;
+  body: string; // sanitized rich-text HTML (optional)
+  event_date: string | null; // when the event happens
+  image_path: string | null;
+  image_name: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** An event resolved for display: image signed URL computed. */
+export interface EventView {
+  id: string;
+  title: string;
+  body: string;
+  eventDate: string | null;
+  imageUrl: string | null;
 }
 
 /** A moment resolved for display: embed / thumbnail / external URLs computed. */

@@ -3,11 +3,13 @@ import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
 import { momentsExist } from "@/lib/moments";
+import { getActiveEvents } from "@/lib/events";
 import { getInfoPanels, isPanelConfigured, panelHref } from "@/lib/info-panels";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import { getActiveCampaign } from "@/lib/campaigns";
 import AppHeader from "@/components/AppHeader";
 import HeroCarousel from "@/components/HeroCarousel";
+import EventsCarousel from "@/components/EventsCarousel";
 import CampaignModal from "@/components/CampaignModal";
 import Logo from "@/components/Logo";
 import { isStaff } from "@/lib/types";
@@ -156,9 +158,10 @@ export default async function HomePage() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
   // Fetch the independent data concurrently rather than one round trip at a time.
-  const [{ community, info, torah }, hasMoments, media, campaign, panels] = await Promise.all([
+  const [{ community, info, torah }, hasMoments, events, media, campaign, panels] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     session ? momentsExist() : Promise.resolve(false),
+    session ? getActiveEvents() : Promise.resolve([]),
     getActiveHomeMedia(),
     getActiveCampaign(),
     getInfoPanels(),
@@ -265,6 +268,16 @@ export default async function HomePage() {
               )}
             </div>
           </section>
+
+          {/* אירועים — auto-advancing carousel of upcoming events (after תורה ותפילה) */}
+          {events.length > 0 && (
+            <section className="mt-12">
+              <SectionTitle>אירועים</SectionTitle>
+              <div data-reveal>
+                <EventsCarousel events={events} />
+              </div>
+            </section>
+          )}
 
           {/* מידע לתושב */}
           <section className="mt-12">

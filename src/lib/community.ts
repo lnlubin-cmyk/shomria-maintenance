@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
+import { notExpired, israelToday } from "@/lib/expiry";
 import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 
 export const COMMUNITY_BUCKET = "community";
@@ -51,14 +52,16 @@ export const getMenuDocs = cache(async (): Promise<{
   const admin = createAdminClient();
   const { data } = await admin
     .from("community_items")
-    .select("id, subject, file_path, section, mode, body, icon, description")
+    .select("id, subject, file_path, section, mode, body, icon, description, expires_at")
     .eq("is_visible", true)
     .order("sort_order")
     .order("created_at");
 
+  const today = israelToday();
   const rows = (data ?? []).filter(
     (r) =>
       r.subject.trim() !== "" &&
+      notExpired(r.expires_at, today) &&
       (r.mode === "text" ? (r.body ?? "").trim() !== "" : !!r.file_path)
   );
   const toMenu = (r: (typeof rows)[number]): CommunityMenuItem => ({
@@ -98,7 +101,7 @@ export async function getCommunityItemForView(
   const admin = createAdminClient();
   const { data } = await admin.from("community_items").select("*").eq("id", id).maybeSingle();
   const item = data as CommunityItem | null;
-  if (!item || !item.is_visible) return null;
+  if (!item || !item.is_visible || !notExpired(item.expires_at)) return null;
 
   if (item.mode === "text") {
     return item.body.trim() !== "" ? { item, url: null, downloadUrl: null } : null;

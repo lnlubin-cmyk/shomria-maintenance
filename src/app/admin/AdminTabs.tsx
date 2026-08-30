@@ -9,6 +9,7 @@ import BuildingsTab from "./BuildingsTab";
 import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
 import MomentsTab from "./MomentsTab";
+import EventsTab from "./EventsTab";
 import NewsletterTab from "./NewsletterTab";
 import PanelTab from "./PanelTab";
 import HomeMediaTab from "./HomeMediaTab";
@@ -20,7 +21,7 @@ import CampaignTab from "./CampaignTab";
 import MoveTab from "./MoveTab";
 import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
-import type { Moment, TorahLesson } from "@/lib/types";
+import type { CommunityEvent, Moment, TorahLesson } from "@/lib/types";
 import type { InfoPanel } from "@/lib/info-panels-shared";
 import type { AdminVote } from "@/lib/votes";
 
@@ -31,6 +32,7 @@ type Tab =
   | "map"
   | "community"
   | "moments"
+  | "events"
   | "newsletter"
   | "clinic"
   | "store"
@@ -63,6 +65,7 @@ const LEAF_LABELS: Record<Tab, string> = {
   moves: "מעבר דירות",
   community: "קהילה/מידע לתושב",
   moments: "רגעים שזוכרים",
+  events: "אירועים",
   clinic: "מרפאה",
   store: "מכולת",
   newsletter: "פיצול ידיעון",
@@ -91,7 +94,7 @@ const TOP: TopEntry[] = [
     kind: "group",
     key: "display",
     label: "ניהול פריטי תצוגה",
-    tabs: ["community", "moments", "clinic", "store"],
+    tabs: ["community", "moments", "events", "clinic", "store"],
   },
   { kind: "leaf", key: "newsletter", label: LEAF_LABELS.newsletter },
   { kind: "leaf", key: "media", label: LEAF_LABELS.media },
@@ -109,6 +112,7 @@ export default function AdminTabs({
   layers,
   community,
   moments,
+  events,
   homeMedia,
   halachicYears,
   schedules,
@@ -127,6 +131,7 @@ export default function AdminTabs({
   layers: BuildingLayer[];
   community: CommunityItem[];
   moments: Moment[];
+  events: (CommunityEvent & { imageUrl: string | null })[];
   homeMedia: (HomeMedia & { previewUrl: string })[];
   halachicYears: { year: number; days: number }[];
   schedules: PrayerSchedule[];
@@ -168,6 +173,8 @@ export default function AdminTabs({
         return <CommunityTab items={community} />;
       case "moments":
         return <MomentsTab moments={moments} />;
+      case "events":
+        return <EventsTab events={events} />;
       case "clinic":
         return panelBySlug("clinic") ? <PanelTab panel={panelBySlug("clinic")!} /> : null;
       case "store":

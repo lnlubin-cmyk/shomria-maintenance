@@ -150,6 +150,13 @@ export default function CommunityTab({ items }: { items: CommunityItem[] }) {
             </div>
           </div>
           <div>
+            <label className="label" htmlFor="new-expires">
+              תאריך תפוגה (לא חובה)
+            </label>
+            <input id="new-expires" name="expires_at" type="date" className="field max-w-xs" />
+            <p className="mt-1 text-xs text-gray-500">הפריט לא יוצג לאחר תאריך זה.</p>
+          </div>
+          <div>
             <label className="label" htmlFor="new-section">
               מדור בתפריט *
             </label>
@@ -257,6 +264,10 @@ function ItemCard({ item, run, busy }: { item: CommunityItem; run: Run; busy: bo
           <div>
             <label className="label">תיאור קצר (לא חובה)</label>
             <input name="description" className="field" defaultValue={item.description} placeholder="מוצג מתחת לכותרת בכרטיס" />
+          </div>
+          <div>
+            <label className="label">תאריך תפוגה (לא חובה)</label>
+            <input name="expires_at" type="date" className="field" defaultValue={item.expires_at ?? ""} />
           </div>
         </div>
         <button type="submit" className="btn-secondary" disabled={busy}>

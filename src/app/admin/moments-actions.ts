@@ -22,9 +22,9 @@ function revalidate() {
 const LINK_ERROR =
   "הקישור אינו נתמך. יש להזין קישור YouTube, Google Drive, Bunny, או כתובת אתר תקינה.";
 
-/** Normalise the optional date field to a "YYYY-MM-DD" string or null. */
-function readDate(formData: FormData): string | null {
-  const s = String(formData.get("event_date") ?? "").trim();
+/** Normalise an optional date field to a "YYYY-MM-DD" string or null. */
+function readDate(formData: FormData, field = "event_date"): string | null {
+  const s = String(formData.get(field) ?? "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
 }
 
@@ -60,6 +60,7 @@ export async function createMoment(formData: FormData): Promise<ActionResult> {
     provider: detected.provider,
     ref: detected.ref,
     event_date,
+    expires_at: readDate(formData, "expires_at"),
     is_visible: true,
     sort_order,
   });
@@ -89,6 +90,7 @@ export async function updateMomentDetails(formData: FormData): Promise<ActionRes
       title,
       description: String(formData.get("description") ?? "").trim(),
       event_date: readDate(formData),
+      expires_at: readDate(formData, "expires_at"),
     })
     .eq("id", id);
   if (error) return { error: "עדכון הרגע נכשל" };

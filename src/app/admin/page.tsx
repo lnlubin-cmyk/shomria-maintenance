@@ -5,6 +5,7 @@ import AdminTabs from "./AdminTabs";
 import GabbaiTabs from "./GabbaiTabs";
 import { getAllCommunityItems } from "@/lib/community";
 import { getAllMoments } from "@/lib/moments";
+import { getAllEventsForAdmin } from "@/lib/events";
 import { getAllHomeMedia } from "@/lib/home-media";
 import { getLoadedHalachicYears } from "@/lib/halachic";
 import { getAllSchedules } from "@/lib/prayer-times-server";
@@ -77,10 +78,11 @@ export default async function AdminPage() {
       supabase.from("building_layers").select("id, name, prefix, sort_order").order("sort_order"),
     ]);
 
-  const [community, moments, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes, panels] =
+  const [community, moments, events, homeMedia, halachicYears, schedules, lessons, contacts, campaigns, moveHouses, votes, panels] =
     await Promise.all([
       getAllCommunityItems(),
       getAllMoments(),
+      getAllEventsForAdmin(),
       getAllHomeMedia(),
       getLoadedHalachicYears(),
       getAllSchedules(),
@@ -106,6 +108,7 @@ export default async function AdminPage() {
           layers={(layers ?? []) as BuildingLayer[]}
           community={community}
           moments={moments}
+          events={events}
           homeMedia={homeMedia}
           halachicYears={halachicYears}
           schedules={schedules}

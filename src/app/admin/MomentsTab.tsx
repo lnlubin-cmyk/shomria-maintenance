@@ -86,11 +86,19 @@ export default function MomentsTab({ moments }: { moments: Moment[] }) {
               required
             />
           </div>
-          <div>
-            <label className="label" htmlFor="new-date">
-              תאריך האירוע (לא חובה)
-            </label>
-            <input id="new-date" name="event_date" type="date" className="field max-w-xs" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="new-date">
+                תאריך האירוע (לא חובה)
+              </label>
+              <input id="new-date" name="event_date" type="date" className="field" />
+            </div>
+            <div>
+              <label className="label" htmlFor="new-expires">
+                תאריך תפוגה (לא חובה)
+              </label>
+              <input id="new-expires" name="expires_at" type="date" className="field" />
+            </div>
           </div>
           <div>
             <label className="label" htmlFor="new-desc">
@@ -193,8 +201,15 @@ export default function MomentsTab({ moments }: { moments: Moment[] }) {
                   <input type="hidden" name="id" value={m.id} />
                   <input name="title" className="field" defaultValue={m.title} required />
                   <div className="flex flex-wrap items-center gap-2">
-                    <input name="event_date" type="date" className="field max-w-[10rem]" defaultValue={m.event_date ?? ""} />
-                    <button type="submit" className="btn-secondary" disabled={busy}>
+                    <label className="text-xs text-gray-500">
+                      תאריך
+                      <input name="event_date" type="date" className="field max-w-[9rem]" defaultValue={m.event_date ?? ""} />
+                    </label>
+                    <label className="text-xs text-gray-500">
+                      תפוגה
+                      <input name="expires_at" type="date" className="field max-w-[9rem]" defaultValue={m.expires_at ?? ""} />
+                    </label>
+                    <button type="submit" className="btn-secondary self-end" disabled={busy}>
                       שמור פרטים
                     </button>
                   </div>
