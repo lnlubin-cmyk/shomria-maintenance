@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import type { Building, BuildingLayer, Campaign, CommunityItem, Contact, HomeMedia, Resident } from "@/lib/types";
 import type { MoveHouse } from "@/lib/houses";
 import UsersTab from "./UsersTab";
 import ResidentsTab from "./ResidentsTab";
 import BuildingsTab from "./BuildingsTab";
-import BuildingsMapTab from "./BuildingsMapTab";
 import CommunityTab from "./CommunityTab";
 import MomentsTab from "./MomentsTab";
 import EventsTab from "./EventsTab";
-import NewsletterTab from "./NewsletterTab";
 import PanelTab from "./PanelTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
@@ -18,9 +17,15 @@ import PrayerTimesTab from "./PrayerTimesTab";
 import TorahLessonsTab from "./TorahLessonsTab";
 import ContactsTab from "./ContactsTab";
 import CampaignTab from "./CampaignTab";
-import MoveTab from "./MoveTab";
-import VotesTab from "./VotesTab";
 import type { PrayerSchedule } from "@/lib/prayer-times";
+
+// Heavy / rarely-opened tabs are loaded only when their tab is first selected, so
+// they stay out of the initial /admin bundle. (Same UI — just deferred.)
+const TabLoading = () => <div className="py-10 text-center text-sm text-gray-500">טוען…</div>;
+const BuildingsMapTab = dynamic(() => import("./BuildingsMapTab"), { ssr: false, loading: TabLoading });
+const NewsletterTab = dynamic(() => import("./NewsletterTab"), { loading: TabLoading });
+const VotesTab = dynamic(() => import("./VotesTab"), { loading: TabLoading });
+const MoveTab = dynamic(() => import("./MoveTab"), { loading: TabLoading });
 import type { CommunityEvent, Moment, TorahLesson } from "@/lib/types";
 import type { InfoPanel } from "@/lib/info-panels-shared";
 import type { AdminVote } from "@/lib/votes";
