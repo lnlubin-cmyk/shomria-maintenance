@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { EventView } from "@/lib/types";
 
@@ -53,29 +53,52 @@ function EventCard({ ev }: { ev: EventView }) {
 export default function EventsCarousel({ events }: { events: EventView[] }) {
   const count = events.length;
   const trackRef = useRef<HTMLDivElement>(null);
+  // Loop only when one copy of the strip overflows the viewport; otherwise all
+  // cards are already visible and there's nothing to scroll.
+  const [loop, setLoop] = useState(false);
 
   useEffect(() => {
-    if (count <= 1) return;
-    const t = setInterval(() => {
-      const c = trackRef.current;
-      if (!c) return;
-      const step = (c.firstElementChild?.getBoundingClientRect().width ?? c.clientWidth) + GAP;
-      // RTL: scrollLeft is 0 at the start (right) and negative toward the end (left).
-      const reachedEnd = Math.abs(c.scrollLeft) + c.clientWidth >= c.scrollWidth - 8;
-      c.scrollBy({ left: reachedEnd ? Math.abs(c.scrollLeft) : -step, behavior: "smooth" });
-    }, ADVANCE_MS);
-    return () => clearInterval(t);
+    const c = trackRef.current;
+    if (!c) return;
+    const check = () => {
+      const step = (c.firstElementChild?.getBoundingClientRect().width ?? 0) + GAP;
+      setLoop(count > 1 && step * count > c.clientWidth + 1);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, [count]);
 
+  useEffect(() => {
+    if (!loop) return;
+    const t = setInterval(() => {
+      const c = trackRef.current;
+      const first = c?.firstElementChild;
+      if (!c || !first) return;
+      const step = first.getBoundingClientRect().width + GAP;
+      const oneCopy = step * count;
+      // Keep shifting left. Once a full copy has passed, rewind by exactly one
+      // copy — the two copies are identical, so it's invisible — then carry on
+      // in the same direction (no rightward jump back to the start).
+      // RTL: scrollLeft is 0 at the start (right) and negative toward the left.
+      if (Math.abs(c.scrollLeft) >= oneCopy - 1) c.scrollLeft += oneCopy;
+      c.scrollBy({ left: -step, behavior: "smooth" });
+    }, ADVANCE_MS);
+    return () => clearInterval(t);
+  }, [loop, count]);
+
   if (count === 0) return null;
+
+  // A second copy of the cards is what makes the loop seamless.
+  const items = loop ? [...events, ...events] : events;
 
   return (
     <div
       ref={trackRef}
       className="flex snap-x gap-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {events.map((ev) => (
-        <EventCard key={ev.id} ev={ev} />
+      {items.map((ev, i) => (
+        <EventCard key={`${ev.id}-${i}`} ev={ev} />
       ))}
     </div>
   );
