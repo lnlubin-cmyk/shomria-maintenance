@@ -23,11 +23,6 @@ export default function ScrollReveal() {
 
     document.documentElement.classList.add("reveal-ready");
 
-    const targets = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-reveal], [data-reveal-group] > *")
-    ).filter((el) => !el.classList.contains("is-visible"));
-    if (targets.length === 0) return;
-
     const io = new IntersectionObserver(
       (entries, obs) => {
         for (const entry of entries) {
@@ -45,8 +40,38 @@ export default function ScrollReveal() {
       { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
     );
 
-    targets.forEach((t) => io.observe(t));
-    return () => io.disconnect();
+    const observe = (el: HTMLElement) => {
+      if (!el.classList.contains("is-visible")) io.observe(el);
+    };
+    // querySelectorAll also matches "[data-reveal-group] > *" when `root` itself
+    // is the group (its children are descendants of the search root).
+    const scan = (root: ParentNode) =>
+      root
+        .querySelectorAll<HTMLElement>("[data-reveal], [data-reveal-group] > *")
+        .forEach(observe);
+
+    // Whatever is already in the DOM.
+    scan(document);
+
+    // Content behind a <Suspense> boundary streams in AFTER this effect runs;
+    // because `reveal-ready` hides reveal targets until observed, a missed
+    // element would stay invisible. Pick up nodes as they're inserted.
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          if (node.matches("[data-reveal]")) observe(node);
+          if (node.parentElement?.hasAttribute("data-reveal-group")) observe(node);
+          scan(node);
+        }
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, [pathname]);
 
   return null;

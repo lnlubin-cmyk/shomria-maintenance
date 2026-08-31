@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/supabase/server";
@@ -154,220 +155,323 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function HomePage() {
-  // Start the login-independent queries immediately so they run *during* the
-  // auth round trips instead of waiting for them to finish first.
-  const mediaP = getActiveHomeMedia();
-  const campaignP = getActiveCampaign();
-  const panelsP = getInfoPanels();
+/* ------------------------------------------------------------------ *
+ * Streaming sections.
+ *
+ * The page shell (header bar, hero band, footer) is returned synchronously
+ * so it paints immediately; each data-dependent region is an async component
+ * inside a <Suspense> boundary whose fallback matches the real layout height,
+ * so the content streams into an already-present frame with no layout shift.
+ * getSession() is React-cached, so the boundaries share a single auth lookup.
+ * ------------------------------------------------------------------ */
 
+/** The admin-scheduled campaign modal (overlay — invisible until it resolves). */
+async function CampaignSection() {
+  const [session, campaign] = await Promise.all([getSession(), getActiveCampaign()]);
+  if (!campaign) return null;
+  return <CampaignModal campaign={campaign} loggedIn={!!session} />;
+}
+
+/** The sticky nav header (fetches its own menu data from the session). */
+async function HeaderSection() {
+  const session = await getSession();
+  return <AppHeader session={session} />;
+}
+
+/** The full-bleed hero band: admin media carousel (or a static image) + heading. */
+async function HeroSection() {
+  const [session, media] = await Promise.all([getSession(), getActiveHomeMedia()]);
+  return (
+    <section className="relative w-full overflow-hidden bg-black">
+      {/* Admin-managed media carousel, or a static image if none. */}
+      {media.length > 0 ? (
+        <HeroCarousel items={media} bare heightClass="h-[380px] sm:h-[480px] lg:h-[560px]" />
+      ) : (
+        <div className="relative h-[380px] w-full sm:h-[480px] lg:h-[560px]">
+          <Image
+            src="/hero.svg"
+            alt="איור של מבני הקיבוץ"
+            fill
+            priority
+            className="animate-kenburns object-cover"
+          />
+        </div>
+      )}
+
+      {/* Legibility scrim (darkest at the bottom, where the text sits). */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+      {/* Heading overlay, aligned to the page content width. pointer-events-none
+          lets the carousel controls underneath stay clickable; the CTA re-enables
+          its own clicks. */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="mx-auto flex h-full max-w-6xl flex-col items-start justify-end px-4 pb-6 sm:pb-8">
+          <h1
+            data-reveal
+            className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl"
+          >
+            מידע ושירות לתושב
+          </h1>
+
+          {!session && (
+            <div className="pointer-events-auto mt-4">
+              <Link href="/login" className="btn-primary">
+                כניסה / רישום
+              </Link>
+              <p className="mt-2 text-sm text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
+                השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Scroll cue — hints there's more below the fold. */}
+      {session && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+          <svg
+            className="animate-bob h-6 w-6 text-white/70"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** The portal tile sections (the heaviest data — streams in last). */
+async function PortalSections() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
-  // The login-gated data, concurrently (only once we know there's a session).
-  const [{ community, info, torah }, hasMoments, events, media, campaign, panels] = await Promise.all([
+  const [{ community, info, torah }, hasMoments, events, panels] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     session ? momentsExist() : Promise.resolve(false),
     session ? getActiveEvents() : Promise.resolve([]),
-    mediaP,
-    campaignP,
-    panelsP,
+    getInfoPanels(),
   ]);
   const infoPanels = panels.filter(isPanelConfigured);
 
   return (
+    <>
+      {/* תורה ותפילה — shown first */}
+      <section>
+        <SectionTitle>תורה ותפילה</SectionTitle>
+        <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Tile href="/prayer-times" tone="accent" icon={<ClockIcon />} title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
+          <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
+          <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
+          <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
+          {torah.map((d) => (
+            <Tile
+              key={d.id}
+              href={`/community/${d.id}`}
+              tone="accent"
+              icon={d.icon || "📄"}
+              title={d.subject}
+              desc={d.description || "לחצו לצפייה."}
+            />
+          ))}
+          {session?.user.role === "gabbai" && (
+            <Tile
+              href="/admin"
+              tone="accent"
+              icon="🛠️"
+              title="ניהול תורה ותפילה"
+              desc="עדכון זמני תפילות, שיעורי תורה וזמנים הלכתיים."
+            />
+          )}
+        </div>
+      </section>
+
+      {/* אירועים — auto-advancing carousel of upcoming events (after תורה ותפילה) */}
+      {events.length > 0 && (
+        <section className="mt-12">
+          <SectionTitle>אירועים</SectionTitle>
+          <div data-reveal>
+            <EventsCarousel events={events} />
+          </div>
+        </section>
+      )}
+
+      {/* מידע לתושב */}
+      <section className="mt-12">
+        <SectionTitle>מידע לתושב</SectionTitle>
+        <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
+          <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
+          {infoPanels.map((p) => (
+            <Tile
+              key={p.slug}
+              href={panelHref(p.slug)}
+              tone="accent"
+              icon={PANEL_ICON[p.slug] ?? "📄"}
+              title={p.menu_label}
+              desc={PANEL_DESC[p.slug] ?? ""}
+            />
+          ))}
+          {info.map((d) => (
+            <Tile
+              key={d.id}
+              href={`/community/${d.id}`}
+              tone="accent"
+              icon={d.icon || "📄"}
+              title={d.subject}
+              desc={d.description || "לחצו לצפייה."}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* קהילה — dynamic, admin-managed items + the "רגעים שזוכרים" gallery
+          (shown only when there's something to show) */}
+      {(community.length > 0 || hasMoments) && (
+        <section className="mt-12">
+          <SectionTitle>קהילה</SectionTitle>
+          <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {hasMoments && (
+              <Tile
+                href="/moments"
+                tone="accent"
+                icon="🎬"
+                title="רגעים שזוכרים"
+                desc="רגעים ואירועים היסטוריים מחיי הקהילה."
+              />
+            )}
+            {community.map((c) => (
+              <Tile
+                key={c.id}
+                href={`/community/${c.id}`}
+                tone="accent"
+                icon={c.icon || "📄"}
+                title={c.subject}
+                desc={c.description || "לחצו לצפייה."}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* פנייה לצוות חצר — the existing maintenance features */}
+      <section className="mt-12">
+        <SectionTitle>פנייה לצוות חצר</SectionTitle>
+        <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Tile
+            href="/faults/new"
+            icon="🔧"
+            title="פתיחת קריאה לתקלה"
+            desc="דיווח על תקלה במבנה. הטיפול יתועד עד לסגירה."
+          />
+          <Tile
+            href="/faults"
+            icon="📋"
+            title={staff ? "ניהול תקלות" : "מעקב סטטוס קריאה"}
+            desc={
+              staff
+                ? "צפייה בכל הקריאות, סינון, עדכון סטטוס וטיפול."
+                : "מעקב אחר הקריאות שדיווחת, משלב הפתיחה ועד לסגירה."
+            }
+          />
+          {session?.user.role === "admin" && (
+            <Tile href="/admin" icon="⚙️" title="ניהול מערכת" desc="ניהול משתמשים, תושבים ומבנים." />
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Instant shell fallbacks — same dimensions as the real content so the
+ * frame is stable while the sections above stream in.
+ * ------------------------------------------------------------------ */
+
+/** The brown header bar + logo, without the nav (which streams in). */
+function HeaderShell() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-brown-600 shadow-soft">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2">
+        <span className="flex shrink-0 items-center">
+          <span className="rounded-xl bg-white px-3 py-1 shadow-sm">
+            <Logo className="h-16 w-auto" />
+          </span>
+        </span>
+      </div>
+    </header>
+  );
+}
+
+/** The black hero band + heading, without the (session-dependent) media/CTA. */
+function HeroShell() {
+  return (
+    <section className="relative w-full overflow-hidden bg-black">
+      <div className="relative h-[380px] w-full sm:h-[480px] lg:h-[560px]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="mx-auto flex h-full max-w-6xl flex-col items-start justify-end px-4 pb-6 sm:pb-8">
+          <h1 className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl">
+            מידע ושירות לתושב
+          </h1>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** A light skeleton of the tile grid while the portal sections load. */
+function SectionsShell() {
+  return (
+    <div className="animate-pulse space-y-12" aria-hidden="true">
+      {[0, 1].map((s) => (
+        <section key={s}>
+          <div className="mb-5 flex items-center gap-3">
+            <span className="h-6 w-1.5 rounded-full bg-gray-200" />
+            <span className="h-6 w-40 rounded bg-gray-200" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((c) => (
+              <div key={c} className="card flex h-full items-start gap-4">
+                <div className="h-12 w-12 shrink-0 rounded-xl bg-gray-200" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-24 rounded bg-gray-200" />
+                  <div className="h-3 w-full rounded bg-gray-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export default function HomePage() {
+  return (
     <div className="min-h-screen bg-gray-50">
-      {campaign && <CampaignModal campaign={campaign} loggedIn={!!session} />}
-      <AppHeader session={session} />
+      <Suspense fallback={null}>
+        <CampaignSection />
+      </Suspense>
+
+      <Suspense fallback={<HeaderShell />}>
+        <HeaderSection />
+      </Suspense>
 
       <main>
-        {/* Hero band — full-bleed media with the heading laid over a dark scrim. */}
-        <section className="relative w-full overflow-hidden bg-black">
-          {/* Admin-managed media carousel, or a static image if none. */}
-          {media.length > 0 ? (
-            <HeroCarousel items={media} bare heightClass="h-[380px] sm:h-[480px] lg:h-[560px]" />
-          ) : (
-            <div className="relative h-[380px] w-full sm:h-[480px] lg:h-[560px]">
-              <Image
-                src="/hero.svg"
-                alt="איור של מבני הקיבוץ"
-                fill
-                priority
-                className="animate-kenburns object-cover"
-              />
-            </div>
-          )}
-
-          {/* Legibility scrim (darkest at the bottom, where the text sits). */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-
-          {/* Heading overlay, aligned to the page content width. pointer-events-none
-              lets the carousel controls underneath stay clickable; the CTA re-enables
-              its own clicks. */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="mx-auto flex h-full max-w-6xl flex-col items-start justify-end px-4 pb-6 sm:pb-8">
-              <h1
-                data-reveal
-                className="text-2xl font-bold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl"
-              >
-                מידע ושירות לתושב
-              </h1>
-
-              {!session && (
-                <div className="pointer-events-auto mt-4">
-                  <Link href="/login" className="btn-primary">
-                    כניסה / רישום
-                  </Link>
-                  <p className="mt-2 text-sm text-white/80 [text-shadow:0_1px_6px_rgba(0,0,0,0.7)]">
-                    השירותים פתוחים לחברי הישוב לאחר כניסה למערכת.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Scroll cue — hints there's more below the fold. */}
-          {session && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-              <svg
-                className="animate-bob h-6 w-6 text-white/70"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </div>
-          )}
-        </section>
+        <Suspense fallback={<HeroShell />}>
+          <HeroSection />
+        </Suspense>
 
         <div className="mx-auto max-w-6xl px-4 py-12">
-          {/* תורה ותפילה — shown first */}
-          <section>
-            <SectionTitle>תורה ותפילה</SectionTitle>
-            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Tile href="/prayer-times" tone="accent" icon={<ClockIcon />} title="זמני תפילות" desc="זמני התפילות והמניינים בישוב." />
-              <Tile href="/torah-lessons" tone="accent" icon="📖" title="שיעורי תורה" desc="שיעורי התורה בישוב." />
-              <Tile href="/halachic-times" tone="accent" icon="🕰️" title="זמנים הלכתיים" desc="זמני היום לפי התאריך העברי." />
-              <Tile href="/eruv" tone="accent" icon="🔗" title="קו העירוב" desc="מפת היקף העירוב וכללי הטלטול בשבת." />
-              {torah.map((d) => (
-                <Tile
-                  key={d.id}
-                  href={`/community/${d.id}`}
-                  tone="accent"
-                  icon={d.icon || "📄"}
-                  title={d.subject}
-                  desc={d.description || "לחצו לצפייה."}
-                />
-              ))}
-              {session?.user.role === "gabbai" && (
-                <Tile
-                  href="/admin"
-                  tone="accent"
-                  icon="🛠️"
-                  title="ניהול תורה ותפילה"
-                  desc="עדכון זמני תפילות, שיעורי תורה וזמנים הלכתיים."
-                />
-              )}
-            </div>
-          </section>
-
-          {/* אירועים — auto-advancing carousel of upcoming events (after תורה ותפילה) */}
-          {events.length > 0 && (
-            <section className="mt-12">
-              <SectionTitle>אירועים</SectionTitle>
-              <div data-reveal>
-                <EventsCarousel events={events} />
-              </div>
-            </section>
-          )}
-
-          {/* מידע לתושב */}
-          <section className="mt-12">
-            <SectionTitle>מידע לתושב</SectionTitle>
-            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
-              <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
-              {infoPanels.map((p) => (
-                <Tile
-                  key={p.slug}
-                  href={panelHref(p.slug)}
-                  tone="accent"
-                  icon={PANEL_ICON[p.slug] ?? "📄"}
-                  title={p.menu_label}
-                  desc={PANEL_DESC[p.slug] ?? ""}
-                />
-              ))}
-              {info.map((d) => (
-                <Tile
-                  key={d.id}
-                  href={`/community/${d.id}`}
-                  tone="accent"
-                  icon={d.icon || "📄"}
-                  title={d.subject}
-                  desc={d.description || "לחצו לצפייה."}
-                />
-              ))}
-            </div>
-          </section>
-
-          {/* קהילה — dynamic, admin-managed items + the "רגעים שזוכרים" gallery
-              (shown only when there's something to show) */}
-          {(community.length > 0 || hasMoments) && (
-            <section className="mt-12">
-              <SectionTitle>קהילה</SectionTitle>
-              <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {hasMoments && (
-                  <Tile
-                    href="/moments"
-                    tone="accent"
-                    icon="🎬"
-                    title="רגעים שזוכרים"
-                    desc="רגעים ואירועים היסטוריים מחיי הקהילה."
-                  />
-                )}
-                {community.map((c) => (
-                  <Tile
-                    key={c.id}
-                    href={`/community/${c.id}`}
-                    tone="accent"
-                    icon={c.icon || "📄"}
-                    title={c.subject}
-                    desc={c.description || "לחצו לצפייה."}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* פנייה לצוות חצר — the existing maintenance features */}
-          <section className="mt-12">
-            <SectionTitle>פנייה לצוות חצר</SectionTitle>
-            <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Tile
-                href="/faults/new"
-                icon="🔧"
-                title="פתיחת קריאה לתקלה"
-                desc="דיווח על תקלה במבנה. הטיפול יתועד עד לסגירה."
-              />
-              <Tile
-                href="/faults"
-                icon="📋"
-                title={staff ? "ניהול תקלות" : "מעקב סטטוס קריאה"}
-                desc={
-                  staff
-                    ? "צפייה בכל הקריאות, סינון, עדכון סטטוס וטיפול."
-                    : "מעקב אחר הקריאות שדיווחת, משלב הפתיחה ועד לסגירה."
-                }
-              />
-              {session?.user.role === "admin" && (
-                <Tile href="/admin" icon="⚙️" title="ניהול מערכת" desc="ניהול משתמשים, תושבים ומבנים." />
-              )}
-            </div>
-          </section>
+          <Suspense fallback={<SectionsShell />}>
+            <PortalSections />
+          </Suspense>
         </div>
       </main>
 
