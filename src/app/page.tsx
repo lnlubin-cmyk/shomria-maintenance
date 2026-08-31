@@ -155,16 +155,22 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default async function HomePage() {
+  // Start the login-independent queries immediately so they run *during* the
+  // auth round trips instead of waiting for them to finish first.
+  const mediaP = getActiveHomeMedia();
+  const campaignP = getActiveCampaign();
+  const panelsP = getInfoPanels();
+
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
-  // Fetch the independent data concurrently rather than one round trip at a time.
+  // The login-gated data, concurrently (only once we know there's a session).
   const [{ community, info, torah }, hasMoments, events, media, campaign, panels] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     session ? momentsExist() : Promise.resolve(false),
     session ? getActiveEvents() : Promise.resolve([]),
-    getActiveHomeMedia(),
-    getActiveCampaign(),
-    getInfoPanels(),
+    mediaP,
+    campaignP,
+    panelsP,
   ]);
   const infoPanels = panels.filter(isPanelConfigured);
 

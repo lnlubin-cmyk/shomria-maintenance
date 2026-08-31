@@ -1,7 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import { Rubik } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import ScrollReveal from "@/components/ScrollReveal";
+
+// Self-hosted (served from our own origin, cached by the service worker) instead
+// of a render-blocking request to fonts.googleapis.com on every cold open.
+const rubik = Rubik({
+  subsets: ["hebrew", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-rubik",
+  display: "swap",
+});
 
 // Mark the root ready for scroll-reveal BEFORE first paint, but only when the
 // viewer allows motion — so reveal-hidden elements never flash, and no-JS /
@@ -30,14 +40,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="he" dir="rtl">
+    <html lang="he" dir="rtl" className={rubik.variable}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         {/* Warm up the GovMap connection so the map (SDK + tiles) loads faster,
             especially on mobile. */}
         <link rel="preconnect" href="https://www.govmap.gov.il" crossOrigin="anonymous" />

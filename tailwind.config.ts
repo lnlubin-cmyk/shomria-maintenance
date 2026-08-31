@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Rubik", "Arial", "sans-serif"],
+        sans: ["var(--font-rubik)", "Rubik", "Arial", "sans-serif"],
       },
       colors: {
         brand: {
