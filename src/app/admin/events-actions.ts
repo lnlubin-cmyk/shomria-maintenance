@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { sanitizeRichText } from "@/lib/rich-text";
+import { revalidateNav } from "@/lib/nav-cache";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -27,6 +28,7 @@ async function requireAdmin() {
 function revalidate() {
   revalidatePath("/admin");
   revalidatePath("/"); // the home-page carousel
+  revalidateNav();
 }
 
 /** Normalise the optional date fields to "YYYY-MM-DD" or null. */

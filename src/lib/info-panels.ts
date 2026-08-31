@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
+import { NAV_CACHE } from "@/lib/nav-cache";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
 import {
@@ -26,12 +27,16 @@ export type { InfoPanel, PanelSlug };
 
 const COLS = "slug, menu_label, mode, body, file_path, file_name";
 
-/** All panels, in menu order. React-cached so menu + home share one lookup. */
-export const getInfoPanels = cache(async (): Promise<InfoPanel[]> => {
-  const admin = createAdminClient();
-  const { data } = await admin.from("info_panels").select(COLS).order("sort_order");
-  return (data ?? []) as InfoPanel[];
-});
+/** All panels, in menu order. Cross-request cached (menu + home + admin share it). */
+export const getInfoPanels = unstable_cache(
+  async (): Promise<InfoPanel[]> => {
+    const admin = createAdminClient();
+    const { data } = await admin.from("info_panels").select(COLS).order("sort_order");
+    return (data ?? []) as InfoPanel[];
+  },
+  ["nav-info-panels"],
+  NAV_CACHE
+);
 
 /** One panel by slug (React-cached per slug). */
 export const getInfoPanel = cache(async (slug: string): Promise<InfoPanel | null> => {

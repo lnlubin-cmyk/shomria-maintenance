@@ -1,6 +1,7 @@
-import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getTodayHalachicTimes } from "@/lib/halachic";
+import { NAV_CACHE } from "@/lib/nav-cache";
 import type { HalachicTimeEntry } from "@/lib/halachic-parse";
 import { toSchedule, type Minyan, type PrayerSchedule, type RelBase } from "@/lib/prayer-times";
 
@@ -57,16 +58,20 @@ export async function getAllSchedules(): Promise<PrayerSchedule[]> {
 }
 
 /** Visible schedules (id + title) for the landing list and nav. */
-export const getVisibleScheduleList = cache(async (): Promise<{ id: string; title: string }[]> => {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("prayer_schedules")
-    .select("id, title")
-    .eq("is_visible", true)
-    .order("sort_order")
-    .order("created_at");
-  return (data ?? []).map((r) => ({ id: String(r.id), title: String(r.title ?? "") }));
-});
+export const getVisibleScheduleList = unstable_cache(
+  async (): Promise<{ id: string; title: string }[]> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("prayer_schedules")
+      .select("id, title")
+      .eq("is_visible", true)
+      .order("sort_order")
+      .order("created_at");
+    return (data ?? []).map((r) => ({ id: String(r.id), title: String(r.title ?? "") }));
+  },
+  ["nav-prayer-schedules"],
+  NAV_CACHE
+);
 
 /**
  * One schedule for viewing: only if visible, with minyanim filtered to visible

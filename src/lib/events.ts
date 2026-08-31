@@ -1,9 +1,9 @@
 import { unstable_cache } from "next/cache";
-import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docKind } from "@/lib/doc-files";
 import { notExpired, israelToday } from "@/lib/expiry";
+import { NAV_CACHE } from "@/lib/nav-cache";
 import type { CommunityEvent, EventView } from "@/lib/types";
 
 // Cached signed URL for an event asset (image or PDF): valid 30 days, reused for
@@ -50,22 +50,27 @@ async function resolveEvent(e: CommunityEvent): Promise<EventView> {
   };
 }
 
-// Visible, titled, non-expired events in display order. React-cached so the
-// carousel and the nav menu share one query per request (both need this list).
-const getVisibleEventRows = cache(async (): Promise<CommunityEvent[]> => {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("community_events")
-    .select("*")
-    .eq("is_visible", true)
-    .order("sort_order")
-    .order("event_date")
-    .order("created_at");
-  const today = israelToday();
-  return ((data ?? []) as CommunityEvent[]).filter(
-    (e) => e.title.trim() !== "" && notExpired(e.expires_at, today)
-  );
-});
+// Visible, titled, non-expired events in display order. Cross-request cached so
+// the carousel and the nav menu share one query (and it's not re-run every
+// navigation); invalidated instantly on any event change via NAV_TAG.
+const getVisibleEventRows = unstable_cache(
+  async (): Promise<CommunityEvent[]> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("community_events")
+      .select("*")
+      .eq("is_visible", true)
+      .order("sort_order")
+      .order("event_date")
+      .order("created_at");
+    const today = israelToday();
+    return ((data ?? []) as CommunityEvent[]).filter(
+      (e) => e.title.trim() !== "" && notExpired(e.expires_at, today)
+    );
+  },
+  ["nav-event-rows"],
+  NAV_CACHE
+);
 
 /** Active events for the home-page carousel: visible, titled, not expired. */
 export async function getActiveEvents(): Promise<EventView[]> {

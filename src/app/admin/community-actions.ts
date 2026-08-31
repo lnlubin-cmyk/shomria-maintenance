@@ -6,6 +6,7 @@ import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 import { sanitizeRichText } from "@/lib/rich-text";
+import { revalidateNav } from "@/lib/nav-cache";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
 
@@ -69,6 +70,7 @@ async function removeFile(path: string | null | undefined) {
 function revalidate() {
   revalidatePath("/admin");
   revalidatePath("/", "layout"); // refresh the nav menu across the site
+  revalidateNav(); // drop the cross-request nav cache so the change shows now
 }
 
 /**

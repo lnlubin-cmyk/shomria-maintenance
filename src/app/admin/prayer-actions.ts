@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { canEditReligious } from "@/lib/types";
 import { PRAYER_TITLES, REL_BASES, type Minyan, type Prayer, type PrayerTitle, type RelBase } from "@/lib/prayer-times";
+import { revalidateNav } from "@/lib/nav-cache";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -23,6 +24,7 @@ async function requireReligiousEditor() {
 function revalidate() {
   revalidatePath("/admin");
   revalidatePath("/prayer-times", "layout");
+  revalidateNav();
 }
 
 /** Clean the nested prayers/minyanim before storing. */

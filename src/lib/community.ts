@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
-import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { notExpired, israelToday } from "@/lib/expiry";
+import { NAV_CACHE } from "@/lib/nav-cache";
 import type { CommunityItem, CommunityMenuItem } from "@/lib/types";
 
 export const COMMUNITY_BUCKET = "community";
@@ -44,40 +44,44 @@ const getSignedDownloadUrl = unstable_cache(
  * has a subject, AND has content — a file (file mode) or non-empty body (text
  * mode) — the exact condition the menu must satisfy, in one place.
  */
-export const getMenuDocs = cache(async (): Promise<{
-  community: CommunityMenuItem[];
-  info: CommunityMenuItem[];
-  torah: CommunityMenuItem[];
-}> => {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("community_items")
-    .select("id, subject, file_path, section, mode, body, icon, description, expires_at")
-    .eq("is_visible", true)
-    .order("sort_order")
-    .order("created_at");
+export const getMenuDocs = unstable_cache(
+  async (): Promise<{
+    community: CommunityMenuItem[];
+    info: CommunityMenuItem[];
+    torah: CommunityMenuItem[];
+  }> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("community_items")
+      .select("id, subject, file_path, section, mode, body, icon, description, expires_at")
+      .eq("is_visible", true)
+      .order("sort_order")
+      .order("created_at");
 
-  const today = israelToday();
-  const rows = (data ?? []).filter(
-    (r) =>
-      r.subject.trim() !== "" &&
-      notExpired(r.expires_at, today) &&
-      (r.mode === "text" ? (r.body ?? "").trim() !== "" : !!r.file_path)
-  );
-  const toMenu = (r: (typeof rows)[number]): CommunityMenuItem => ({
-    id: r.id,
-    subject: r.subject,
-    icon: r.icon ?? "",
-    description: r.description ?? "",
-  });
-  const inSection = (s: string) => rows.filter((r) => r.section === s).map(toMenu);
-  return {
-    // Legacy rows default to 'community', so anything not info/torah counts as community.
-    community: rows.filter((r) => r.section !== "info" && r.section !== "torah").map(toMenu),
-    info: inSection("info"),
-    torah: inSection("torah"),
-  };
-});
+    const today = israelToday();
+    const rows = (data ?? []).filter(
+      (r) =>
+        r.subject.trim() !== "" &&
+        notExpired(r.expires_at, today) &&
+        (r.mode === "text" ? (r.body ?? "").trim() !== "" : !!r.file_path)
+    );
+    const toMenu = (r: (typeof rows)[number]): CommunityMenuItem => ({
+      id: r.id,
+      subject: r.subject,
+      icon: r.icon ?? "",
+      description: r.description ?? "",
+    });
+    const inSection = (s: string) => rows.filter((r) => r.section === s).map(toMenu);
+    return {
+      // Legacy rows default to 'community', so anything not info/torah counts as community.
+      community: rows.filter((r) => r.section !== "info" && r.section !== "torah").map(toMenu),
+      info: inSection("info"),
+      torah: inSection("torah"),
+    };
+  },
+  ["nav-menu-docs"],
+  NAV_CACHE
+);
 
 /** All items, for the admin management tab (includes hidden/incomplete ones). */
 export async function getAllCommunityItems(): Promise<CommunityItem[]> {

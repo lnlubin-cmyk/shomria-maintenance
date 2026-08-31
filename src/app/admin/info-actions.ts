@@ -7,6 +7,7 @@ import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 import { sanitizeRichText } from "@/lib/rich-text";
 import { isPanelSlug } from "@/lib/info-panels";
+import { revalidateNav } from "@/lib/nav-cache";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -82,5 +83,6 @@ export async function updatePanel(formData: FormData): Promise<ActionResult> {
   revalidatePath("/admin");
   revalidatePath(`/info/${slug}`);
   revalidatePath("/", "layout"); // refresh the menu + home tile
+  revalidateNav();
   return { ok: true };
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { detectMoment } from "@/lib/moments-embed";
+import { revalidateNav } from "@/lib/nav-cache";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -17,6 +18,7 @@ function revalidate() {
   revalidatePath("/admin");
   revalidatePath("/"); // home-page קהילה tile
   revalidatePath("/moments"); // the gallery
+  revalidateNav();
 }
 
 const LINK_ERROR =

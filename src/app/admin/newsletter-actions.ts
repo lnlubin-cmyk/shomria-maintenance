@@ -8,6 +8,7 @@ import { isAIConfigured } from "@/lib/ai";
 import { renderNewsletter, cropSection } from "@/lib/newsletter/render";
 import { cropSectionToPdf } from "@/lib/newsletter/crop-pdf";
 import { suggestSections, type SectionSuggestion } from "@/lib/newsletter/ai";
+import { revalidateNav } from "@/lib/nav-cache";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // matches the 'community' bucket size limit
 const WORK_PREFIX = "newsletter-work"; // temp working files, cleaned up on publish
@@ -278,6 +279,7 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
   revalidatePath("/admin");
   revalidatePath("/", "layout");
   if (clinicUpdated) revalidatePath("/info/clinic");
+  revalidateNav(); // publish can add community items, events, and clinic content
 
   if (count === 0) return { error: "לא פורסם אף מקטע" };
   return { ok: true, count };
