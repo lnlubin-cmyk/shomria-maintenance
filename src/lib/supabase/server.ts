@@ -59,18 +59,23 @@ export function createAdminClient() {
 export const getSession = cache(async (): Promise<Session | null> => {
   const supabase = createClient();
 
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
+  // Verify the access token's signature locally instead of getUser(), which
+  // always makes a network round trip to the auth server. With asymmetric JWT
+  // signing keys enabled, getClaims() checks the signature against the cached
+  // public keys — no round trip. The middleware already ran the authoritative
+  // refresh/gate for this request, and the is_active check below still rejects
+  // a deactivated account.
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const authUserId = claimsData?.claims?.sub;
 
-  if (!authUser) return null;
+  if (claimsError || !authUserId) return null;
 
   const { data, error } = await supabase
     .from("users")
     .select(
       "id, resident_id, role, first_name, last_name, email, phone, is_active, resident:residents(id, first_name, last_name, phone, email, share_phone, share_house, is_member)"
     )
-    .eq("id", authUser.id)
+    .eq("id", authUserId)
     .single();
 
   // A resident-linked user must have its resident row; an external staff user
