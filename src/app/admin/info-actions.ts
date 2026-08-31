@@ -8,6 +8,7 @@ import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 import { sanitizeRichText } from "@/lib/rich-text";
 import { isPanelSlug } from "@/lib/info-panels";
 import { revalidateNav } from "@/lib/nav-cache";
+import { decodeUploadedFileName } from "@/lib/upload-filename";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -63,7 +64,7 @@ export async function updatePanel(formData: FormData): Promise<ActionResult> {
     if (up.error) return { error: "העלאת הקובץ נכשלה" };
     if (file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([file_path]);
     file_path = path;
-    file_name = file.name;
+    file_name = decodeUploadedFileName(file.name);
   } else if (removeFile && file_path) {
     await admin.storage.from(COMMUNITY_BUCKET).remove([file_path]);
     file_path = null;

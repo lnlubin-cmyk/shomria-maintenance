@@ -7,6 +7,7 @@ import { COMMUNITY_BUCKET } from "@/lib/community";
 import { docExt, docContentType, DOC_KINDS_HE } from "@/lib/doc-files";
 import { sanitizeRichText } from "@/lib/rich-text";
 import { revalidateNav } from "@/lib/nav-cache";
+import { decodeUploadedFileName } from "@/lib/upload-filename";
 
 export type ActionResult = { error: string } | { ok: true; message?: string };
 
@@ -121,7 +122,7 @@ export async function createCommunityItem(formData: FormData): Promise<ActionRes
     const { path, error } = await uploadDoc(file, ext);
     if (error || !path) return { error: "העלאת הקובץ נכשלה" };
     file_path = path;
-    file_name = file.name;
+    file_name = decodeUploadedFileName(file.name);
   }
 
   const { error } = await admin
@@ -219,7 +220,7 @@ export async function updateCommunityContent(formData: FormData): Promise<Action
     if (error || !path) return { error: "העלאת הקובץ נכשלה" };
     if (file_path) await removeFile(file_path); // drop the old file
     file_path = path;
-    file_name = file.name;
+    file_name = decodeUploadedFileName(file.name);
   } else if (removeExisting && file_path) {
     await removeFile(file_path);
     file_path = null;

@@ -6,6 +6,7 @@ import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { COMMUNITY_BUCKET } from "@/lib/community";
 import { sanitizeRichText } from "@/lib/rich-text";
 import { revalidateNav } from "@/lib/nav-cache";
+import { decodeUploadedFileName } from "@/lib/upload-filename";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -111,7 +112,7 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
     const { path, error } = await uploadImage(file, ext);
     if (error || !path) return { error: "העלאת התמונה נכשלה" };
     image_path = path;
-    image_name = file.name;
+    image_name = decodeUploadedFileName(file.name);
   }
 
   const { file: docFile, error: docErr } = readEventDoc(formData);
@@ -128,7 +129,7 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
       return { error: "העלאת המסמך נכשלה" };
     }
     doc_path = path;
-    doc_name = docFile.name;
+    doc_name = decodeUploadedFileName(docFile.name);
   }
 
   const admin = createAdminClient();
@@ -220,7 +221,7 @@ export async function updateEventImage(formData: FormData): Promise<ActionResult
     if (error || !path) return { error: "העלאת התמונה נכשלה" };
     if (cur?.image_path) await removeImage(cur.image_path);
     image_path = path;
-    image_name = file.name;
+    image_name = decodeUploadedFileName(file.name);
   } else if (removeExisting && cur?.image_path) {
     await removeImage(cur.image_path);
     image_path = null;
@@ -267,7 +268,7 @@ export async function updateEventDoc(formData: FormData): Promise<ActionResult> 
     if (error || !path) return { error: "העלאת המסמך נכשלה" };
     if (cur?.doc_path) await removeFile(cur.doc_path);
     doc_path = path;
-    doc_name = file.name;
+    doc_name = decodeUploadedFileName(file.name);
   } else if (removeExisting && cur?.doc_path) {
     await removeFile(cur.doc_path);
     doc_path = null;
