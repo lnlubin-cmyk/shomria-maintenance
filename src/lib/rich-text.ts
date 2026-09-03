@@ -28,12 +28,14 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// http(s):// or www. links, or an Israeli phone number (must start with 0 or
-// +972 so we don't grab arbitrary long digit runs). Phone candidates are still
-// validated by normalizeIsraeliPhone() below, so wrong-length numbers fall back
-// to plain text.
+// http(s):// or www. links, an email address, or an Israeli phone number (must
+// start with 0 or +972 so we don't grab arbitrary long digit runs). Phone
+// candidates are still validated by normalizeIsraeliPhone() below, so
+// wrong-length numbers fall back to plain text.
 const LINK_SOURCE =
   String.raw`((?:https?:\/\/|www\.)[^\s<]+)` +
+  "|" +
+  String.raw`([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})` +
   "|" +
   String.raw`((?:\+?972[-\s.]?|0)\d(?:[-\s.]?\d){7,9})`;
 
@@ -66,9 +68,14 @@ export function linkifyText(text: string | null | undefined): string {
         .replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;");
       out += `<a href="${href}" target="_blank" rel="noopener noreferrer" class="${LINK_CLASS}">${escapeHtml(url)}</a>${escapeHtml(trail)}`;
+    } else if (m[2]) {
+      // Email → mailto:.
+      const email = m[2];
+      const href = email.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+      out += `<a href="mailto:${href}" class="${LINK_CLASS}">${escapeHtml(email)}</a>`;
     } else {
       // Phone — only link it if it normalises to a valid Israeli number.
-      const raw = m[2];
+      const raw = m[3];
       const e164 = normalizeIsraeliPhone(raw);
       out += e164
         ? `<a href="tel:${e164}" class="${LINK_CLASS}">${escapeHtml(raw)}</a>`
