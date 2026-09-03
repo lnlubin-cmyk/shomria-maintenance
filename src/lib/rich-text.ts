@@ -21,7 +21,10 @@ const VOID_TAGS = new Set(["br"]);
 
 function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
+    // Escape a lone '&' (e.g. "Q&A") but keep existing HTML entities intact
+    // (&nbsp;, &amp;, &#39;, &#x2d;, …) — the rich-text editor emits those, and
+    // double-escaping them would surface literal "&nbsp;" text.
+    .replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
