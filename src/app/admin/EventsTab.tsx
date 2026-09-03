@@ -22,8 +22,29 @@ type EventRow = CommunityEvent & { imageUrl: string | null; docUrl: string | nul
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Run = (action: (fd: FormData) => Promise<any>, fd: FormData) => Promise<boolean>;
 
-const fileInputClass =
-  "block text-sm file:ml-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600";
+/**
+ * A tidy file picker: a styled button that hides the browser's native
+ * "no file chosen" clutter and instead shows the name of the newly-picked file
+ * (the current attachment is shown separately — thumbnail / צפייה link).
+ */
+function FilePicker({ name, accept }: { name: string; accept: string }) {
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <label className="shrink-0 cursor-pointer rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-brand-600">
+        בחר קובץ
+        <input
+          name={name}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => setPicked(e.target.files?.[0]?.name ?? null)}
+        />
+      </label>
+      <span className="truncate text-xs text-gray-500">{picked ?? "לא נבחר קובץ חדש"}</span>
+    </div>
+  );
+}
 
 export default function EventsTab({ events }: { events: EventRow[] }) {
   const router = useRouter();
@@ -103,17 +124,13 @@ export default function EventsTab({ events }: { events: EventRow[] }) {
             <RichTextEditor name="body" />
           </div>
           <div>
-            <label className="label" htmlFor="new-image">
-              תמונה — תצוגה מקדימה בכרטיס (לא חובה)
-            </label>
-            <input id="new-image" name="image" type="file" accept={EVENT_IMAGE_ACCEPT} className={fileInputClass} />
+            <span className="label">תמונה — תצוגה מקדימה בכרטיס (לא חובה)</span>
+            <FilePicker name="image" accept={EVENT_IMAGE_ACCEPT} />
             <p className="mt-1 text-xs text-gray-500">תמונה (JPG/PNG/WEBP). עד 20MB.</p>
           </div>
           <div>
-            <label className="label" htmlFor="new-doc">
-              מסמך PDF — לעמוד האירוע המלא (לא חובה)
-            </label>
-            <input id="new-doc" name="doc" type="file" accept=".pdf,application/pdf" className={fileInputClass} />
+            <span className="label">מסמך PDF — לעמוד האירוע המלא (לא חובה)</span>
+            <FilePicker name="doc" accept=".pdf,application/pdf" />
             <p className="mt-1 text-xs text-gray-500">אם מצורף PDF, עמוד האירוע יציג אותו במקום התמונה.</p>
           </div>
           <button type="submit" className="btn-primary" disabled={busy}>
@@ -201,11 +218,11 @@ export default function EventsTab({ events }: { events: EventRow[] }) {
                       <span className="flex h-full w-full items-center justify-center text-xs text-gray-400">אין תמונה</span>
                     )}
                   </div>
-                  <input name="image" type="file" accept={EVENT_IMAGE_ACCEPT} className={fileInputClass} />
+                  <FilePicker name="image" accept={EVENT_IMAGE_ACCEPT} />
                   <div className="flex items-center justify-between">
                     {ev.imageUrl ? (
                       <label className="flex items-center gap-1 text-xs text-gray-600">
-                        <input type="checkbox" name="remove_image" value="1" /> הסר
+                        <input type="checkbox" name="remove_image" value="1" /> הסר תמונה
                       </label>
                     ) : (
                       <span />
@@ -250,13 +267,13 @@ export default function EventsTab({ events }: { events: EventRow[] }) {
                       צפייה
                     </a>
                     <label className="flex items-center gap-1 text-xs text-gray-600">
-                      <input type="checkbox" name="remove_doc" value="1" /> הסר
+                      <input type="checkbox" name="remove_doc" value="1" /> הסר מסמך
                     </label>
                   </>
                 ) : (
                   <span className="text-gray-400">אין</span>
                 )}
-                <input name="doc" type="file" accept=".pdf,application/pdf" className={fileInputClass} />
+                <FilePicker name="doc" accept=".pdf,application/pdf" />
                 <button type="submit" className="btn-secondary" disabled={busy}>
                   שמור מסמך
                 </button>
