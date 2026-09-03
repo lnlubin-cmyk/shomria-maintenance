@@ -10,7 +10,6 @@ import BuildingsTab from "./BuildingsTab";
 import CommunityTab from "./CommunityTab";
 import MomentsTab from "./MomentsTab";
 import EventsTab from "./EventsTab";
-import PanelTab from "./PanelTab";
 import HomeMediaTab from "./HomeMediaTab";
 import HalachicTab from "./HalachicTab";
 import PrayerTimesTab from "./PrayerTimesTab";
@@ -27,7 +26,6 @@ const NewsletterTab = dynamic(() => import("./NewsletterTab"), { loading: TabLoa
 const VotesTab = dynamic(() => import("./VotesTab"), { loading: TabLoading });
 const MoveTab = dynamic(() => import("./MoveTab"), { loading: TabLoading });
 import type { CommunityEvent, Moment, TorahLesson } from "@/lib/types";
-import type { InfoPanel } from "@/lib/info-panels-shared";
 import type { AdminVote } from "@/lib/votes";
 
 type Tab =
@@ -39,8 +37,6 @@ type Tab =
   | "moments"
   | "events"
   | "newsletter"
-  | "clinic"
-  | "store"
   | "media"
   | "halachic"
   | "religion"
@@ -71,8 +67,6 @@ const LEAF_LABELS: Record<Tab, string> = {
   community: "קהילה/מידע לתושב",
   moments: "רגעים שזוכרים",
   events: "אירועים",
-  clinic: "מרפאה",
-  store: "מכולת",
   newsletter: "פיצול ידיעון",
   media: "מדיה בדף הבית",
   halachic: "זמנים הלכתיים",
@@ -99,7 +93,7 @@ const TOP: TopEntry[] = [
     kind: "group",
     key: "display",
     label: "ניהול פריטי תצוגה",
-    tabs: ["community", "moments", "events", "clinic", "store"],
+    tabs: ["community", "moments", "events"],
   },
   { kind: "leaf", key: "newsletter", label: LEAF_LABELS.newsletter },
   { kind: "leaf", key: "media", label: LEAF_LABELS.media },
@@ -128,7 +122,6 @@ export default function AdminTabs({
   votes,
   currentUserId,
   aiConfigured,
-  panels,
 }: {
   residents: Resident[];
   buildings: Building[];
@@ -147,9 +140,7 @@ export default function AdminTabs({
   votes: AdminVote[];
   currentUserId: string;
   aiConfigured: boolean;
-  panels: InfoPanel[];
 }) {
-  const panelBySlug = (slug: string) => panels.find((p) => p.slug === slug);
   // Which top-level entry is open (a group key or a standalone leaf key)...
   const [top, setTop] = useState<string>("people");
   // ...and which leaf is selected inside each group (remembered per group).
@@ -180,10 +171,6 @@ export default function AdminTabs({
         return <MomentsTab moments={moments} />;
       case "events":
         return <EventsTab events={events} />;
-      case "clinic":
-        return panelBySlug("clinic") ? <PanelTab panel={panelBySlug("clinic")!} /> : null;
-      case "store":
-        return panelBySlug("store") ? <PanelTab panel={panelBySlug("store")!} /> : null;
       case "newsletter":
         return <NewsletterTab aiConfigured={aiConfigured} />;
       case "media":

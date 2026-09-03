@@ -140,7 +140,7 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
   const pdf = new Uint8Array(await blob.arrayBuffer());
 
   let count = 0;
-  let clinicUpdated = false;
+  let clinicItemId: string | null = null;
   for (const s of wanted) {
     if (!TARGETS.includes(s.section)) continue;
     if (!(s.x1 > s.x0 && s.y1 > s.y0)) continue;
@@ -171,30 +171,52 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
     }
     const path = `${randomUUID()}.${ext}`;
 
-    // "מרפאה" → update the clinic info-panel's file (rather than creating a doc).
+    // "מרפאה" → update the merged מרפאה menu item's file IN PLACE (the item keyed
+    // 'clinic'), rather than creating a new item each week.
     if (s.section === "clinic") {
       const up = await admin.storage.from(COMMUNITY_BUCKET).upload(path, bytes, { contentType, upsert: false });
       if (up.error) continue;
+      const file_name = `${s.title.trim() || "מרפאה"}.${ext}`;
       const { data: cur } = await admin
-        .from("info_panels")
-        .select("file_path")
-        .eq("slug", "clinic")
+        .from("community_items")
+        .select("id, file_path")
+        .eq("key", "clinic")
         .maybeSingle();
-      const { error } = await admin
-        .from("info_panels")
-        .update({
-          mode: "pdf", // "file" mode
-          file_path: path,
-          file_name: `${s.title.trim() || "מרפאה"}.${ext}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("slug", "clinic");
-      if (error) {
-        await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
-        continue;
+      if (cur) {
+        const { error } = await admin
+          .from("community_items")
+          .update({ mode: "file", file_path: path, file_name, is_visible: true })
+          .eq("id", cur.id);
+        if (error) {
+          await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+          continue;
+        }
+        if (cur.file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([cur.file_path]);
+        clinicItemId = cur.id;
+      } else {
+        // The מרפאה item was deleted — recreate it (still keyed, so it stays the one).
+        const { data: ins, error } = await admin
+          .from("community_items")
+          .insert({
+            subject: "מרפאה",
+            section: "info",
+            mode: "file",
+            icon: "🩺",
+            description: "שעות פעילות ומידע על המרפאה.",
+            file_path: path,
+            file_name,
+            is_visible: true,
+            sort_order: -20,
+            key: "clinic",
+          })
+          .select("id")
+          .maybeSingle();
+        if (error || !ins) {
+          await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+          continue;
+        }
+        clinicItemId = ins.id;
       }
-      if (cur?.file_path) await admin.storage.from(COMMUNITY_BUCKET).remove([cur.file_path]);
-      clinicUpdated = true;
       count++;
       continue;
     }
@@ -278,7 +300,7 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
 
   revalidatePath("/admin");
   revalidatePath("/", "layout");
-  if (clinicUpdated) revalidatePath("/info/clinic");
+  if (clinicItemId) revalidatePath(`/community/${clinicItemId}`);
   revalidateNav(); // publish can add community items, events, and clinic content
 
   if (count === 0) return { error: "לא פורסם אף מקטע" };

@@ -83,6 +83,17 @@ export const getMenuDocs = unstable_cache(
   NAV_CACHE
 );
 
+/**
+ * The id of the item carrying a stable key — מרפאה ('clinic') / מכולת ('store'),
+ * the two former info-panels — or null. Used by the /info/[slug] redirect and
+ * the newsletter "clinic" target so they keep pointing at the same item.
+ */
+export async function getItemIdByKey(key: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("community_items").select("id").eq("key", key).maybeSingle();
+  return data?.id ?? null;
+}
+
 /** All items, for the admin management tab (includes hidden/incomplete ones). */
 export async function getAllCommunityItems(): Promise<CommunityItem[]> {
   const admin = createAdminClient();

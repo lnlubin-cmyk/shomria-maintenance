@@ -10,8 +10,8 @@ import {
 } from "./newsletter-actions";
 
 type SectionKey = "community" | "info" | "torah";
-// A per-section target may also be "clinic" (updates the מרפאה panel file) or
-// "events" (creates an אירועים carousel card from the crop image).
+// A per-section target may also be "clinic" (updates the מרפאה menu item in
+// place) or "events" (creates an אירועים carousel card from the crop image).
 type TargetKey = SectionKey | "clinic" | "events";
 
 const SECTION_LABELS: Record<SectionKey, string> = {
@@ -23,7 +23,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 const TARGET_LABELS: Record<TargetKey, string> = {
   ...SECTION_LABELS,
   events: "אירועים",
-  clinic: "מרפאה (עדכון הפאנל)",
+  clinic: "מרפאה (עדכון הפריט)",
 };
 
 // A crop box the admin is reviewing. Coords are 0..1 within the page preview.

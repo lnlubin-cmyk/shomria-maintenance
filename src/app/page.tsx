@@ -5,7 +5,6 @@ import { getSession } from "@/lib/supabase/server";
 import { getMenuDocs } from "@/lib/community";
 import { momentsExist } from "@/lib/moments";
 import { getActiveEvents } from "@/lib/events";
-import { getInfoPanels, isPanelConfigured, panelHref } from "@/lib/info-panels";
 import { getActiveHomeMedia } from "@/lib/home-media";
 import { getActiveCampaign } from "@/lib/campaigns";
 import AppHeader from "@/components/AppHeader";
@@ -33,53 +32,6 @@ function ClockIcon() {
     </svg>
   );
 }
-
-/** Shopping-cart icon (Lucide) for the "מכולת" tile. */
-function CartIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-6 w-6"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="21" r="1" />
-      <circle cx="19" cy="21" r="1" />
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-    </svg>
-  );
-}
-
-/** Stethoscope icon (Lucide) for the "מרפאה" tile. */
-function MedicalIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-6 w-6"
-      aria-hidden="true"
-    >
-      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .2.3" />
-      <path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4" />
-      <circle cx="20" cy="10" r="2" />
-    </svg>
-  );
-}
-
-/** Per-panel tile icon + description (keyed by slug). */
-const PANEL_ICON: Record<string, React.ReactNode> = { store: <CartIcon />, clinic: <MedicalIcon /> };
-const PANEL_DESC: Record<string, string> = {
-  store: "שעות פתיחה ומידע על המכולת.",
-  clinic: "שעות פעילות ומידע על המרפאה.",
-};
 
 /**
  * A portal tile. A working tile links somewhere and lifts on hover; a "בקרוב"
@@ -251,13 +203,11 @@ async function HeroSection() {
 async function PortalSections() {
   const session = await getSession();
   const staff = session ? isStaff(session.user.role) : false;
-  const [{ community, info, torah }, hasMoments, events, panels] = await Promise.all([
+  const [{ community, info, torah }, hasMoments, events] = await Promise.all([
     session ? getMenuDocs() : Promise.resolve({ community: [], info: [], torah: [] }),
     session ? momentsExist() : Promise.resolve(false),
     session ? getActiveEvents() : Promise.resolve([]),
-    getInfoPanels(),
   ]);
-  const infoPanels = panels.filter(isPanelConfigured);
 
   return (
     <>
@@ -307,16 +257,6 @@ async function PortalSections() {
         <div data-reveal-group className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Tile href="/map" tone="accent" icon="🗺️" title="חפש בית בישוב" desc="מציאת בית של משפחה על מפת הישוב." />
           <Tile href="/phone-directory" tone="accent" icon="📞" title="חפש מספר טלפון" desc="ספר טלפונים של חברי הישוב." />
-          {infoPanels.map((p) => (
-            <Tile
-              key={p.slug}
-              href={panelHref(p.slug)}
-              tone="accent"
-              icon={PANEL_ICON[p.slug] ?? "📄"}
-              title={p.menu_label}
-              desc={PANEL_DESC[p.slug] ?? ""}
-            />
-          ))}
           {info.map((d) => (
             <Tile
               key={d.id}

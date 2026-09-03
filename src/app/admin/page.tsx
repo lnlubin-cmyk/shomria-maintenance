@@ -14,7 +14,6 @@ import { getAllContacts } from "@/lib/contacts";
 import { getAllCampaigns } from "@/lib/campaigns";
 import { getHousesForMove } from "@/lib/houses";
 import { getAdminVotes } from "@/lib/votes";
-import { getInfoPanels } from "@/lib/info-panels";
 import { isAIConfigured } from "@/lib/ai";
 import type { Building, BuildingLayer, Resident } from "@/lib/types";
 
@@ -77,7 +76,6 @@ export default async function AdminPage() {
     campaigns,
     moveHouses,
     votes,
-    panels,
   ] = await Promise.all([
     supabase
       .from("residents")
@@ -105,7 +103,6 @@ export default async function AdminPage() {
     getAllCampaigns(),
     getHousesForMove(),
     getAdminVotes(),
-    getInfoPanels(),
   ]);
 
   return (
@@ -133,7 +130,6 @@ export default async function AdminPage() {
           votes={votes}
           currentUserId={session.user.id}
           aiConfigured={isAIConfigured()}
-          panels={panels}
         />
       </main>
     </div>

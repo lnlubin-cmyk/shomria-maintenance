@@ -243,6 +243,7 @@ export interface CommunityItem {
   is_visible: boolean;
   sort_order: number;
   expires_at: string | null; // "YYYY-MM-DD" or null — hidden after this date
+  key: string | null; // stable handle for the migrated מרפאה/מכולת items ('clinic'/'store')
   created_at: string;
   updated_at: string;
 }
