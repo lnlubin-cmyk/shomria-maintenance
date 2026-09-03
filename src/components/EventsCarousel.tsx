@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { EventView } from "@/lib/types";
 
-const ADVANCE_MS = 5000;
+const ADVANCE_MS = 3000;
 const GAP = 16; // matches gap-4
 
 function formatEventDate(iso: string | null): string | null {
