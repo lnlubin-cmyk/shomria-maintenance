@@ -284,15 +284,62 @@ export async function publishNewsletter(input: PublishInput): Promise<{ error: s
       .upload(path, Buffer.from(pdf), { contentType: "application/pdf", upsert: false });
     if (!up.error) {
       const section: SectionKey = SECTIONS.includes(input.fullSection) ? input.fullSection : "community";
-      const { error } = await admin.from("community_items").insert({
-        subject: input.fullTitle.trim() || "הידיעון האחרון",
-        section,
-        file_path: path,
-        file_name: "newsletter.pdf",
-        is_visible: true,
-      });
-      if (error) await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
-      else count++;
+      const subject = input.fullTitle.trim() || "הידיעון האחרון";
+
+      // Keep ONE ידיעון item and REPLACE it in place (keyed 'newsletter'), so a
+      // new edition overwrites the last instead of piling up duplicates. On the
+      // first run after this change, adopt an existing same-titled item so we
+      // don't leave the old one orphaned.
+      let target =
+        (await admin.from("community_items").select("id, file_path").eq("key", "newsletter").maybeSingle())
+          .data;
+      if (!target) {
+        target = (
+          await admin
+            .from("community_items")
+            .select("id, file_path")
+            .is("key", null)
+            .eq("subject", subject)
+            .not("file_path", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        ).data;
+      }
+
+      if (target) {
+        const { error } = await admin
+          .from("community_items")
+          .update({
+            subject,
+            section,
+            mode: "file",
+            file_path: path,
+            file_name: "newsletter.pdf",
+            is_visible: true,
+            key: "newsletter",
+          })
+          .eq("id", target.id);
+        if (error) {
+          await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+        } else {
+          if (target.file_path && target.file_path !== path)
+            await admin.storage.from(COMMUNITY_BUCKET).remove([target.file_path]);
+          count++;
+        }
+      } else {
+        const { error } = await admin.from("community_items").insert({
+          subject,
+          section,
+          mode: "file",
+          file_path: path,
+          file_name: "newsletter.pdf",
+          is_visible: true,
+          key: "newsletter",
+        });
+        if (error) await admin.storage.from(COMMUNITY_BUCKET).remove([path]);
+        else count++;
+      }
     }
   }
 

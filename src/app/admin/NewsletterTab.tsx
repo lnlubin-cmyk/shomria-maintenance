@@ -347,7 +347,7 @@ export default function NewsletterTab({ aiConfigured }: { aiConfigured: boolean 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
             <label className="flex items-center gap-2 text-sm font-medium">
               <input type="checkbox" checked={publishFull} onChange={(e) => setPublishFull(e.target.checked)} />
-              פרסם גם את הידיעון המלא (PDF) כפריט נפרד
+              פרסם את הידיעון המלא (PDF) — מחליף את הידיעון הקודם
             </label>
             {publishFull && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
