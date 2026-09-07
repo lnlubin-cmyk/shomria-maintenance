@@ -125,6 +125,25 @@ export default function InstallPage() {
           </p>
         </section>
 
+        {/* Video guide — registration / login */}
+        <section className="card space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+            <span className="text-2xl">🎬</span> סרטון הדרכה — הרשמה וכניסה
+          </h2>
+          <p className="text-gray-800 leading-relaxed">צפו בסרטון קצר שמדגים כיצד להירשם ולהתחבר לאפליקציה:</p>
+          <div className="mx-auto w-full max-w-[360px]">
+            <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-black">
+              <iframe
+                src="https://www.youtube.com/embed/_eRcjhFbS8Y"
+                title="סרטון הדרכה — הרשמה וכניסה"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Troubleshooting */}
         <section className="card space-y-2">
           <h2 className="text-lg font-bold text-gray-900">לא מוצאים את אפשרות ההתקנה?</h2>
