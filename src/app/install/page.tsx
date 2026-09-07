@@ -90,12 +90,38 @@ export default function InstallPage() {
           </ol>
         </section>
 
+        {/* Windows */}
+        <section className="card space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+            <span className="text-2xl">🖥️</span> מחשב Windows
+          </h2>
+          <p className="text-sm text-gray-600">
+            בדפדפן <b>Chrome</b> או <b>Edge</b>:
+          </p>
+          <ol className="space-y-3 text-gray-800">
+            <Step n={1}>
+              פתחו את הכתובת <b>www.shomriya.com</b> בדפדפן Chrome או Edge.
+            </Step>
+            <Step n={2}>
+              בשורת הכתובת שלמעלה, הקישו על <b>סמל ההתקנה</b> — מסך קטן עם חץ, שמופיע בצד שורת הכתובת.
+            </Step>
+            <Step n={3}>
+              לחלופין דרך התפריט: ב-Chrome הקישו על <b>(⋮)</b> ובחרו „התקנת אפליקציה”; ב-Edge הקישו על{" "}
+              <b>(⋯)</b> → „אפליקציות” → „התקנת אתר זה כאפליקציה”.
+            </Step>
+            <Step n={4}>לחצו <b>„התקנה”</b>.</Step>
+            <Step n={5}>
+              האפליקציה תיפתח בחלון נפרד ותתווסף לתפריט „התחל” (ואפשר להצמיד אותה לשורת המשימות).
+            </Step>
+          </ol>
+        </section>
+
         {/* After install */}
         <section className="card space-y-2">
           <h2 className="text-lg font-bold text-gray-900">אחרי ההתקנה</h2>
           <p className="text-gray-800 leading-relaxed">
-            פתחו את האפליקציה מסמל מסך הבית, והתחברו באמצעות מספר הטלפון שלכם — יישלח אליכם קוד
-            חד-פעמי ב-SMS. הכניסה מיועדת לחברי הקהילה.
+            פתחו את האפליקציה מהסמל שנוצר (במסך הבית בטלפון, או בתפריט „התחל” במחשב), והתחברו באמצעות
+            מספר הטלפון שלכם — יישלח אליכם קוד חד-פעמי ב-SMS. הכניסה מיועדת לחברי הקהילה.
           </p>
         </section>
 
