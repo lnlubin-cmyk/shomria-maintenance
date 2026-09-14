@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
-import { getTodayHalachicTimes } from "@/lib/halachic";
+import { getTodayHalachicTimes, getAvailableHalachicMonths } from "@/lib/halachic";
 import AppHeader from "@/components/AppHeader";
+import HalachicViewer from "./HalachicViewer";
 
 export const metadata = { title: "זמנים הלכתיים — קהילת עצמונה-שומריה" };
 
@@ -19,7 +20,7 @@ export default async function HalachicTimesPage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/halachic-times");
 
-  const t = await getTodayHalachicTimes();
+  const [t, months] = await Promise.all([getTodayHalachicTimes(), getAvailableHalachicMonths()]);
 
   const gregHe = new Date(`${t.gregorianISO}T12:00:00`).toLocaleDateString("he-IL", {
     weekday: "long",
@@ -69,6 +70,8 @@ export default async function HalachicTimesPage() {
             לא נמצאו זמנים לתאריך זה. ייתכן שטרם הועלה לוח זמנים לשנה זו.
           </div>
         )}
+
+        <HalachicViewer months={months} />
 
         <p className="mt-4 text-center text-xs text-gray-400">
           הזמנים לפי לוח הזמנים השנתי של שומריה. באחריות המשתמש לוודא מול לוח מוסמך.
