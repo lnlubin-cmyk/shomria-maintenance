@@ -25,7 +25,9 @@ export default function HalachicTab({ years }: { years: { year: number; days: nu
         setError(data.error ?? "טעינת הקובץ נכשלה");
         return;
       }
-      setSuccess(`נטען לוח זמנים לשנת ${data.year} — ${data.months} חודשים, ${data.days} ימים.`);
+      const monthsList: string[] = data.monthNames ?? [];
+      const monthsPart = monthsList.length > 0 ? `חודשים: ${monthsList.join(", ")}` : `${data.months} חודשים`;
+      setSuccess(`נטען לוח זמנים לשנת ${data.year} — ${monthsPart} (${data.days} ימים).`);
       router.refresh();
     } catch {
       setError("שגיאת רשת. נסה שוב.");
@@ -49,8 +51,9 @@ export default function HalachicTab({ years }: { years: { year: number; days: nu
       <div className="card">
         <h2 className="font-semibold">טעינת לוח זמנים הלכתיים (Excel)</h2>
         <p className="mt-1 text-sm text-gray-600">
-          קובץ עם לשונית לכל חודש עברי (בשנה מעוברת: „אדר א” ו„אדר ב”). הזמנים נטענים לפי התאריך העברי,
-          והדף מציג את זמני היום הנוכחי. טעינה מחדש של אותה שנה תעדכן את הנתונים.
+          קובץ עם לשונית לכל חודש עברי (בשנה מעוברת: „אדר א” ו„אדר ב”). אפשר להעלות שנה מלאה או קובץ חלקי
+          עם חודש/חודשים בלבד — ייטענו רק החודשים שבקובץ, ושאר החודשים שכבר נטענו לאותה שנה יישמרו. הזמנים
+          נטענים לפי התאריך העברי, והדף מציג את זמני היום הנוכחי.
         </p>
         <div className="mt-3 flex items-center gap-3">
           <input

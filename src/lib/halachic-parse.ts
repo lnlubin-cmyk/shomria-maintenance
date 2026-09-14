@@ -112,9 +112,21 @@ export function parseHalachicWorkbook(wb: XLSX.WorkBook): ParsedHalachic {
       raw: false,
     });
 
-  // Year from the first tab's title.
-  const firstRows = sheetRows(wb.SheetNames[0]);
-  const hebrew_year = parseHebrewYear(String(firstRows[0]?.[0] ?? "")) ?? 0;
+  // Year from a tab title. Scan every tab's first row (not only the first sheet)
+  // so a partial file — e.g. a single month — is recognised wherever the year
+  // appears in the workbook.
+  let hebrew_year = 0;
+  for (const name of wb.SheetNames) {
+    const firstRow = sheetRows(name)[0] ?? [];
+    for (const cell of firstRow) {
+      const y = parseHebrewYear(String(cell ?? ""));
+      if (y) {
+        hebrew_year = y;
+        break;
+      }
+    }
+    if (hebrew_year) break;
+  }
 
   const months: HalachicMonth[] = [];
 

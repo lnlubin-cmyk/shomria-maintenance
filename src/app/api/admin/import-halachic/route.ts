@@ -5,10 +5,12 @@ import { canEditReligious } from "@/lib/types";
 import { parseHalachicWorkbook } from "@/lib/halachic-parse";
 
 /**
- * Admin upload of the yearly halachic-times Excel. The whole file is parsed,
- * then all rows for that Hebrew year are replaced (so re-uploading corrects the
- * year cleanly). The file is small (well under the serverless body limit), so a
- * normal multipart upload is fine.
+ * Admin upload of the halachic-times Excel. The file may be a full year OR a
+ * partial file (one/some months). Only the months present in the file are
+ * replaced — other months already loaded for that year are kept — so a
+ * single-month upload updates just that month instead of wiping the year. The
+ * file is small (well under the serverless body limit), so a normal multipart
+ * upload is fine.
  */
 export async function POST(request: Request) {
   const session = await getSession();
@@ -55,8 +57,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "לא נמצאו נתונים בקובץ" }, { status: 400 });
   }
 
+  const monthNames = parsed.months.map((mo) => mo.month_name);
   const admin = createAdminClient();
-  await admin.from("halachic_times").delete().eq("hebrew_year", parsed.hebrew_year);
+  // Replace only the months that are in this file, leaving the rest of the
+  // year's data intact — this is what makes a partial (single-month) upload work.
+  await admin
+    .from("halachic_times")
+    .delete()
+    .eq("hebrew_year", parsed.hebrew_year)
+    .in("month_name", monthNames);
   const { error } = await admin.from("halachic_times").insert(rows);
   if (error) {
     return NextResponse.json({ error: "טעינת הקובץ נכשלה" }, { status: 500 });
@@ -66,6 +75,7 @@ export async function POST(request: Request) {
     ok: true,
     year: parsed.hebrew_year,
     months: parsed.months.length,
+    monthNames,
     days: rows.length,
   });
 }
