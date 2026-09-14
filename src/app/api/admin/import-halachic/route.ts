@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { canEditReligious } from "@/lib/types";
-import { parseHalachicWorkbook } from "@/lib/halachic-parse";
+import { parseHalachicWorkbook, isCanonicalMonth } from "@/lib/halachic-parse";
 
 /**
  * Admin upload of the halachic-times Excel. The file may be a full year OR a
@@ -66,6 +66,22 @@ export async function POST(request: Request) {
     .delete()
     .eq("hebrew_year", parsed.hebrew_year)
     .in("month_name", monthNames);
+  // Self-heal: drop any rows for this year stored under an unrecognised month
+  // name (e.g. a generic "Sheet1" tab from before month-from-title parsing).
+  const { data: existing } = await admin
+    .from("halachic_times")
+    .select("month_name")
+    .eq("hebrew_year", parsed.hebrew_year);
+  const bogus = [...new Set((existing ?? []).map((r) => r.month_name as string))].filter(
+    (m) => !isCanonicalMonth(m)
+  );
+  if (bogus.length > 0) {
+    await admin
+      .from("halachic_times")
+      .delete()
+      .eq("hebrew_year", parsed.hebrew_year)
+      .in("month_name", bogus);
+  }
   const { error } = await admin.from("halachic_times").insert(rows);
   if (error) {
     return NextResponse.json({ error: "טעינת הקובץ נכשלה" }, { status: 500 });

@@ -95,6 +95,30 @@ export function tabToCanonicalMonth(tab: string): string {
   return t;
 }
 
+/** The canonical month names we recognise (leap-year Adar variants included). */
+const KNOWN_MONTHS = new Set([
+  "תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר", "אדר א", "אדר ב",
+  "ניסן", "אייר", "סיון", "תמוז", "אב", "אלול",
+]);
+
+/**
+ * The month for a sheet: prefer the tab name, but when the tab is generically
+ * named (e.g. "גיליון1" / "Sheet1") fall back to the month written in the
+ * title cell — some files name the month only in the header text.
+ */
+export function resolveMonthName(tabName: string, title: string): string {
+  const fromTab = tabToCanonicalMonth(tabName);
+  if (KNOWN_MONTHS.has(fromTab)) return fromTab;
+  const fromTitle = tabToCanonicalMonth(title);
+  if (KNOWN_MONTHS.has(fromTitle)) return fromTitle;
+  return fromTab;
+}
+
+/** True for a recognised canonical Hebrew month name. */
+export function isCanonicalMonth(name: string): boolean {
+  return KNOWN_MONTHS.has(name);
+}
+
 /** Extract the Hebrew year (e.g. 5786) from a tab title like "…התשפו…". */
 export function parseHebrewYear(title: string): number | null {
   const m = String(title).match(/ה(תש[א-ת]{1,3})/);
@@ -184,7 +208,10 @@ export function parseHalachicWorkbook(wb: XLSX.WorkBook): ParsedHalachic {
       });
     }
 
-    if (days.length > 0) months.push({ month_name: tabToCanonicalMonth(name), days });
+    if (days.length > 0) {
+      const title = String(rows[0]?.[0] ?? "");
+      months.push({ month_name: resolveMonthName(name, title), days });
+    }
   }
 
   return { hebrew_year, months };
