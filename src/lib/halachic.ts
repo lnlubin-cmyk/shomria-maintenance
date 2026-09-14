@@ -1,6 +1,6 @@
 import { HDate } from "@hebcal/core";
 import { createAdminClient } from "@/lib/supabase/server";
-import type { HalachicTimeEntry } from "@/lib/halachic-parse";
+import { isCanonicalMonth, type HalachicTimeEntry } from "@/lib/halachic-parse";
 
 // hebcal month name -> the canonical Hebrew name we store (matches the tab names).
 const HEBCAL_TO_CANONICAL: Record<string, string> = {
@@ -73,7 +73,7 @@ export async function getAvailableHalachicMonths(): Promise<{ hebrew_year: numbe
   const out: { hebrew_year: number; month_name: string }[] = [];
   for (const r of data ?? []) {
     const key = `${r.hebrew_year}|${r.month_name}`;
-    if (!seen.has(key)) {
+    if (!seen.has(key) && isCanonicalMonth(r.month_name)) {
       seen.add(key);
       out.push({ hebrew_year: r.hebrew_year, month_name: r.month_name });
     }
