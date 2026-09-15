@@ -57,8 +57,11 @@ export default function StaffFaultTable({
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  // Multi-status filter: check the statuses to show. Empty = show all statuses.
-  const [statusFilter, setStatusFilter] = useState<Set<FaultStatus>>(new Set());
+  // Multi-status filter: check the statuses to show (empty = all). Defaults to the
+  // two active statuses so staff land on the open calls; clearing shows everything.
+  const [statusFilter, setStatusFilter] = useState<Set<FaultStatus>>(
+    new Set<FaultStatus>(["received", "in_treatment"])
+  );
   const toggleStatus = (s: FaultStatus) =>
     setStatusFilter((prev) => {
       const next = new Set(prev);

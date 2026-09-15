@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "resident" | "maintenance" | "maintenance_manager" | "gabbai";
-export type FaultStatus = "received" | "in_treatment" | "on_hold" | "fixed" | "duplicate";
+export type FaultStatus = "received" | "in_treatment" | "fixed" | "duplicate";
 export type TreatmentType =
   | "electricity"
   | "plumbing"
@@ -22,7 +22,6 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const STATUS_LABELS: Record<FaultStatus, string> = {
   received: "התקלה התקבלה במערכת",
   in_treatment: "התקלה בטיפול",
-  on_hold: "בהמתנה",
   fixed: "התקלה תוקנה",
   duplicate: "כפול (יש כבר קריאה במערכת)",
 };
@@ -31,7 +30,6 @@ export const STATUS_LABELS: Record<FaultStatus, string> = {
 export const STATUS_SHORT_LABELS: Record<FaultStatus, string> = {
   received: "התקבלה",
   in_treatment: "בטיפול",
-  on_hold: "בהמתנה",
   fixed: "תוקנה",
   duplicate: "כפול",
 };
@@ -53,16 +51,10 @@ export const PRIORITY_LABELS: Record<FaultPriority, string> = {
 };
 
 // All statuses, in the order they appear in staff dropdowns and filters.
-export const STATUS_ORDER: FaultStatus[] = [
-  "received",
-  "in_treatment",
-  "on_hold",
-  "fixed",
-  "duplicate",
-];
+export const STATUS_ORDER: FaultStatus[] = ["received", "in_treatment", "fixed", "duplicate"];
 
-// The linear progression shown in the resident status tracker. "בהמתנה" and
-// "כפול" are non-linear outcomes and are shown separately, not as steps.
+// The linear progression shown in the resident status tracker. "כפול" is a
+// non-linear outcome and is shown separately, not as a step.
 export const STATUS_STEPPER: FaultStatus[] = ["received", "in_treatment", "fixed"];
 export const TREATMENT_TYPE_ORDER: TreatmentType[] = [
   "electricity",
@@ -79,7 +71,6 @@ export const PRIORITY_ORDER: FaultPriority[] = ["very_urgent", "normal", "can_wa
 export const STATUS_STYLES: Record<FaultStatus, string> = {
   received: "bg-blue-100 text-blue-800",
   in_treatment: "bg-amber-100 text-amber-800",
-  on_hold: "bg-slate-200 text-slate-700",
   fixed: "bg-emerald-100 text-emerald-800",
   duplicate: "bg-gray-200 text-gray-600",
 };

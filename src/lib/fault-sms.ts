@@ -13,7 +13,6 @@ export const FAULT_RECEIVED_MESSAGE =
 const STATUS_SMS_TEXT: Record<FaultStatus, string> = {
   received: "התקלה התקבלה במערכת",
   in_treatment: "התקלה בטיפול",
-  on_hold: "הטיפול בקריאה בהמתנה",
   fixed: "התקלה תוקנה",
   duplicate: "הקריאה סומנה ככפולה (קיימת כבר קריאה במערכת על תקלה זו)",
 };

@@ -21,18 +21,15 @@ import FeedbackStars from "./FeedbackStars";
 /**
  * Visual status tracker — the linear stages of a call (התקבלה → בטיפול →
  * תוקנה), with the current one highlighted and earlier ones marked done. The
- * page is RTL, so the first stage sits on the right. "בהמתנה" and "כפול" are
- * non-linear outcomes: they aren't steps, so they're shown as a note instead.
+ * page is RTL, so the first stage sits on the right. "כפול" is a non-linear
+ * outcome: it isn't a step, so it's shown as a note instead.
  */
 function StatusTracker({ status }: { status: FaultStatus }) {
   const current = STATUS_STEPPER.indexOf(status);
 
-  // Non-linear status (on_hold / duplicate) — show a note, not the stepper.
+  // Non-linear status (duplicate) — show a note, not the stepper.
   if (current === -1) {
-    const note =
-      status === "duplicate"
-        ? "קריאה זו סומנה ככפולה — כבר קיימת במערכת קריאה על תקלה זו."
-        : "הטיפול בקריאה זו ממתין. נעדכן אתכם כשההמשך יתקדם.";
+    const note = "קריאה זו סומנה ככפולה — כבר קיימת במערכת קריאה על תקלה זו.";
     return (
       <div
         className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${STATUS_STYLES[status]}`}
