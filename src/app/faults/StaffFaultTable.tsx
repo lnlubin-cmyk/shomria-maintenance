@@ -31,7 +31,6 @@ const EMPTY_FILTERS = {
   fault_number: "",
   caller: "",
   building: "",
-  building_plot: "",
   description: "",
   priority: "",
   assignee: "",
@@ -89,7 +88,6 @@ export default function StaffFaultTable({
         has(String(f.fault_number), filters.fault_number) &&
         has(callerDisplay(f), filters.caller) &&
         has(f.building ? buildingLabel(f.building) : "", filters.building) &&
-        has(f.building_plot_number, filters.building_plot) &&
         has(f.fault_description, filters.description) &&
         (statusFilter.size === 0 || statusFilter.has(f.status)) &&
         (!filters.priority || f.priority === filters.priority) &&
@@ -249,6 +247,7 @@ export default function StaffFaultTable({
   }
 
   const filtersActive = Object.values(filters).some(Boolean) || statusFilter.size > 0;
+  const allStatusesSelected = STATUS_ORDER.every((s) => statusFilter.has(s));
 
   return (
     <div className="space-y-4">
@@ -312,6 +311,20 @@ export default function StaffFaultTable({
       {/* Multi-status filter — check the statuses to show (none = all). */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-white p-3">
         <span className="text-sm font-medium text-gray-700">סינון לפי סטטוס:</span>
+        <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={allStatusesSelected}
+            onChange={() =>
+              setStatusFilter(allStatusesSelected ? new Set() : new Set<FaultStatus>(STATUS_ORDER))
+            }
+          />
+          בחר הכל
+        </label>
+        <span className="text-gray-300" aria-hidden="true">
+          |
+        </span>
         {STATUS_ORDER.map((s) => (
           <label key={s} className="flex items-center gap-1.5 text-sm text-gray-700">
             <input
@@ -323,11 +336,6 @@ export default function StaffFaultTable({
             {STATUS_LABELS[s]}
           </label>
         ))}
-        {statusFilter.size > 0 && (
-          <button className="text-sm text-brand-600 hover:underline" onClick={() => setStatusFilter(new Set())}>
-            נקה
-          </button>
-        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -343,10 +351,10 @@ export default function StaffFaultTable({
                   className="h-4 w-4"
                 />
               </th>
+              <th className="px-3 py-3">פעולות</th>
               <th className="px-3 py-3">מס׳</th>
               <th className="px-3 py-3">שם הפונה</th>
               <th className="px-3 py-3">שם המבנה</th>
-              <th className="px-3 py-3">מגרש</th>
               <th className="px-3 py-3">תיאור התקלה</th>
               <th className="px-3 py-3">סטטוס</th>
               <th className="px-3 py-3">עדיפות</th>
@@ -368,9 +376,9 @@ export default function StaffFaultTable({
               </th>
               <th className="px-3 py-3">נסגרה</th>
               {canSeeFeedback && <th className="px-3 py-3">דירוג</th>}
-              <th className="px-3 py-3">פעולות</th>
             </tr>
             <tr className="border-t border-gray-200">
+              <th />
               <th />
               <th className="px-2 pb-2">
                 <FilterInput
@@ -388,12 +396,6 @@ export default function StaffFaultTable({
                 <FilterInput
                   value={filters.building}
                   onChange={(v) => setFilters({ ...filters, building: v })}
-                />
-              </th>
-              <th className="px-2 pb-2">
-                <FilterInput
-                  value={filters.building_plot}
-                  onChange={(v) => setFilters({ ...filters, building_plot: v })}
                 />
               </th>
               <th className="px-2 pb-2">
@@ -454,14 +456,13 @@ export default function StaffFaultTable({
               </th>
               <th />
               {canSeeFeedback && <th />}
-              <th />
             </tr>
           </thead>
 
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={canSeeFeedback ? 17 : 16} className="px-3 py-10 text-center text-gray-500">
+                <td colSpan={canSeeFeedback ? 16 : 15} className="px-3 py-10 text-center text-gray-500">
                   לא נמצאו תקלות התואמות את הסינון.
                 </td>
               </tr>
@@ -481,12 +482,19 @@ export default function StaffFaultTable({
                     aria-label={`בחירת תקלה ${f.fault_number}`}
                   />
                 </td>
+                <td className="whitespace-nowrap px-3 py-3">
+                  <div className="flex gap-3">
+                    <Link href={`/faults/${f.fault_number}`} className="text-brand-600 hover:underline">
+                      עדכון
+                    </Link>
+                    <Link href={`/faults/${f.fault_number}?view=1`} className="text-gray-600 hover:underline">
+                      צפייה
+                    </Link>
+                  </div>
+                </td>
                 <td className="px-3 py-3 font-medium">{f.fault_number}</td>
                 <td className="px-3 py-3">{callerDisplay(f)}</td>
                 <td className="px-3 py-3">{buildingLabel(f.building)}</td>
-                <td className="px-3 py-3 tabular-nums" dir="ltr">
-                  {f.building_plot_number}
-                </td>
                 <td className="max-w-56 px-3 py-3">
                   <div className="truncate" title={f.fault_description}>
                     {f.fault_description}
@@ -534,16 +542,6 @@ export default function StaffFaultTable({
                     )}
                   </td>
                 )}
-                <td className="whitespace-nowrap px-3 py-3">
-                  <div className="flex gap-3">
-                    <Link href={`/faults/${f.fault_number}`} className="text-brand-600 hover:underline">
-                      עדכון
-                    </Link>
-                    <Link href={`/faults/${f.fault_number}?view=1`} className="text-gray-600 hover:underline">
-                      צפייה
-                    </Link>
-                  </div>
-                </td>
               </tr>
             ))}
           </tbody>
