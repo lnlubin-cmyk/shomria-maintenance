@@ -100,6 +100,44 @@ export async function saveSchedule(payload: SchedulePayload): Promise<ActionResu
   return { ok: true };
 }
 
+/** Create a new schedule by copying an existing one's prayers/minyanim. The copy
+ *  starts hidden and titled „… — עותק” so the admin can adjust it before showing. */
+export async function duplicateSchedule(id: string): Promise<ActionResult> {
+  try {
+    await requireReligiousEditor();
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  if (!id) return { error: "פריט חסר" };
+
+  const admin = createAdminClient();
+  const { data: src } = await admin
+    .from("prayer_schedules")
+    .select("title, prayers")
+    .eq("id", id)
+    .maybeSingle();
+  if (!src) return { error: "הלוח לא נמצא" };
+
+  const { data: maxRow } = await admin
+    .from("prayer_schedules")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sort_order = (maxRow?.sort_order ?? -1) + 1;
+
+  const { error } = await admin.from("prayer_schedules").insert({
+    title: `${src.title || "לוח"} — עותק`,
+    is_visible: false, // hidden until the admin reviews/edits and chooses to show it
+    prayers: src.prayers ?? [],
+    sort_order,
+  });
+  if (error) return { error: "שכפול הלוח נכשל" };
+
+  revalidate();
+  return { ok: true };
+}
+
 export async function toggleScheduleVisible(id: string, visible: boolean): Promise<ActionResult> {
   try {
     await requireReligiousEditor();

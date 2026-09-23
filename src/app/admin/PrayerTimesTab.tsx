@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PrayerSchedule } from "@/lib/prayer-times";
-import { toggleScheduleVisible, deleteSchedule, moveSchedule } from "./prayer-actions";
+import { toggleScheduleVisible, deleteSchedule, moveSchedule, duplicateSchedule } from "./prayer-actions";
 import ScheduleEditor from "./ScheduleEditor";
 
 export default function PrayerTimesTab({ schedules }: { schedules: PrayerSchedule[] }) {
@@ -93,6 +93,10 @@ export default function PrayerTimesTab({ schedules }: { schedules: PrayerSchedul
                 </button>
                 <button className="text-brand-600 hover:underline" onClick={() => setEditing(s)}>
                   עריכה
+                </button>
+                <button className="text-brand-600 hover:underline" disabled={busy}
+                  onClick={() => run(duplicateSchedule(s.id))} title="יצירת עותק">
+                  שכפול
                 </button>
                 <button className="text-red-600 hover:underline" disabled={busy}
                   onClick={() => {
