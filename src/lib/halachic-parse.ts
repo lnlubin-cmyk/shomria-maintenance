@@ -210,7 +210,11 @@ export function parseHalachicWorkbook(wb: XLSX.WorkBook): ParsedHalachic {
 
     if (days.length > 0) {
       const title = String(rows[0]?.[0] ?? "");
-      months.push({ month_name: resolveMonthName(name, title), days });
+      const month_name = resolveMonthName(name, title);
+      // Only real Hebrew-month tabs are stored. Auxiliary sheets (e.g. רמבם /
+      // שבתות / גיליון1) can carry time-looking rows too; ignoring them keeps
+      // their (duplicated) rows out of the DB and avoids a primary-key clash.
+      if (isCanonicalMonth(month_name)) months.push({ month_name, days });
     }
   }
 
