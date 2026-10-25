@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ResidentPicker from "@/components/ResidentPicker";
 import BuildingPicker from "@/components/BuildingPicker";
@@ -40,6 +40,9 @@ export default function NewFaultForm({
   const [buildingPlot, setBuildingPlot] = useState(defaultBuildingPlot ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // `busy` only disables the button on the NEXT render, which leaves a window
+  // where a fast double-tap submits twice. This ref blocks re-entry immediately.
+  const submitting = useRef(false);
 
   // Spec 2d: the opening date is today's date, shown and not editable.
   const today = new Date().toLocaleDateString("he-IL", {
@@ -49,6 +52,7 @@ export default function NewFaultForm({
   });
 
   async function handleSubmit(formData: FormData) {
+    if (submitting.current) return; // a submit is already in flight
     setError(null);
 
     if (!callerId) {
@@ -60,6 +64,7 @@ export default function NewFaultForm({
       return;
     }
 
+    submitting.current = true;
     setBusy(true);
     formData.set("caller_resident_id", callerId);
     formData.set("building_plot_number", buildingPlot);
@@ -67,6 +72,7 @@ export default function NewFaultForm({
     const result = await createFault(formData);
     // On success createFault redirects, so reaching here means it failed.
     if (result && "error" in result) {
+      submitting.current = false; // allow a retry after a real failure
       setError(result.error);
       setBusy(false);
     }

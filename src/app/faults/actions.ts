@@ -33,6 +33,27 @@ export async function createFault(formData: FormData): Promise<ActionResult> {
   if (!faultDescription) return { error: "יש למלא תיאור תקלה" };
 
   const supabase = createClient();
+
+  // Guard against double submits — a fast double/triple tap on the phone, or a
+  // retried request — which would otherwise create several identical calls in a
+  // row. If this user already opened an identical call moments ago, reuse it
+  // instead of inserting another (and don't send a second SMS).
+  const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+  const { data: recentDuplicate } = await createAdminClient()
+    .from("faults")
+    .select("fault_number")
+    .eq("created_by_user_id", session.user.id)
+    .eq("caller_resident_id", callerResidentId)
+    .eq("building_plot_number", buildingPlotNumber)
+    .eq("fault_description", faultDescription)
+    .gte("created_at", new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString())
+    .limit(1)
+    .maybeSingle();
+  if (recentDuplicate) {
+    revalidatePath("/faults");
+    redirect("/faults?created=1"); // behave exactly like the original success
+  }
+
   const { data: created, error } = await supabase
     .from("faults")
     .insert({
