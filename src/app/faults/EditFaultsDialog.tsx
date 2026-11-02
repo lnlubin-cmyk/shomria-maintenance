@@ -84,11 +84,11 @@ export default function EditFaultsDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+      <div className="my-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-bold">
           {single ? `עריכת תקלה #${single.fault_number}` : `עריכת ${count} תקלות`}
         </h2>
