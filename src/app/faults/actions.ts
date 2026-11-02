@@ -216,6 +216,10 @@ export async function updateFaults(formData: FormData): Promise<ActionResult> {
     }
   }
 
+  // Whether to notify the resident by SMS when the status changes. Defaults to
+  // sending, so any caller that doesn't submit the field keeps notifying.
+  const sendSms = String(formData.get("send_sms") ?? "1") !== "0";
+
   if (Object.keys(patch).length === 0) return { error: "לא בוצעו שינויים" };
 
   // Capture prior statuses so we notify only when the status actually changes.
@@ -230,7 +234,7 @@ export async function updateFaults(formData: FormData): Promise<ActionResult> {
   if (error) return { error: "עדכון נכשל. נסה שוב." };
 
   // Automatic SMS to each caller whose status changed.
-  if (patch.status) {
+  if (patch.status && sendSms) {
     const next = patch.status as FaultStatus;
     for (const id of ids) {
       if (prevStatus.get(id) !== next) await sendFaultStatusSms(id, next);

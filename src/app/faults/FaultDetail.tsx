@@ -95,6 +95,8 @@ export default function FaultDetail({
   const [treatment, setTreatment] = useState(fault.treatment_description ?? "");
   const [assignee, setAssignee] = useState(fault.assigned_to_user_id ?? "");
   const [hours, setHours] = useState(fault.hours_spent != null ? String(fault.hours_spent) : "");
+  // Notify the resident by SMS on a status change. On by default.
+  const [sendSms, setSendSms] = useState(true);
 
   // messages
   const [showMessages, setShowMessages] = useState(false);
@@ -130,6 +132,7 @@ export default function FaultDetail({
     fd.set("treatment_description", treatment);
     fd.set("assigned_to_user_id", assignee || "__none__");
     fd.set("hours_spent", hours);
+    fd.set("send_sms", sendSms ? "1" : "0");
     await run(updateFaults(fd));
   }
 
@@ -255,6 +258,18 @@ export default function FaultDetail({
               <Field label="תיאור הטיפול">
                 <textarea className="field" rows={2} value={treatment} onChange={(e) => setTreatment(e.target.value)} />
               </Field>
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4"
+                  checked={sendSms}
+                  onChange={(e) => setSendSms(e.target.checked)}
+                />
+                <span>
+                  שליחת SMS לתושב
+                  <span className="block text-xs text-gray-500">נשלח רק כאשר הסטטוס משתנה.</span>
+                </span>
+              </label>
               <button className="btn-primary" disabled={busy} onClick={saveFault}>
                 {busy ? "שומר..." : "שמירת הטיפול"}
               </button>

@@ -49,6 +49,7 @@ export default function EditFaultsDialog({
     priority?: FaultPriority | "";
     treatment_description?: string | null;
     assigned_to_user_id?: string | "";
+    send_sms?: boolean;
   }) => void;
 }) {
   const [status, setStatus] = useState<FaultStatus | "">(single?.status ?? "");
@@ -63,6 +64,8 @@ export default function EditFaultsDialog({
   // For a bulk edit, only overwrite the description if explicitly opted in —
   // otherwise one edit would wipe every selected fault's existing notes.
   const [writeDescription, setWriteDescription] = useState(Boolean(single));
+  // Notify the resident by SMS on a status change. On by default.
+  const [sendSms, setSendSms] = useState(true);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +78,7 @@ export default function EditFaultsDialog({
       // unchanged one re-validates it, so a worker who has since been demoted
       // would block an unrelated status edit. "" means "leave unchanged".
       assigned_to_user_id: assignee === (single?.assigned_to_user_id ?? "") ? "" : assignee,
+      send_sms: sendSms,
     });
   }
 
@@ -197,6 +201,19 @@ export default function EditFaultsDialog({
               placeholder="תאר את הטיפול שבוצע"
             />
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4"
+              checked={sendSms}
+              onChange={(e) => setSendSms(e.target.checked)}
+            />
+            <span>
+              שליחת SMS לתושב
+              <span className="block text-xs text-gray-500">נשלח רק כאשר הסטטוס משתנה.</span>
+            </span>
+          </label>
 
           <div className="flex gap-3 border-t border-gray-200 pt-4">
             <button type="submit" className="btn-primary" disabled={busy}>

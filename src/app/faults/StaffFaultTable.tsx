@@ -162,12 +162,14 @@ export default function StaffFaultTable({
     priority?: FaultPriority | "";
     treatment_description?: string | null;
     assigned_to_user_id?: string | "";
+    send_sms?: boolean;
   }) {
     setError(null);
     setBusy(true);
 
     const fd = new FormData();
     selected.forEach((n) => fd.append("fault_numbers", String(n)));
+    fd.set("send_sms", patch.send_sms === false ? "0" : "1");
     if (patch.status) fd.set("status", patch.status);
     if (patch.treatment_type) fd.set("treatment_type", patch.treatment_type);
     if (patch.priority) fd.set("priority", patch.priority);
